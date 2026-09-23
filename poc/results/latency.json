@@ -1,0 +1,134 @@
+{
+  "repeats": 2,
+  "rows": [
+    {
+      "state_tokens": 250,
+      "questions": 1,
+      "mode": "naive",
+      "seconds": 1.1335121269985393,
+      "input_tokens": 349
+    },
+    {
+      "state_tokens": 250,
+      "questions": 1,
+      "mode": "kv",
+      "seconds": 1.2398566270003357,
+      "input_tokens": 349
+    },
+    {
+      "state_tokens": 250,
+      "questions": 1,
+      "mode": "packed",
+      "seconds": 1.1237455219998083,
+      "input_tokens": 349
+    },
+    {
+      "state_tokens": 250,
+      "questions": 4,
+      "mode": "naive",
+      "seconds": 4.561492521999753,
+      "input_tokens": 439
+    },
+    {
+      "state_tokens": 250,
+      "questions": 4,
+      "mode": "kv",
+      "seconds": 1.7603723280008126,
+      "input_tokens": 439
+    },
+    {
+      "state_tokens": 250,
+      "questions": 4,
+      "mode": "packed",
+      "seconds": 1.2140311880011723,
+      "input_tokens": 439
+    },
+    {
+      "state_tokens": 250,
+      "questions": 13,
+      "mode": "naive",
+      "seconds": 27.73104504999901,
+      "input_tokens": 1423
+    },
+    {
+      "state_tokens": 250,
+      "questions": 13,
+      "mode": "kv",
+      "seconds": 7.159442514999682,
+      "input_tokens": 1423
+    },
+    {
+      "state_tokens": 250,
+      "questions": 13,
+      "mode": "packed",
+      "seconds": 5.711522531999435,
+      "input_tokens": 1423
+    },
+    {
+      "state_tokens": 1000,
+      "questions": 1,
+      "mode": "naive",
+      "seconds": 4.059232544001134,
+      "input_tokens": 1108
+    },
+    {
+      "state_tokens": 1000,
+      "questions": 1,
+      "mode": "kv",
+      "seconds": 4.114311355000609,
+      "input_tokens": 1108
+    },
+    {
+      "state_tokens": 1000,
+      "questions": 1,
+      "mode": "packed",
+      "seconds": 3.997073767999609,
+      "input_tokens": 1108
+    },
+    {
+      "state_tokens": 1000,
+      "questions": 4,
+      "mode": "naive",
+      "seconds": 16.09462239700042,
+      "input_tokens": 1198
+    },
+    {
+      "state_tokens": 1000,
+      "questions": 4,
+      "mode": "kv",
+      "seconds": 4.820011292000345,
+      "input_tokens": 1198
+    },
+    {
+      "state_tokens": 1000,
+      "questions": 4,
+      "mode": "packed",
+      "seconds": 4.5414107230008085,
+      "input_tokens": 1198
+    },
+    {
+      "state_tokens": 1000,
+      "questions": 13,
+      "mode": "naive",
+      "seconds": 93.25005599799988,
+      "input_tokens": 2182
+    },
+    {
+      "state_tokens": 1000,
+      "questions": 13,
+      "mode": "kv",
+      "seconds": 10.201401088999773,
+      "input_tokens": 2182
+    },
+    {
+      "state_tokens": 1000,
+      "questions": 13,
+      "mode": "packed",
+      "seconds": 10.074534981000397,
+      "input_tokens": 2182
+    }
+  ],
+  "note": "min over repeats; CPU fp32; 6 threads",
+  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "seconds_total": 412.1021129140008
+}

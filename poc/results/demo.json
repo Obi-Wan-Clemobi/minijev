@@ -1,0 +1,78 @@
+{
+  "request": {
+    "model": "minijev-latest",
+    "state": "Hi, my Stripe integration has failed for 3 days. Losing sales. Help ASAP.",
+    "questions": {
+      "urgency": {
+        "type": "noul",
+        "instructions": "Does this message express urgency?"
+      },
+      "team": {
+        "type": "choice",
+        "instructions": "Which team should handle this?",
+        "criteria": {
+          "billing": "Payments, invoices, refunds",
+          "technical": "Integrations, bugs, outages",
+          "sales": "Pricing, new plans"
+        }
+      },
+      "tone": {
+        "type": "score",
+        "instructions": "How upset is the customer?",
+        "criteria": [
+          "calm",
+          "mildly annoyed",
+          "frustrated",
+          "angry"
+        ]
+      }
+    }
+  },
+  "response": {
+    "model": "minijev-poc (Qwen/Qwen2.5-0.5B-Instruct)",
+    "answers": {
+      "urgency": {
+        "type": "noul",
+        "noul": 0.98
+      },
+      "team": {
+        "type": "choice",
+        "choice": "technical",
+        "probabilities": {
+          "billing": 0.02,
+          "technical": 0.97,
+          "sales": 0.01
+        },
+        "confidence": 0.96
+      },
+      "tone": {
+        "type": "score",
+        "score": 1.92,
+        "legend": {
+          "0": "calm",
+          "1": "mildly annoyed",
+          "2": "frustrated",
+          "3": "angry"
+        },
+        "probabilities": {
+          "0": 0.09,
+          "1": 0.08,
+          "2": 0.65,
+          "3": 0.18
+        },
+        "confidence": 0.55
+      }
+    },
+    "usage": {
+      "input_tokens": 264,
+      "output_tokens": 0,
+      "latency_ms": 1148
+    }
+  },
+  "max_logit_gap_vs_naive": {
+    "kv": 2.0503997802734375e-05,
+    "packed": 1.1533498764038086e-05
+  },
+  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "seconds_total": 5.327304162001383
+}

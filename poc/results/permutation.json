@@ -1,0 +1,232 @@
+{
+  "summary": {
+    "listwise": {
+      "mean_max_abs_dp": 0.44606432417832104,
+      "mean_argmax_change_rate": 0.5416666666666666
+    },
+    "pointwise": {
+      "mean_max_abs_dp": 2.9785386514349227e-06,
+      "mean_argmax_change_rate": 0.0
+    }
+  },
+  "rows": [
+    {
+      "case": "choice: department",
+      "mode": "listwise",
+      "k": 3,
+      "max_abs_dp": 0.06662728879426871,
+      "argmax_changes": 0.0,
+      "winners": [
+        "returns",
+        "returns",
+        "returns"
+      ],
+      "jev": "returns"
+    },
+    {
+      "case": "choice: department",
+      "mode": "pointwise",
+      "k": 3,
+      "max_abs_dp": 4.514018591972313e-06,
+      "argmax_changes": 0.0,
+      "winners": [
+        "returns",
+        "returns",
+        "returns"
+      ],
+      "jev": "returns"
+    },
+    {
+      "case": "choice: department",
+      "mode": "listwise",
+      "k": 3,
+      "max_abs_dp": 0.7502983235642176,
+      "argmax_changes": 1.0,
+      "winners": [
+        "technical",
+        "billing",
+        "billing"
+      ],
+      "jev": "billing"
+    },
+    {
+      "case": "choice: department",
+      "mode": "pointwise",
+      "k": 3,
+      "max_abs_dp": 4.645357260857352e-06,
+      "argmax_changes": 0.0,
+      "winners": [
+        "billing",
+        "billing",
+        "billing"
+      ],
+      "jev": "billing"
+    },
+    {
+      "case": "choice: department",
+      "mode": "listwise",
+      "k": 3,
+      "max_abs_dp": 0.8717641342883858,
+      "argmax_changes": 0.5,
+      "winners": [
+        "billing",
+        "billing",
+        "returns"
+      ],
+      "jev": "returns"
+    },
+    {
+      "case": "choice: department",
+      "mode": "pointwise",
+      "k": 3,
+      "max_abs_dp": 3.4633075766121735e-06,
+      "argmax_changes": 0.0,
+      "winners": [
+        "returns",
+        "returns",
+        "returns"
+      ],
+      "jev": "returns"
+    },
+    {
+      "case": "choice: return reason",
+      "mode": "listwise",
+      "k": 5,
+      "max_abs_dp": 0.2592906808717233,
+      "argmax_changes": 1.0,
+      "winners": [
+        "wrong_item",
+        "wrong_size",
+        "wrong_size",
+        "wrong_size",
+        "wrong_size"
+      ],
+      "jev": "wrong_size"
+    },
+    {
+      "case": "choice: return reason",
+      "mode": "pointwise",
+      "k": 5,
+      "max_abs_dp": 1.676647629261785e-06,
+      "argmax_changes": 0.0,
+      "winners": [
+        "damaged",
+        "damaged",
+        "damaged",
+        "damaged",
+        "damaged"
+      ],
+      "jev": "wrong_size"
+    },
+    {
+      "case": "choice: shipping issue",
+      "mode": "listwise",
+      "k": 5,
+      "max_abs_dp": 0.6218690438722186,
+      "argmax_changes": 0.5,
+      "winners": [
+        "delayed",
+        "delayed",
+        "wrong_address",
+        "other",
+        "delayed"
+      ],
+      "jev": "delayed"
+    },
+    {
+      "case": "choice: shipping issue",
+      "mode": "pointwise",
+      "k": 5,
+      "max_abs_dp": 3.3248671024999066e-06,
+      "argmax_changes": 0.0,
+      "winners": [
+        "delayed",
+        "delayed",
+        "delayed",
+        "delayed",
+        "delayed"
+      ],
+      "jev": "delayed"
+    },
+    {
+      "case": "choice: resolution",
+      "mode": "listwise",
+      "k": 4,
+      "max_abs_dp": 0.6168288072358835,
+      "argmax_changes": 0.3333333333333333,
+      "winners": [
+        "refund",
+        "refund",
+        "refund",
+        "replacement"
+      ],
+      "jev": "refund"
+    },
+    {
+      "case": "choice: resolution",
+      "mode": "pointwise",
+      "k": 4,
+      "max_abs_dp": 2.9917312450167266e-06,
+      "argmax_changes": 0.0,
+      "winners": [
+        "refund",
+        "refund",
+        "refund",
+        "refund"
+      ],
+      "jev": "refund"
+    },
+    {
+      "case": "choice: tone",
+      "mode": "listwise",
+      "k": 3,
+      "max_abs_dp": 0.07299187464106505,
+      "argmax_changes": 0.0,
+      "winners": [
+        "frustrated",
+        "frustrated",
+        "frustrated"
+      ],
+      "jev": "frustrated"
+    },
+    {
+      "case": "choice: tone",
+      "mode": "pointwise",
+      "k": 3,
+      "max_abs_dp": 2.246420715779074e-06,
+      "argmax_changes": 0.0,
+      "winners": [
+        "frustrated",
+        "frustrated",
+        "frustrated"
+      ],
+      "jev": "frustrated"
+    },
+    {
+      "case": "choice: yes/no refund (jaggedness)",
+      "mode": "listwise",
+      "k": 2,
+      "max_abs_dp": 0.30884444015880574,
+      "argmax_changes": 1.0,
+      "winners": [
+        "yes",
+        "no"
+      ],
+      "jev": "no"
+    },
+    {
+      "case": "choice: yes/no refund (jaggedness)",
+      "mode": "pointwise",
+      "k": 2,
+      "max_abs_dp": 9.659590894800507e-07,
+      "argmax_changes": 0.0,
+      "winners": [
+        "yes",
+        "yes"
+      ],
+      "jev": "no"
+    }
+  ],
+  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "seconds_total": 30.61101914200117
+}

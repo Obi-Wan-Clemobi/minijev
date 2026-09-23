@@ -1,0 +1,13 @@
+[project]
+name = "minijev-poc"
+version = "0.0.1"
+description = "minijev proof of concept: Jev-shaped typed decisions read from label-token probabilities"
+requires-python = "==3.12.*"
+dependencies = [
+    "torch==2.2.2",            # last x86_64 macOS wheels
+    "numpy<2",                 # torch 2.2.2 was built against numpy 1.x
+    "transformers==4.49.0",    # resolves with torch 2.2.2; Qwen2.5 support
+]
+
+[tool.uv]
+package = false

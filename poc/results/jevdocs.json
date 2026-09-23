@@ -1,0 +1,1219 @@
+{
+  "summary": {
+    "raw": {
+      "noul_mean_abs_diff": 0.2960467691125354,
+      "noul_same_side_of_0.5": 0.7333333333333333,
+      "noul_pearson": 0.5093126192157489,
+      "score_pointwise_mean_abs_diff": 0.6205126797515516,
+      "score_pointwise_same_rounded_level": 0.5,
+      "score_listwise_mean_abs_diff": 0.6031929850520911,
+      "score_listwise_same_rounded_level": 0.6,
+      "choice_listwise_same_argmax": 0.5,
+      "choice_pointwise_same_argmax": 0.75
+    },
+    "cc": {
+      "noul_mean_abs_diff": 0.37279043379189475,
+      "noul_same_side_of_0.5": 0.4666666666666667,
+      "noul_pearson": 0.5717875307124515,
+      "score_pointwise_mean_abs_diff": 0.6043045809903204,
+      "score_pointwise_same_rounded_level": 0.5,
+      "score_listwise_mean_abs_diff": 0.7141177396747616,
+      "score_listwise_same_rounded_level": 0.6,
+      "choice_listwise_same_argmax": 0.5,
+      "choice_pointwise_same_argmax": 0.625
+    },
+    "n": {
+      "noul": 15,
+      "score": 10,
+      "choice": 8
+    }
+  },
+  "rows": [
+    {
+      "case": "noul: human agent",
+      "cc": false,
+      "state": "Thanks, that fixed it!",
+      "jev": 0.02,
+      "ours": 0.017580899044146725,
+      "probabilities": null
+    },
+    {
+      "case": "noul: human agent",
+      "cc": true,
+      "state": "Thanks, that fixed it!",
+      "jev": 0.02,
+      "ours": 0.5454144702082362,
+      "probabilities": null
+    },
+    {
+      "case": "noul: human agent",
+      "cc": false,
+      "state": "How do I reset my password?",
+      "jev": 0.07,
+      "ours": 0.06970319721429592,
+      "probabilities": null
+    },
+    {
+      "case": "noul: human agent",
+      "cc": true,
+      "state": "How do I reset my password?",
+      "jev": 0.07,
+      "ours": 0.8339808642421064,
+      "probabilities": null
+    },
+    {
+      "case": "noul: human agent",
+      "cc": false,
+      "state": "I need this sorted today, whatever it takes.",
+      "jev": 0.26,
+      "ours": 0.04353468324834521,
+      "probabilities": null
+    },
+    {
+      "case": "noul: human agent",
+      "cc": true,
+      "state": "I need this sorted today, whatever it takes.",
+      "jev": 0.26,
+      "ours": 0.7531862056920424,
+      "probabilities": null
+    },
+    {
+      "case": "noul: human agent",
+      "cc": false,
+      "state": "Are you a bot?",
+      "jev": 0.4,
+      "ours": 0.03901754596981924,
+      "probabilities": null
+    },
+    {
+      "case": "noul: human agent",
+      "cc": true,
+      "state": "Are you a bot?",
+      "jev": 0.4,
+      "ours": 0.7313377115670514,
+      "probabilities": null
+    },
+    {
+      "case": "noul: human agent",
+      "cc": false,
+      "state": "Is there any way to speak to someone about my invoice?",
+      "jev": 0.84,
+      "ours": 0.3224107007429422,
+      "probabilities": null
+    },
+    {
+      "case": "noul: human agent",
+      "cc": true,
+      "state": "Is there any way to speak to someone about my invoice?",
+      "jev": 0.84,
+      "ours": 0.9696061519885416,
+      "probabilities": null
+    },
+    {
+      "case": "noul: human agent",
+      "cc": false,
+      "state": "I have asked three times now. Can I please just talk to a real person?",
+      "jev": 0.99,
+      "ours": 0.8336499842266751,
+      "probabilities": null
+    },
+    {
+      "case": "noul: human agent",
+      "cc": true,
+      "state": "I have asked three times now. Can I please just talk to a real person?",
+      "jev": 0.99,
+      "ours": 0.9970325618493022,
+      "probabilities": null
+    },
+    {
+      "case": "noul: repeat contact",
+      "cc": false,
+      "state": "I have asked three times now. Can I please just talk to a real person?",
+      "jev": 0.93,
+      "ours": 0.041262992703362186,
+      "probabilities": null
+    },
+    {
+      "case": "noul: repeat contact",
+      "cc": true,
+      "state": "I have asked three times now. Can I please just talk to a real person?",
+      "jev": 0.93,
+      "ours": 0.8307645515685907,
+      "probabilities": null
+    },
+    {
+      "case": "noul: urgency",
+      "cc": false,
+      "state": "Help! My payouts have been failing for 3 days.",
+      "jev": 0.95,
+      "ours": 0.9247671229088155,
+      "probabilities": null
+    },
+    {
+      "case": "noul: urgency",
+      "cc": true,
+      "state": "Help! My payouts have been failing for 3 days.",
+      "jev": 0.95,
+      "ours": 0.9991446326636481,
+      "probabilities": null
+    },
+    {
+      "case": "noul: strong python",
+      "cc": false,
+      "state": "My experience is in Java and Go. I have not used Python.",
+      "jev": 0.03,
+      "ours": 0.09339924891253132,
+      "probabilities": null
+    },
+    {
+      "case": "noul: strong python",
+      "cc": true,
+      "state": "My experience is in Java and Go. I have not used Python.",
+      "jev": 0.03,
+      "ours": 0.8513916592650855,
+      "probabilities": null
+    },
+    {
+      "case": "noul: strong python",
+      "cc": false,
+      "state": "I have used Python occasionally for small scripts alongside my main Java work.",
+      "jev": 0.14,
+      "ours": 0.9259362394732009,
+      "probabilities": null
+    },
+    {
+      "case": "noul: strong python",
+      "cc": true,
+      "state": "I have used Python occasionally for small scripts alongside my main Java work.",
+      "jev": 0.14,
+      "ours": 0.9985637119072275,
+      "probabilities": null
+    },
+    {
+      "case": "noul: strong python",
+      "cc": false,
+      "state": "I used Python every day for two years in my last job, mostly data pipelines.",
+      "jev": 0.81,
+      "ours": 0.9904685301420917,
+      "probabilities": null
+    },
+    {
+      "case": "noul: strong python",
+      "cc": true,
+      "state": "I used Python every day for two years in my last job, mostly data pipelines.",
+      "jev": 0.81,
+      "ours": 0.9998269844433432,
+      "probabilities": null
+    },
+    {
+      "case": "noul: strong python",
+      "cc": false,
+      "state": "I have written Python daily for eight years, including maintaining a large Django codebase.",
+      "jev": 0.92,
+      "ours": 0.9740466726886731,
+      "probabilities": null
+    },
+    {
+      "case": "noul: strong python",
+      "cc": true,
+      "state": "I have written Python daily for eight years, including maintaining a large Django codebase.",
+      "jev": 0.92,
+      "ours": 0.999521098336351,
+      "probabilities": null
+    },
+    {
+      "case": "noul: refund (jaggedness)",
+      "cc": false,
+      "state": "I'm not happy with the fit. What are my options here?",
+      "jev": 0.22,
+      "ours": 0.11515195621425975,
+      "probabilities": null
+    },
+    {
+      "case": "noul: refund (jaggedness)",
+      "cc": true,
+      "state": "I'm not happy with the fit. What are my options here?",
+      "jev": 0.22,
+      "ours": 0.9396450999146108,
+      "probabilities": null
+    },
+    {
+      "case": "noul: refund",
+      "cc": false,
+      "state": "I was charged twice for the same order. Can someone look into this?",
+      "jev": 0.72,
+      "ours": 0.07715841580531944,
+      "probabilities": null
+    },
+    {
+      "case": "noul: refund",
+      "cc": true,
+      "state": "I was charged twice for the same order. Can someone look into this?",
+      "jev": 0.72,
+      "ours": 0.9091108576153798,
+      "probabilities": null
+    },
+    {
+      "case": "noul: not refund",
+      "cc": false,
+      "state": "I was charged twice for the same order. Can someone look into this?",
+      "jev": 0.47,
+      "ours": 0.0289116564504847,
+      "probabilities": null
+    },
+    {
+      "case": "noul: not refund",
+      "cc": true,
+      "state": "I was charged twice for the same order. Can someone look into this?",
+      "jev": 0.47,
+      "ours": 0.8048590487540861,
+      "probabilities": null
+    },
+    {
+      "case": "score: severity",
+      "cc": false,
+      "state": "The export button is misaligned by a few pixels on the settings page.",
+      "jev": 0.0,
+      "ours": 0.9464425858971481,
+      "probabilities": {
+        "0": 0.18610330425772573,
+        "1": 0.6813508055874004,
+        "2": 0.1325458901548739
+      }
+    },
+    {
+      "case": "score: severity",
+      "cc": true,
+      "state": "The export button is misaligned by a few pixels on the settings page.",
+      "jev": 0.0,
+      "ours": 0.901773796229772,
+      "probabilities": {
+        "0": 0.2577162504630027,
+        "1": 0.5827937028442223,
+        "2": 0.15949004669277492
+      }
+    },
+    {
+      "case": "score: severity [listwise]",
+      "cc": false,
+      "state": "The export button is misaligned by a few pixels on the settings page.",
+      "jev": 0.0,
+      "ours": 0.5711251179660788,
+      "probabilities": {
+        "0": 0.4374680125796276,
+        "1": 0.5539388568746663,
+        "2": 0.008593130545706254
+      }
+    },
+    {
+      "case": "score: severity [listwise]",
+      "cc": true,
+      "state": "The export button is misaligned by a few pixels on the settings page.",
+      "jev": 0.0,
+      "ours": 0.3950515043240366,
+      "probabilities": {
+        "0": 0.6083890837479263,
+        "1": 0.38817032818011077,
+        "2": 0.003440588071962915
+      }
+    },
+    {
+      "case": "score: severity",
+      "cc": false,
+      "state": "The PDF export button does nothing when clicked. I can still export to CSV and convert it myself, but that takes ages.",
+      "jev": 1.0,
+      "ours": 1.0712158533357508,
+      "probabilities": {
+        "0": 0.0990583909924696,
+        "1": 0.7306673646793101,
+        "2": 0.17027424432822033
+      }
+    },
+    {
+      "case": "score: severity",
+      "cc": true,
+      "state": "The PDF export button does nothing when clicked. I can still export to CSV and convert it myself, but that takes ages.",
+      "jev": 1.0,
+      "ours": 1.070019399147213,
+      "probabilities": {
+        "0": 0.1418515849507923,
+        "1": 0.6462774309512025,
+        "2": 0.21187098409800517
+      }
+    },
+    {
+      "case": "score: severity [listwise]",
+      "cc": false,
+      "state": "The PDF export button does nothing when clicked. I can still export to CSV and convert it myself, but that takes ages.",
+      "jev": 1.0,
+      "ours": 0.6328210209641285,
+      "probabilities": {
+        "0": 0.39294331474952227,
+        "1": 0.581292349536827,
+        "2": 0.025764335713650752
+      }
+    },
+    {
+      "case": "score: severity [listwise]",
+      "cc": true,
+      "state": "The PDF export button does nothing when clicked. I can still export to CSV and convert it myself, but that takes ages.",
+      "jev": 1.0,
+      "ours": 0.44389561693797275,
+      "probabilities": {
+        "0": 0.5668039970340901,
+        "1": 0.42249638899384695,
+        "2": 0.010699613972062904
+      }
+    },
+    {
+      "case": "score: severity",
+      "cc": false,
+      "state": "Export to PDF fails with a spinner that never finishes. Some of our team say CSV export still works for them, others say it fails too.",
+      "jev": 1.11,
+      "ours": 1.046837884201934,
+      "probabilities": {
+        "0": 0.1355026676026197,
+        "1": 0.6821567805928267,
+        "2": 0.18234055180455364
+      }
+    },
+    {
+      "case": "score: severity",
+      "cc": true,
+      "state": "Export to PDF fails with a spinner that never finishes. Some of our team say CSV export still works for them, others say it fails too.",
+      "jev": 1.11,
+      "ours": 1.032066192958475,
+      "probabilities": {
+        "0": 0.18943749677825333,
+        "1": 0.5890588134850183,
+        "2": 0.22150368973672835
+      }
+    },
+    {
+      "case": "score: severity [listwise]",
+      "cc": false,
+      "state": "Export to PDF fails with a spinner that never finishes. Some of our team say CSV export still works for them, others say it fails too.",
+      "jev": 1.11,
+      "ours": 0.9235594145765469,
+      "probabilities": {
+        "0": 0.17348151235653964,
+        "1": 0.729477560710374,
+        "2": 0.09704092693308648
+      }
+    },
+    {
+      "case": "score: severity [listwise]",
+      "cc": true,
+      "state": "Export to PDF fails with a spinner that never finishes. Some of our team say CSV export still works for them, others say it fails too.",
+      "jev": 1.11,
+      "ours": 0.7442068222911334,
+      "probabilities": {
+        "0": 0.30489507936311316,
+        "1": 0.6460030189826403,
+        "2": 0.04910190165424654
+      }
+    },
+    {
+      "case": "score: severity",
+      "cc": false,
+      "state": "The export button crashes the settings page in Safari. It works in Chrome, but a few of our customers only use Safari.",
+      "jev": 1.43,
+      "ours": 1.0176439041969683,
+      "probabilities": {
+        "0": 0.11729112547153583,
+        "1": 0.7477738448599601,
+        "2": 0.13493502966850404
+      }
+    },
+    {
+      "case": "score: severity",
+      "cc": true,
+      "state": "The export button crashes the settings page in Safari. It works in Chrome, but a few of our customers only use Safari.",
+      "jev": 1.43,
+      "ours": 0.9999376349813868,
+      "probabilities": {
+        "0": 0.16842103546568987,
+        "1": 0.6632202940872333,
+        "2": 0.16835867044707675
+      }
+    },
+    {
+      "case": "score: severity [listwise]",
+      "cc": false,
+      "state": "The export button crashes the settings page in Safari. It works in Chrome, but a few of our customers only use Safari.",
+      "jev": 1.43,
+      "ours": 0.9429137503696252,
+      "probabilities": {
+        "0": 0.1637061219845715,
+        "1": 0.7296740056612319,
+        "2": 0.10661987235419668
+      }
+    },
+    {
+      "case": "score: severity [listwise]",
+      "cc": true,
+      "state": "The export button crashes the settings page in Safari. It works in Chrome, but a few of our customers only use Safari.",
+      "jev": 1.43,
+      "ours": 0.7633565481611494,
+      "probabilities": {
+        "0": 0.29125628441027573,
+        "1": 0.6541308830182992,
+        "2": 0.05461283257142506
+      }
+    },
+    {
+      "case": "score: severity",
+      "cc": false,
+      "state": "Nobody on our team can log in since this morning. We get a 500 error on every attempt.",
+      "jev": 2.0,
+      "ours": 1.1348067128919355,
+      "probabilities": {
+        "0": 0.16169937653960123,
+        "1": 0.541794534028862,
+        "2": 0.2965060894315368
+      }
+    },
+    {
+      "case": "score: severity",
+      "cc": true,
+      "state": "Nobody on our team can log in since this morning. We get a 500 error on every attempt.",
+      "jev": 2.0,
+      "ours": 1.1272439287890084,
+      "probabilities": {
+        "0": 0.21445840857192228,
+        "1": 0.4438392540671469,
+        "2": 0.34170233736093075
+      }
+    },
+    {
+      "case": "score: severity [listwise]",
+      "cc": false,
+      "state": "Nobody on our team can log in since this morning. We get a 500 error on every attempt.",
+      "jev": 2.0,
+      "ours": 0.9425804502523938,
+      "probabilities": {
+        "0": 0.3060610466863365,
+        "1": 0.4452974563749333,
+        "2": 0.24864149693873028
+      }
+    },
+    {
+      "case": "score: severity [listwise]",
+      "cc": true,
+      "state": "Nobody on our team can log in since this morning. We get a 500 error on every attempt.",
+      "jev": 2.0,
+      "ours": 0.6105180457850293,
+      "probabilities": {
+        "0": 0.5083890959444718,
+        "1": 0.37270376232602714,
+        "2": 0.11890714172950109
+      }
+    },
+    {
+      "case": "score: severity, numbers-only levels",
+      "cc": false,
+      "state": "The export button is misaligned by a few pixels on the settings page.",
+      "jev": 0.55,
+      "ours": 1.8231180631633392,
+      "probabilities": {
+        "0": 0.06084439016517948,
+        "1": 0.05519315650630175,
+        "2": 0.8839624533285187
+      }
+    },
+    {
+      "case": "score: severity, numbers-only levels",
+      "cc": true,
+      "state": "The export button is misaligned by a few pixels on the settings page.",
+      "jev": 0.55,
+      "ours": 1.606970155430624,
+      "probabilities": {
+        "0": 0.1075462992856793,
+        "1": 0.1779372459980173,
+        "2": 0.7145164547163033
+      }
+    },
+    {
+      "case": "score: severity, numbers-only levels [listwise]",
+      "cc": false,
+      "state": "The export button is misaligned by a few pixels on the settings page.",
+      "jev": 0.55,
+      "ours": 1.5362945503906293,
+      "probabilities": {
+        "0": 0.03467772417340877,
+        "1": 0.3943500012625528,
+        "2": 0.5709722745640383
+      }
+    },
+    {
+      "case": "score: severity, numbers-only levels [listwise]",
+      "cc": true,
+      "state": "The export button is misaligned by a few pixels on the settings page.",
+      "jev": 0.55,
+      "ours": 1.1386917612348992,
+      "probabilities": {
+        "0": 0.19474121435657035,
+        "1": 0.47182581005196,
+        "2": 0.3334329755914696
+      }
+    },
+    {
+      "case": "score: python experience",
+      "cc": false,
+      "state": "My experience is in Java and Go. I have not used Python.",
+      "jev": 0.0,
+      "ours": 2.1361316920380373,
+      "probabilities": {
+        "0": 0.03528888484340853,
+        "1": 0.2131387274965486,
+        "2": 0.33172419843863976,
+        "3": 0.4198481892214031
+      }
+    },
+    {
+      "case": "score: python experience",
+      "cc": true,
+      "state": "My experience is in Java and Go. I have not used Python.",
+      "jev": 0.0,
+      "ours": 1.8323782619083397,
+      "probabilities": {
+        "0": 0.08455199649492069,
+        "1": 0.283421841001166,
+        "2": 0.3471220666045662,
+        "3": 0.2849040958993471
+      }
+    },
+    {
+      "case": "score: python experience [listwise]",
+      "cc": false,
+      "state": "My experience is in Java and Go. I have not used Python.",
+      "jev": 0.0,
+      "ours": 1.7305048326085155,
+      "probabilities": {
+        "0": 0.07082496746624277,
+        "1": 0.2626149374459444,
+        "2": 0.5317903901008673,
+        "3": 0.13476970498694552
+      }
+    },
+    {
+      "case": "score: python experience [listwise]",
+      "cc": true,
+      "state": "My experience is in Java and Go. I have not used Python.",
+      "jev": 0.0,
+      "ours": 1.3205658454257254,
+      "probabilities": {
+        "0": 0.1325418548656404,
+        "1": 0.5471640889792913,
+        "2": 0.1874804120187711,
+        "3": 0.13281364413629734
+      }
+    },
+    {
+      "case": "score: python experience",
+      "cc": false,
+      "state": "I have used Python occasionally for small scripts alongside my main Java work.",
+      "jev": 1.0,
+      "ours": 2.1289492365202474,
+      "probabilities": {
+        "0": 0.008870287107223051,
+        "1": 0.14494873931075564,
+        "2": 0.5545424235365721,
+        "3": 0.2916385500454492
+      }
+    },
+    {
+      "case": "score: python experience",
+      "cc": true,
+      "state": "I have used Python occasionally for small scripts alongside my main Java work.",
+      "jev": 1.0,
+      "ours": 1.962355991161476,
+      "probabilities": {
+        "0": 0.021420573091543858,
+        "1": 0.19426424076571397,
+        "2": 0.5848538080324642,
+        "3": 0.1994613781102779
+      }
+    },
+    {
+      "case": "score: python experience [listwise]",
+      "cc": false,
+      "state": "I have used Python occasionally for small scripts alongside my main Java work.",
+      "jev": 1.0,
+      "ours": 1.4330052151853439,
+      "probabilities": {
+        "0": 0.013351085788134334,
+        "1": 0.5607937837325476,
+        "2": 0.4053539599851579,
+        "3": 0.02050117049416017
+      }
+    },
+    {
+      "case": "score: python experience [listwise]",
+      "cc": true,
+      "state": "I have used Python occasionally for small scripts alongside my main Java work.",
+      "jev": 1.0,
+      "ours": 1.11671606785949,
+      "probabilities": {
+        "0": 0.018418604520400467,
+        "1": 0.8613404212842954,
+        "2": 0.1053472760107177,
+        "3": 0.014893698184586386
+      }
+    },
+    {
+      "case": "score: python experience",
+      "cc": false,
+      "state": "I used Python every day for two years in my last job, mostly data pipelines.",
+      "jev": 2.05,
+      "ours": 2.0707347560109417,
+      "probabilities": {
+        "0": 0.006008805746378922,
+        "1": 0.04630982117939095,
+        "2": 0.8186191843911395,
+        "3": 0.1290621886830907
+      }
+    },
+    {
+      "case": "score: python experience",
+      "cc": true,
+      "state": "I used Python every day for two years in my last job, mostly data pipelines.",
+      "jev": 2.05,
+      "ours": 1.9972606099968169,
+      "probabilities": {
+        "0": 0.014112347424677688,
+        "1": 0.060362777241063946,
+        "2": 0.8396767932470222,
+        "3": 0.08584808208723622
+      }
+    },
+    {
+      "case": "score: python experience [listwise]",
+      "cc": false,
+      "state": "I used Python every day for two years in my last job, mostly data pipelines.",
+      "jev": 2.05,
+      "ours": 1.8600418821238738,
+      "probabilities": {
+        "0": 0.003914028240321819,
+        "1": 0.14849368692145268,
+        "2": 0.8312286593122554,
+        "3": 0.016363625525970055
+      }
+    },
+    {
+      "case": "score: python experience [listwise]",
+      "cc": true,
+      "state": "I used Python every day for two years in my last job, mostly data pipelines.",
+      "jev": 2.05,
+      "ours": 1.5080369144981942,
+      "probabilities": {
+        "0": 0.011702935176858487,
+        "1": 0.4943224515698195,
+        "2": 0.4682093768315911,
+        "3": 0.025765236421730824
+      }
+    },
+    {
+      "case": "score: python experience",
+      "cc": false,
+      "state": "I have written Python daily for eight years, including maintaining a large Django codebase.",
+      "jev": 2.89,
+      "ours": 2.3576251387629,
+      "probabilities": {
+        "0": 0.01518019091307248,
+        "1": 0.10422873622799482,
+        "2": 0.388376816041893,
+        "3": 0.4922142568170396
+      }
+    },
+    {
+      "case": "score: python experience",
+      "cc": true,
+      "state": "I have written Python daily for eight years, including maintaining a large Django codebase.",
+      "jev": 2.89,
+      "ours": 2.1340081247136213,
+      "probabilities": {
+        "0": 0.03973371773480258,
+        "1": 0.15140996342567914,
+        "2": 0.44397079523061245,
+        "3": 0.36488552360890575
+      }
+    },
+    {
+      "case": "score: python experience [listwise]",
+      "cc": false,
+      "state": "I have written Python daily for eight years, including maintaining a large Django codebase.",
+      "jev": 2.89,
+      "ours": 1.9399616833788464,
+      "probabilities": {
+        "0": 0.01556678281371725,
+        "1": 0.22533183638011403,
+        "2": 0.5626742954197738,
+        "3": 0.19642708538639497
+      }
+    },
+    {
+      "case": "score: python experience [listwise]",
+      "cc": true,
+      "state": "I have written Python daily for eight years, including maintaining a large Django codebase.",
+      "jev": 2.89,
+      "ours": 1.624762950230556,
+      "probabilities": {
+        "0": 0.032711637472447944,
+        "1": 0.5271782394388181,
+        "2": 0.22274565847446415,
+        "3": 0.21736446461426984
+      }
+    },
+    {
+      "case": "score: frustration",
+      "cc": false,
+      "state": "Help! My payouts have been failing for 3 days.",
+      "jev": 1.05,
+      "ours": 1.0214336862328726,
+      "probabilities": {
+        "0": 0.09661773379058917,
+        "1": 0.7853308461859488,
+        "2": 0.1180514200234619
+      }
+    },
+    {
+      "case": "score: frustration",
+      "cc": true,
+      "state": "Help! My payouts have been failing for 3 days.",
+      "jev": 1.05,
+      "ours": 0.9629651471042893,
+      "probabilities": {
+        "0": 0.20483612697629025,
+        "1": 0.6273625989431304,
+        "2": 0.1678012740805794
+      }
+    },
+    {
+      "case": "score: frustration [listwise]",
+      "cc": false,
+      "state": "Help! My payouts have been failing for 3 days.",
+      "jev": 1.05,
+      "ours": 0.9908271135736129,
+      "probabilities": {
+        "0": 0.009532341542605013,
+        "1": 0.9901082033411772,
+        "2": 0.0003594551162178396
+      }
+    },
+    {
+      "case": "score: frustration [listwise]",
+      "cc": true,
+      "state": "Help! My payouts have been failing for 3 days.",
+      "jev": 1.05,
+      "ours": 0.5263791229576015,
+      "probabilities": {
+        "0": 0.5250544843522655,
+        "1": 0.42351190833786734,
+        "2": 0.05143360730986705
+      }
+    },
+    {
+      "case": "choice: department",
+      "cc": false,
+      "state": "My running shoes arrived in the wrong size. Can I swap them for a size 10?",
+      "jev": "returns",
+      "ours": "returns",
+      "probabilities": {
+        "returns": 0.9329458838224423,
+        "shipping": 0.01850522396061091,
+        "billing": 0.048548892216946755
+      }
+    },
+    {
+      "case": "choice: department",
+      "cc": true,
+      "state": "My running shoes arrived in the wrong size. Can I swap them for a size 10?",
+      "jev": "returns",
+      "ours": "returns",
+      "probabilities": {
+        "returns": 0.930735333223909,
+        "shipping": 0.003684535083941673,
+        "billing": 0.06558013169214927
+      }
+    },
+    {
+      "case": "choice: department [pointwise]",
+      "cc": false,
+      "state": "My running shoes arrived in the wrong size. Can I swap them for a size 10?",
+      "jev": "returns",
+      "ours": "returns",
+      "probabilities": {
+        "returns": 0.4586867419869157,
+        "shipping": 0.27548715042772093,
+        "billing": 0.26582610758536335
+      }
+    },
+    {
+      "case": "choice: department [pointwise]",
+      "cc": true,
+      "state": "My running shoes arrived in the wrong size. Can I swap them for a size 10?",
+      "jev": "returns",
+      "ours": "returns",
+      "probabilities": {
+        "returns": 0.42124728193441063,
+        "shipping": 0.2944905086994367,
+        "billing": 0.2842622093661527
+      }
+    },
+    {
+      "case": "choice: department",
+      "cc": false,
+      "state": "Help! My payouts have been failing for 3 days.",
+      "jev": "billing",
+      "ours": "technical",
+      "probabilities": {
+        "billing": 0.05069278508033108,
+        "technical": 0.9289593422729003,
+        "sales": 0.020347872646768444
+      }
+    },
+    {
+      "case": "choice: department",
+      "cc": true,
+      "state": "Help! My payouts have been failing for 3 days.",
+      "jev": "billing",
+      "ours": "technical",
+      "probabilities": {
+        "billing": 0.0830025665033309,
+        "technical": 0.8790042201220842,
+        "sales": 0.03799321337458487
+      }
+    },
+    {
+      "case": "choice: department [pointwise]",
+      "cc": false,
+      "state": "Help! My payouts have been failing for 3 days.",
+      "jev": "billing",
+      "ours": "billing",
+      "probabilities": {
+        "billing": 0.42108617093326123,
+        "technical": 0.38177879820899724,
+        "sales": 0.19713503085774153
+      }
+    },
+    {
+      "case": "choice: department [pointwise]",
+      "cc": true,
+      "state": "Help! My payouts have been failing for 3 days.",
+      "jev": "billing",
+      "ours": "billing",
+      "probabilities": {
+        "billing": 0.40595811023563955,
+        "technical": 0.3583544042425304,
+        "sales": 0.23568748552182997
+      }
+    },
+    {
+      "case": "choice: department",
+      "cc": false,
+      "state": "Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?",
+      "jev": "returns",
+      "ours": "billing",
+      "probabilities": {
+        "returns": 0.007426938899337869,
+        "shipping": 0.033624265773363075,
+        "billing": 0.958948795327299
+      }
+    },
+    {
+      "case": "choice: department",
+      "cc": true,
+      "state": "Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?",
+      "jev": "returns",
+      "ours": "billing",
+      "probabilities": {
+        "returns": 0.005658327140049525,
+        "shipping": 0.005112691803905254,
+        "billing": 0.9892289810560452
+      }
+    },
+    {
+      "case": "choice: department [pointwise]",
+      "cc": false,
+      "state": "Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?",
+      "jev": "returns",
+      "ours": "returns",
+      "probabilities": {
+        "returns": 0.38006026177816704,
+        "shipping": 0.251671184584819,
+        "billing": 0.36826855363701394
+      }
+    },
+    {
+      "case": "choice: department [pointwise]",
+      "cc": true,
+      "state": "Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?",
+      "jev": "returns",
+      "ours": "billing",
+      "probabilities": {
+        "returns": 0.3449407551389668,
+        "shipping": 0.2658732051093654,
+        "billing": 0.3891860397516678
+      }
+    },
+    {
+      "case": "choice: return reason",
+      "cc": false,
+      "state": "Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?",
+      "jev": "wrong_size",
+      "ours": "wrong_item",
+      "probabilities": {
+        "wrong_size": 0.2585589886684669,
+        "wrong_item": 0.2601184588240353,
+        "damaged": 0.11909063872445556,
+        "changed_mind": 0.18560262353614393,
+        "other": 0.17662929024689836
+      }
+    },
+    {
+      "case": "choice: return reason",
+      "cc": true,
+      "state": "Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?",
+      "jev": "wrong_size",
+      "ours": "wrong_size",
+      "probabilities": {
+        "wrong_size": 0.5631694043912541,
+        "wrong_item": 0.12990388222024485,
+        "damaged": 0.06643856741784095,
+        "changed_mind": 0.12499552421363216,
+        "other": 0.11549262175702787
+      }
+    },
+    {
+      "case": "choice: return reason [pointwise]",
+      "cc": false,
+      "state": "Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?",
+      "jev": "wrong_size",
+      "ours": "damaged",
+      "probabilities": {
+        "wrong_size": 0.22390020672128336,
+        "wrong_item": 0.21715312722809757,
+        "damaged": 0.23319269285184702,
+        "changed_mind": 0.22259719570557804,
+        "other": 0.10315677749319394
+      }
+    },
+    {
+      "case": "choice: return reason [pointwise]",
+      "cc": true,
+      "state": "Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?",
+      "jev": "wrong_size",
+      "ours": "wrong_item",
+      "probabilities": {
+        "wrong_size": 0.25905184498619827,
+        "wrong_item": 0.2932303352956089,
+        "damaged": 0.12917972383657453,
+        "changed_mind": 0.11556595726584423,
+        "other": 0.2029721386157741
+      }
+    },
+    {
+      "case": "choice: shipping issue",
+      "cc": false,
+      "state": "Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?",
+      "jev": "delayed",
+      "ours": "delayed",
+      "probabilities": {
+        "not_delivered": 0.12762561148442123,
+        "delayed": 0.6431297187888202,
+        "wrong_address": 0.11276425037265894,
+        "damaged_in_transit": 0.06462684526617797,
+        "other": 0.05185357408792161
+      }
+    },
+    {
+      "case": "choice: shipping issue",
+      "cc": true,
+      "state": "Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?",
+      "jev": "delayed",
+      "ours": "wrong_address",
+      "probabilities": {
+        "not_delivered": 0.21907256835860217,
+        "delayed": 0.2894925651686015,
+        "wrong_address": 0.3458056336151333,
+        "damaged_in_transit": 0.0917423852290961,
+        "other": 0.053886847628566964
+      }
+    },
+    {
+      "case": "choice: shipping issue [pointwise]",
+      "cc": false,
+      "state": "Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?",
+      "jev": "delayed",
+      "ours": "delayed",
+      "probabilities": {
+        "not_delivered": 0.1645892454813022,
+        "delayed": 0.35161846463383467,
+        "wrong_address": 0.20975406601728824,
+        "damaged_in_transit": 0.20153958954814521,
+        "other": 0.07249863431942968
+      }
+    },
+    {
+      "case": "choice: shipping issue [pointwise]",
+      "cc": true,
+      "state": "Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?",
+      "jev": "delayed",
+      "ours": "delayed",
+      "probabilities": {
+        "not_delivered": 0.19563825174592536,
+        "delayed": 0.27825078609991866,
+        "wrong_address": 0.24696239656807023,
+        "damaged_in_transit": 0.13675275830653044,
+        "other": 0.14239580727955528
+      }
+    },
+    {
+      "case": "choice: resolution",
+      "cc": false,
+      "state": "Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?",
+      "jev": "refund",
+      "ours": "refund",
+      "probabilities": {
+        "exchange": 0.07119607007142592,
+        "refund": 0.6058402566417247,
+        "replacement": 0.24690853455624087,
+        "information": 0.07605513873060857
+      }
+    },
+    {
+      "case": "choice: resolution",
+      "cc": true,
+      "state": "Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?",
+      "jev": "refund",
+      "ours": "refund",
+      "probabilities": {
+        "exchange": 0.02639802382939409,
+        "refund": 0.38419101955883805,
+        "replacement": 0.365833472344317,
+        "information": 0.22357748426745075
+      }
+    },
+    {
+      "case": "choice: resolution [pointwise]",
+      "cc": false,
+      "state": "Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?",
+      "jev": "refund",
+      "ours": "refund",
+      "probabilities": {
+        "exchange": 0.2216545889020123,
+        "refund": 0.41365098431138086,
+        "replacement": 0.29107444409289024,
+        "information": 0.07361998269371664
+      }
+    },
+    {
+      "case": "choice: resolution [pointwise]",
+      "cc": true,
+      "state": "Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?",
+      "jev": "refund",
+      "ours": "replacement",
+      "probabilities": {
+        "exchange": 0.21938867778738794,
+        "refund": 0.30239395200821473,
+        "replacement": 0.35152114415575614,
+        "information": 0.12669622604864111
+      }
+    },
+    {
+      "case": "choice: tone",
+      "cc": false,
+      "state": "Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?",
+      "jev": "frustrated",
+      "ours": "frustrated",
+      "probabilities": {
+        "calm": 0.05338902038314253,
+        "frustrated": 0.9182128709689485,
+        "angry": 0.028398108647908864
+      }
+    },
+    {
+      "case": "choice: tone",
+      "cc": true,
+      "state": "Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?",
+      "jev": "frustrated",
+      "ours": "frustrated",
+      "probabilities": {
+        "calm": 0.0482561110811724,
+        "frustrated": 0.9497966364384142,
+        "angry": 0.001947252480413514
+      }
+    },
+    {
+      "case": "choice: tone [pointwise]",
+      "cc": false,
+      "state": "Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?",
+      "jev": "frustrated",
+      "ours": "frustrated",
+      "probabilities": {
+        "calm": 0.12560747311707107,
+        "frustrated": 0.7848694863919654,
+        "angry": 0.08952304049096352
+      }
+    },
+    {
+      "case": "choice: tone [pointwise]",
+      "cc": true,
+      "state": "Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?",
+      "jev": "frustrated",
+      "ours": "frustrated",
+      "probabilities": {
+        "calm": 0.09551264056725757,
+        "frustrated": 0.6995824447682253,
+        "angry": 0.20490491466451713
+      }
+    },
+    {
+      "case": "choice: yes/no refund (jaggedness)",
+      "cc": false,
+      "state": "I'm not happy with the fit. What are my options here?",
+      "jev": "no",
+      "ours": "yes",
+      "probabilities": {
+        "yes": 0.5031931860236519,
+        "no": 0.4968068139763481
+      }
+    },
+    {
+      "case": "choice: yes/no refund (jaggedness)",
+      "cc": true,
+      "state": "I'm not happy with the fit. What are my options here?",
+      "jev": "no",
+      "ours": "yes",
+      "probabilities": {
+        "yes": 0.6831599753237428,
+        "no": 0.31684002467625716
+      }
+    },
+    {
+      "case": "choice: yes/no refund (jaggedness) [pointwise]",
+      "cc": false,
+      "state": "I'm not happy with the fit. What are my options here?",
+      "jev": "no",
+      "ours": "yes",
+      "probabilities": {
+        "yes": 0.888530813753702,
+        "no": 0.11146918624629788
+      }
+    },
+    {
+      "case": "choice: yes/no refund (jaggedness) [pointwise]",
+      "cc": true,
+      "state": "I'm not happy with the fit. What are my options here?",
+      "jev": "no",
+      "ours": "no",
+      "probabilities": {
+        "yes": 0.470047854412366,
+        "no": 0.5299521455876339
+      }
+    }
+  ],
+  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "seconds_total": 41.7039616359998
+}

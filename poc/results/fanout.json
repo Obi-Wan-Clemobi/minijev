@@ -1,0 +1,84 @@
+{
+  "rows": [
+    {
+      "questions": 1,
+      "generate_per_question": {
+        "seconds": 2.478070397999545,
+        "output_tokens": 2,
+        "parse_failures": 0,
+        "agrees_with_readout": 1.0
+      },
+      "generate_per_question_cached": {
+        "seconds": 2.48245150799994,
+        "output_tokens": 2,
+        "parse_failures": 0,
+        "agrees_with_readout": 1.0,
+        "agrees_with_uncached": 1.0
+      },
+      "generate_one_json": {
+        "seconds": 3.936752048000926,
+        "output_tokens": 11,
+        "parse_failures": 0,
+        "agrees_with_readout": 1.0
+      },
+      "readout_packed": {
+        "seconds": 2.283133151999209,
+        "input_tokens": 619
+      }
+    },
+    {
+      "questions": 4,
+      "generate_per_question": {
+        "seconds": 9.071029484999599,
+        "output_tokens": 8,
+        "parse_failures": 0,
+        "agrees_with_readout": 1.0
+      },
+      "generate_per_question_cached": {
+        "seconds": 3.482354599997052,
+        "output_tokens": 8,
+        "parse_failures": 0,
+        "agrees_with_readout": 1.0,
+        "agrees_with_uncached": 1.0
+      },
+      "generate_one_json": {
+        "seconds": 8.018625655000506,
+        "output_tokens": 35,
+        "parse_failures": 0,
+        "agrees_with_readout": 0.5
+      },
+      "readout_packed": {
+        "seconds": 2.6692936350009404,
+        "input_tokens": 748
+      }
+    },
+    {
+      "questions": 13,
+      "generate_per_question": {
+        "seconds": 30.952844052000728,
+        "output_tokens": 33,
+        "parse_failures": 0,
+        "agrees_with_readout": 0.6923076923076923
+      },
+      "generate_per_question_cached": {
+        "seconds": 8.96417192700028,
+        "output_tokens": 33,
+        "parse_failures": 0,
+        "agrees_with_readout": 0.6923076923076923,
+        "agrees_with_uncached": 1.0
+      },
+      "generate_one_json": {
+        "seconds": 28.85916097399968,
+        "output_tokens": 124,
+        "parse_failures": 2,
+        "agrees_with_readout": 0.6153846153846154
+      },
+      "readout_packed": {
+        "seconds": 6.269386113999644,
+        "input_tokens": 1371
+      }
+    }
+  ],
+  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "seconds_total": 111.20514936299878
+}

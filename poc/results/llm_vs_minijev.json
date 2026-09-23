@@ -1,0 +1,2891 @@
+{
+  "n": 120,
+  "single_decision": {
+    "readout (minijev)": {
+      "accuracy": 0.8833333333333333,
+      "ece": 0.09970439679956102,
+      "brier": 0.19881914177804544,
+      "n": 120,
+      "parse_failures": 0,
+      "mean_s": 0.44420377400844396,
+      "output_tokens": 0
+    },
+    "generate label": {
+      "accuracy": 0.9083333333333333,
+      "ece": null,
+      "brier": null,
+      "n": 120,
+      "parse_failures": 0,
+      "mean_s": 0.7105408570085577,
+      "output_tokens": 3.125
+    },
+    "readout (minijev), first 60": {
+      "accuracy": 0.8833333333333333,
+      "ece": 0.11364373549029905,
+      "brier": 0.21042730272576932,
+      "n": 60,
+      "parse_failures": 0,
+      "mean_s": 0.4479615843168479,
+      "output_tokens": 0
+    },
+    "generate JSON probabilities": {
+      "accuracy": 0.2,
+      "ece": 0.05934464404524285,
+      "brier": 0.6546451089836296,
+      "n": 60,
+      "parse_failures": 44,
+      "mean_s": 3.134076864333171,
+      "output_tokens": 19.866666666666667
+    }
+  },
+  "label_vs_readout_agreement": 0.9416666666666667,
+  "generation_costs": {
+    "fixed_ms": -200.1577891713962,
+    "ms_per_prompt_token": 3.3137987888728104,
+    "ms_per_generated_token": 140.48102562488953,
+    "readout_ms_per_input_token": 3.0730112349252434
+  },
+  "fan_out": [
+    {
+      "questions": 1,
+      "generate_per_question": {
+        "seconds": 2.245444429001509,
+        "output_tokens": 2,
+        "parse_failures": 0,
+        "agrees_with_readout": 1.0
+      },
+      "generate_one_json": {
+        "seconds": 3.789188924998598,
+        "output_tokens": 11,
+        "parse_failures": 0,
+        "agrees_with_readout": 1.0
+      },
+      "readout_packed": {
+        "seconds": 2.0195070290028525,
+        "input_tokens": 619
+      }
+    },
+    {
+      "questions": 4,
+      "generate_per_question": {
+        "seconds": 8.81604362500002,
+        "output_tokens": 8,
+        "parse_failures": 0,
+        "agrees_with_readout": 1.0
+      },
+      "generate_one_json": {
+        "seconds": 7.639693139000883,
+        "output_tokens": 35,
+        "parse_failures": 0,
+        "agrees_with_readout": 0.5
+      },
+      "readout_packed": {
+        "seconds": 2.307649403999676,
+        "input_tokens": 748
+      }
+    },
+    {
+      "questions": 13,
+      "generate_per_question": {
+        "seconds": 27.32199395200223,
+        "output_tokens": 33,
+        "parse_failures": 0,
+        "agrees_with_readout": 0.6923076923076923
+      },
+      "generate_one_json": {
+        "seconds": 27.28758239200033,
+        "output_tokens": 124,
+        "parse_failures": 2,
+        "agrees_with_readout": 0.6153846153846154
+      },
+      "readout_packed": {
+        "seconds": 5.336087072999362,
+        "input_tokens": 1371
+      }
+    }
+  ],
+  "rows": [
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          2.3239298908423823e-05,
+          0.9999665234329164,
+          7.646162086420186e-06,
+          2.5911060888121027e-06
+        ],
+        "seconds": 0.4198357319983188,
+        "input_tokens": 131
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.5122818210002151,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": [
+          0.0,
+          0.9333333333333333,
+          0.0,
+          0.0
+        ],
+        "text": "{\"Sport\": 0.9333333333333333, \"Business\": 0.0, \"Technology\": 0.0, \"World\": 0.0, \"Sports\": 0.9333333333333333}",
+        "seconds": 10.225440549998893,
+        "new_tokens": 71,
+        "raw_sum": 0.9333333333333333
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          9.203709908350646e-06,
+          0.9999782741584431,
+          7.3992122745464376e-06,
+          5.122919374000629e-06
+        ],
+        "seconds": 0.46303965900006006,
+        "input_tokens": 138
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.5488978989997122,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": [
+          0.001,
+          0.0,
+          0.001,
+          0.001
+        ],
+        "text": "{\"Sport\": 0.999, \"Business\": 0.001, \"Technology\": 0.001, \"World\": 0.001}",
+        "seconds": 6.191062010999303,
+        "new_tokens": 41,
+        "raw_sum": 0.003
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          0.0001642818377548795,
+          8.330099975356159e-05,
+          2.2261899132240808e-05,
+          0.9997301552633593
+        ],
+        "seconds": 0.798647338997398,
+        "input_tokens": 266
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.9999812780006323,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Technology\", \"probability\": 0.7}",
+        "seconds": 2.9866726770014793,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          0.36462939756930196,
+          0.008375015229439661,
+          0.04199434363618984,
+          0.5850012435650684
+        ],
+        "seconds": 0.40935797699785326,
+        "input_tokens": 142
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.5812843359999533,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"World\", \"probability\": 0.8}",
+        "seconds": 2.509717973000079,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          0.0001619006740484544,
+          4.484326285506128e-05,
+          7.48400509154094e-06,
+          0.9997857720580049
+        ],
+        "seconds": 0.38533298399852356,
+        "input_tokens": 119
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.5242116340014036,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Technology\", \"probability\": 0.7}",
+        "seconds": 2.402421119000792,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          2.9027515970386888e-05,
+          0.9999591033480619,
+          7.910640326463159e-06,
+          3.9584956411352754e-06
+        ],
+        "seconds": 0.5968181809985253,
+        "input_tokens": 208
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.7557833889986796,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Sports\", \"probability\": 0.9}",
+        "seconds": 2.803090448000148,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.9990139359033566,
+          0.00019920612737073828,
+          0.00023405114837540434,
+          0.0005528068208972987
+        ],
+        "seconds": 0.3645167040012893,
+        "input_tokens": 121
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.4867246020003222,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"World\", \"probability\": 0.7}",
+        "seconds": 2.507010426001216,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          1.4240701331243191e-05,
+          0.9999693860067694,
+          9.089969091017708e-06,
+          7.2833228082955196e-06
+        ],
+        "seconds": 0.44568907100256183,
+        "input_tokens": 138
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.5375272570017842,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Sports\", \"probability\": 0.5}",
+        "seconds": 2.461283093998645,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          0.0003236257778645629,
+          0.9995996839840487,
+          2.533643894157289e-05,
+          5.135379914515632e-05
+        ],
+        "seconds": 0.4559764499972516,
+        "input_tokens": 158
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.5800067300006049,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": [
+          0.999,
+          0.001,
+          0.001,
+          0.001
+        ],
+        "text": "{\"World\": 0.999, \"Sports\": 0.001, \"Business\": 0.001, \"Technology\": 0.001}",
+        "seconds": 6.364058818999183,
+        "new_tokens": 41,
+        "raw_sum": 1.002
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          4.84922062852088e-05,
+          4.514680340090981e-05,
+          7.954579140863147e-06,
+          0.999898406411173
+        ],
+        "seconds": 0.39290335699843126,
+        "input_tokens": 133
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.5194132610013185,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Technology\", \"probability\": 0.7}",
+        "seconds": 2.4289289259977522,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          7.83547418789855e-06,
+          0.9999793850502336,
+          8.180085680700332e-06,
+          4.599389897826004e-06
+        ],
+        "seconds": 0.5953977749995829,
+        "input_tokens": 177
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.6383647410002595,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": [
+          0.0,
+          0.9999999999999999,
+          0.0,
+          0.0
+        ],
+        "text": "{\"Sports\": 0.9999999999999999}",
+        "seconds": 3.862186035999912,
+        "new_tokens": 24,
+        "raw_sum": 0.9999999999999999
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          1.1098528170846371e-05,
+          1.8561560853261478e-05,
+          0.9998480644769668,
+          0.00012227543400909456
+        ],
+        "seconds": 0.4844440879969625,
+        "input_tokens": 138
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business: Business, companies and the economy",
+        "seconds": 1.5591079929981788,
+        "new_tokens": 9
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"business\": 0.98, \"technology\": 0.02}",
+        "seconds": 3.081759991000581,
+        "new_tokens": 19,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          2.697354789722571e-05,
+          0.9999566946655903,
+          1.1327704705149971e-05,
+          5.004081807239967e-06
+        ],
+        "seconds": 0.39653718400222715,
+        "input_tokens": 138
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.5616299089997483,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": [
+          0.0,
+          0.9,
+          0.0,
+          0.0
+        ],
+        "text": "{\"Sports\": 0.9}",
+        "seconds": 1.6106408400009968,
+        "new_tokens": 9,
+        "raw_sum": 0.9
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          9.88506227852789e-05,
+          4.556650463907406e-05,
+          5.866921586913897e-06,
+          0.9998497159509888
+        ],
+        "seconds": 0.44113861300138524,
+        "input_tokens": 141
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.5354361659992719,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Technology\", \"probability\": 0.7}",
+        "seconds": 2.445029403999797,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          0.00034631477152937675,
+          0.9994776588504024,
+          5.460775171693544e-05,
+          0.00012141862635134782
+        ],
+        "seconds": 0.49618011499842396,
+        "input_tokens": 177
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.6421884150004189,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Sports\", \"probability\": 0.9}",
+        "seconds": 2.5974586410011398,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.9972647581892988,
+          0.0002096338634562719,
+          8.286828163766652e-05,
+          0.0024427396656072106
+        ],
+        "seconds": 0.4600428390003799,
+        "input_tokens": 154
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.6442925470000773,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"STATE\": \"World: World news, politics and international affairs\", \"Options\": {\"Sports\": 0, \"Business\": 0, \"Technology\": 0}}",
+        "seconds": 5.545342895999056,
+        "new_tokens": 36,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          0.024675305347873405,
+          0.0009029734005158248,
+          0.0002941908904000706,
+          0.9741275303612106
+        ],
+        "seconds": 0.3692521470002248,
+        "input_tokens": 128
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.5181765420020383,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"World\", \"probability\": 0.7}",
+        "seconds": 2.335556797999743,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.9814849542778086,
+          0.002166186327369217,
+          0.00030920036463835405,
+          0.01603965903018398
+        ],
+        "seconds": 0.6095634619996417,
+        "input_tokens": 158
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.733284571000695,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"STATE\": \"World: World news, politics and international affairs}, {\"Probability\": 0.8}}",
+        "seconds": 3.633843560997775,
+        "new_tokens": 23,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          1.1195006493395008e-05,
+          1.568125132952151e-05,
+          0.9999399748098459,
+          3.314893233121064e-05
+        ],
+        "seconds": 0.6222927779999736,
+        "input_tokens": 139
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business",
+        "seconds": 0.6572497689994634,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Business\", \"probability\": 0.7}",
+        "seconds": 2.4863578129989037,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          1.8386975570270712e-05,
+          6.399691936900972e-05,
+          1.8839855721760074e-05,
+          0.999898776249339
+        ],
+        "seconds": 0.44441422000090824,
+        "input_tokens": 113
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology: Science and technology",
+        "seconds": 1.112908779999998,
+        "new_tokens": 6
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Technology\", \"probability\": 0.7}",
+        "seconds": 2.391154415996425,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.2627738444461894,
+          0.0012196074547708355,
+          0.7247134337835139,
+          0.011293114315525916
+        ],
+        "seconds": 0.5502712989982683,
+        "input_tokens": 137
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.6440763089995016,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"World\", \"probability\": 0.8}",
+        "seconds": 2.5335410420011613,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          0.00019742331413719673,
+          0.00013167743549927902,
+          0.0011705470214586932,
+          0.9985003522289048
+        ],
+        "seconds": 0.5870291060018644,
+        "input_tokens": 151
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.717910296003538,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": [
+          0.0,
+          0.0,
+          0.0,
+          0.9
+        ],
+        "text": "{\"Technology\": 0.9}",
+        "seconds": 1.7947184429976915,
+        "new_tokens": 9,
+        "raw_sum": 0.9
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          0.09568966297652147,
+          0.9015092928550041,
+          0.00016603633022462794,
+          0.002635007838249776
+        ],
+        "seconds": 0.5220653920005134,
+        "input_tokens": 133
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.6317690709984163,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Sports\", \"probability\": 0.7}",
+        "seconds": 2.48343382800158,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.9947683337519816,
+          0.000520273597292112,
+          0.0002432661785215979,
+          0.004468126472204581
+        ],
+        "seconds": 1.0345352570002433,
+        "input_tokens": 128
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.7501109719996748,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"World\", \"probability\": 0.9}",
+        "seconds": 2.539187755999592,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          0.00037691987488952023,
+          0.00041715816051617126,
+          9.604661891736768e-05,
+          0.9991098753456771
+        ],
+        "seconds": 0.5970524839976861,
+        "input_tokens": 143
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology: Science and technology",
+        "seconds": 1.1318456970002444,
+        "new_tokens": 6
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Technology\", \"probability\": 0.7}",
+        "seconds": 2.4414181709980767,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          2.691644193037086e-05,
+          0.9999583118694682,
+          8.283762141081228e-06,
+          6.487926460296701e-06
+        ],
+        "seconds": 0.35948643400115543,
+        "input_tokens": 120
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.5246678600015002,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        "text": "{\"Sports\": 1}",
+        "seconds": 1.28416854399984,
+        "new_tokens": 7,
+        "raw_sum": 1.0
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          4.848053293361405e-06,
+          9.606371500365678e-06,
+          0.9999782223353929,
+          7.323239813284992e-06
+        ],
+        "seconds": 0.41664333600056125,
+        "input_tokens": 136
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business",
+        "seconds": 0.5113394260006316,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Business\", \"probability\": 0.7}",
+        "seconds": 2.5037176299993007,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.2112691727382364,
+          0.009258523894769673,
+          0.005351150567397425,
+          0.7741211527995965
+        ],
+        "seconds": 0.5924506490009662,
+        "input_tokens": 152
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.5883327359988471,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": [
+          0.9,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "text": "{\"STATE\": \"Suspect charged in abduction, sexual assault of 11-year-old girl\", \"World\": 0.9, \"Sports\": 0.0, \"Business\": 0.0, \"Technology\": 0.0}",
+        "seconds": 7.950685438998335,
+        "new_tokens": 53,
+        "raw_sum": 0.9
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          6.400697283982013e-05,
+          0.9999278149575563,
+          4.6638882829152335e-06,
+          3.5141813208187083e-06
+        ],
+        "seconds": 0.39374829400185263,
+        "input_tokens": 130
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.5715681780020532,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"sports\": 0.6666666666666666}",
+        "seconds": 3.689746076001029,
+        "new_tokens": 24,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          7.4982909992400906e-06,
+          1.1736881129094547e-05,
+          0.9999536928261109,
+          2.7072001760740856e-05
+        ],
+        "seconds": 0.3926092330002575,
+        "input_tokens": 144
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business: Business, companies and the economy",
+        "seconds": 1.4982454840028367,
+        "new_tokens": 9
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Business\", \"probability\": 0.7}",
+        "seconds": 2.345963063999079,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          4.13442245583975e-05,
+          9.778606870365189e-05,
+          7.057736099136656e-05,
+          0.9997902923457466
+        ],
+        "seconds": 0.39843675200245343,
+        "input_tokens": 146
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.5594755470010568,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Technology\", \"probability\": 0.7}",
+        "seconds": 2.488687564000429,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          5.400438516336617e-05,
+          7.442654199648623e-05,
+          2.134341821070287e-05,
+          0.9998502256546296
+        ],
+        "seconds": 0.34120010400147294,
+        "input_tokens": 124
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.44871164000142016,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Technology\", \"probability\": 0.7}",
+        "seconds": 2.3764737630008312,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          5.646212505503993e-05,
+          9.534424124483832e-05,
+          2.411940125074235e-05,
+          0.9998240742324495
+        ],
+        "seconds": 0.38651483800276765,
+        "input_tokens": 134
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.4750380440018489,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Technology\", \"probability\": 0.7}",
+        "seconds": 2.3405768539996643,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          6.846198640838703e-05,
+          0.9999027949162816,
+          1.890713376855837e-05,
+          9.835963541382749e-06
+        ],
+        "seconds": 0.3711756049997348,
+        "input_tokens": 135
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.46806373100116616,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Sports\", \"probability\": 0.7}",
+        "seconds": 2.4283661789995676,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          3.889607775560429e-05,
+          3.3964155699422826e-05,
+          0.9998571634727978,
+          6.997629374715004e-05
+        ],
+        "seconds": 0.38790695600255276,
+        "input_tokens": 158
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business",
+        "seconds": 0.527384422999603,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Business\", \"probability\": 0.7}",
+        "seconds": 2.352257214999554,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          4.512249769135885e-06,
+          1.541342703673248e-05,
+          0.9999553599719826,
+          2.4714351211536254e-05
+        ],
+        "seconds": 0.38124464800057467,
+        "input_tokens": 143
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business",
+        "seconds": 0.512700045001111,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": [
+          0.0,
+          0.0,
+          0.6666666666666666,
+          0.0
+        ],
+        "text": "{\"Business\": 0.6666666666666666}",
+        "seconds": 3.6021782159987197,
+        "new_tokens": 24,
+        "raw_sum": 0.6666666666666666
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          2.5299911326892184e-05,
+          0.9999595680038541,
+          5.3735782175335195e-06,
+          9.758506601530532e-06
+        ],
+        "seconds": 0.44782352299807826,
+        "input_tokens": 163
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.7757354319983278,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Sports\", \"probability\": 0.7}",
+        "seconds": 2.647755166999559,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          0.00010891956518619653,
+          0.00011549643519514094,
+          7.458489670179519e-05,
+          0.9997009991029168
+        ],
+        "seconds": 0.3563424070016481,
+        "input_tokens": 120
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.5382425210009387,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Technology\", \"probability\": 0.7}",
+        "seconds": 2.3599927889990795,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          1.3782434861304609e-05,
+          0.9999772840511116,
+          5.409419587437958e-06,
+          3.5240944395645704e-06
+        ],
+        "seconds": 0.3462137040005473,
+        "input_tokens": 131
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.4882104700009222,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": [
+          0.0,
+          0.9,
+          0.0,
+          0.0
+        ],
+        "text": "{\"Sports\": 0.9}",
+        "seconds": 1.5069039789996168,
+        "new_tokens": 9,
+        "raw_sum": 0.9
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.9993449550806696,
+          0.00018612892536162368,
+          7.77294646383768e-05,
+          0.0003911865293305342
+        ],
+        "seconds": 0.5077527110006486,
+        "input_tokens": 139
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.4917374579999887,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "text": "{\"STATE\": \"World\", \"World\": 1}",
+        "seconds": 2.1243931930002873,
+        "new_tokens": 13,
+        "raw_sum": 1.0
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          1.512708142994247e-05,
+          2.0082408440577524e-05,
+          0.9999290683918383,
+          3.572211829127489e-05
+        ],
+        "seconds": 0.3546184760016331,
+        "input_tokens": 121
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business: Business, companies and the economy",
+        "seconds": 1.431200071998319,
+        "new_tokens": 9
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Business: Business, companies and the economy\", \"probability\": 0.7}",
+        "seconds": 3.2567245089994685,
+        "new_tokens": 22,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          0.0002807452238716479,
+          0.9996927398280351,
+          1.3373119492743115e-05,
+          1.3141828600574285e-05
+        ],
+        "seconds": 0.36853820999749587,
+        "input_tokens": 140
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.49768802000107826,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": [
+          0.9,
+          0.1,
+          0.0,
+          0.0
+        ],
+        "text": "{\"World\": 0.9, \"Sports\": 0.1}",
+        "seconds": 2.5469282189988007,
+        "new_tokens": 17,
+        "raw_sum": 1.0
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          6.419125606485733e-05,
+          4.532720864949713e-05,
+          7.573058608936962e-06,
+          0.9998829084766767
+        ],
+        "seconds": 0.3560130500009109,
+        "input_tokens": 136
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.45117294500232674,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Technology\", \"probability\": 0.7}",
+        "seconds": 2.38674686900049,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          6.729036227223123e-05,
+          0.00012912820299041582,
+          0.0025889929815009344,
+          0.9972145884532365
+        ],
+        "seconds": 0.3624180430015258,
+        "input_tokens": 129
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.4727979310009687,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Technology\", \"probability\": 0.7}",
+        "seconds": 2.337812492998637,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          3.681723583414484e-05,
+          0.9999398876330235,
+          1.0015786635025986e-05,
+          1.3279344507377103e-05
+        ],
+        "seconds": 0.40922835799938184,
+        "input_tokens": 148
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.5690995670011034,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": [
+          0.0,
+          0.9999999999999999,
+          0.0,
+          0.0
+        ],
+        "text": "{\"Sports\": 0.9999999999999999}",
+        "seconds": 3.7014003900003445,
+        "new_tokens": 24,
+        "raw_sum": 0.9999999999999999
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.9679634955934083,
+          0.001126583664563937,
+          0.00043098460768719975,
+          0.030478936134340565
+        ],
+        "seconds": 0.3894709390006028,
+        "input_tokens": 145
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.5105020150003838,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"STATE\": \"World\", \"Probability\": 0.8}}",
+        "seconds": 2.408269477000431,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          0.00022704008466702374,
+          0.0001470695080099075,
+          0.00015294705202307184,
+          0.9994729433552999
+        ],
+        "seconds": 0.3967997360014124,
+        "input_tokens": 151
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.58273889100019,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Technology\", \"probability\": 0.7}",
+        "seconds": 2.4353946470000665,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          0.0003279484215000936,
+          0.00016377627726826466,
+          0.9991889931296091,
+          0.0003192821716225279
+        ],
+        "seconds": 0.4140564990011626,
+        "input_tokens": 141
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business",
+        "seconds": 0.4909339559999353,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Business: Business, companies and the economy\", \"probability\": 0.7}",
+        "seconds": 3.3660104150003463,
+        "new_tokens": 22,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          0.00014391659223495347,
+          0.0002668250159426006,
+          0.9962978998521592,
+          0.003291358539663177
+        ],
+        "seconds": 0.4349720999998681,
+        "input_tokens": 156
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business: Business, companies and the economy",
+        "seconds": 1.4954394010019314,
+        "new_tokens": 9
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Business\", \"probability\": 0.7}",
+        "seconds": 2.3741728069981036,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          4.674155250832991e-05,
+          0.000213679579215877,
+          0.9970341981277598,
+          0.0027053807405159024
+        ],
+        "seconds": 0.4839415100032056,
+        "input_tokens": 149
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business: Business, companies and the economy",
+        "seconds": 1.52948233600182,
+        "new_tokens": 9
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Business: Science and technology\", \"probability\": 0.7}",
+        "seconds": 2.9769182210002327,
+        "new_tokens": 19,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          8.163985916533607e-06,
+          9.985206687798943e-06,
+          0.9999619316265884,
+          1.9919180807244868e-05
+        ],
+        "seconds": 0.49146968300192384,
+        "input_tokens": 152
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business: Business, companies and the economy",
+        "seconds": 1.6307228549994761,
+        "new_tokens": 9
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Business\", \"probability\": 0.7}",
+        "seconds": 2.410880231000192,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          2.507671303890548e-05,
+          4.2546742001261115e-05,
+          8.977674250467596e-06,
+          0.9999233988707094
+        ],
+        "seconds": 0.3569114419988182,
+        "input_tokens": 115
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.4451511869992828,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Technology\", \"probability\": 0.7}",
+        "seconds": 2.2926594439995824,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          3.0090064255153036e-05,
+          0.999943051900428,
+          9.670669312335582e-06,
+          1.718736600449804e-05
+        ],
+        "seconds": 0.36124954799743136,
+        "input_tokens": 129
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.4699189759994624,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": [
+          0.0,
+          0.9,
+          0.0,
+          0.0
+        ],
+        "text": "{\"Sports\": 0.9}",
+        "seconds": 1.470781078998698,
+        "new_tokens": 9,
+        "raw_sum": 0.9
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.8900296842173102,
+          0.0022477029457048277,
+          0.00151878761980604,
+          0.10620382521717893
+        ],
+        "seconds": 0.37369279700214975,
+        "input_tokens": 140
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.5804177009995328,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": [
+          0.999,
+          0.001,
+          0.001,
+          0.001
+        ],
+        "text": "{\"STATE\": \"Wounded troops detail fierce fight LANDSTUHL, Germany\", \"World\": 0.999, \"Sports\": 0.001, \"Business\": 0.001, \"Technology\": 0.001}",
+        "seconds": 8.521766032001324,
+        "new_tokens": 58,
+        "raw_sum": 1.002
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          3.857935623021673e-05,
+          0.999951168643949,
+          3.599475541805957e-06,
+          6.652524278898211e-06
+        ],
+        "seconds": 0.3580468030013435,
+        "input_tokens": 132
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.4711077300016768,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"QUESTION}: Sports\", \"1.0\"}\n\nThe topic of this news article is clearly Sports, as it discusses an official call for pass interference in a college football game.",
+        "seconds": 5.52138052400187,
+        "new_tokens": 37,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          9.999328133027706e-06,
+          2.447872723108595e-05,
+          0.9999083131224734,
+          5.720882216255896e-05
+        ],
+        "seconds": 0.36316814699966926,
+        "input_tokens": 146
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business: Business, companies and the economy",
+        "seconds": 1.4264818279989413,
+        "new_tokens": 9
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Business\", \"probability\": 0.7}",
+        "seconds": 2.3937620729993796,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          9.921751198252181e-06,
+          1.7241755946457714e-05,
+          0.9999286433913785,
+          4.419310147669319e-05
+        ],
+        "seconds": 0.3950810209971678,
+        "input_tokens": 147
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business",
+        "seconds": 0.5268265160011651,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Business\", \"probability\": 0.7}",
+        "seconds": 2.401287308002793,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          1.943143353179226e-05,
+          1.541033756788372e-05,
+          0.9999434929267511,
+          2.166530214920387e-05
+        ],
+        "seconds": 0.3810944600008952,
+        "input_tokens": 128
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business: Business, companies and the economy",
+        "seconds": 1.4570852760007256,
+        "new_tokens": 9
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Business\", \"probability\": 0.7}",
+        "seconds": 2.2910848740029905,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          9.7011733675639e-06,
+          0.9999723046086957,
+          7.553293020384932e-06,
+          1.0440924916312173e-05
+        ],
+        "seconds": 0.3467615459994704,
+        "input_tokens": 130
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.5000023120010155,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": [
+          0.001,
+          0.0,
+          0.001,
+          0.001
+        ],
+        "text": "{\"Sport\": 0.999, \"Business\": 0.001, \"Technology\": 0.001, \"World\": 0.001}",
+        "seconds": 5.973339225998643,
+        "new_tokens": 41,
+        "raw_sum": 0.003
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.002788131428743582,
+          0.00012864290537483358,
+          9.1494310464865e-06,
+          0.997074076234835
+        ],
+        "seconds": 0.458279284001037,
+        "input_tokens": 134
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.5458983009993972,
+        "new_tokens": 2
+      },
+      "generate_json_probs": {
+        "probs": null,
+        "text": "{\"topic\": \"Technology\", \"probability\": 0.7}",
+        "seconds": 2.3141116710030474,
+        "new_tokens": 15,
+        "raw_sum": 0.0
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.9984992143188303,
+          0.00024586712694872734,
+          0.00010714212079288704,
+          0.0011477764334281756
+        ],
+        "seconds": 0.48306579500058433,
+        "input_tokens": 128
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.4772150109965878,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.9474211644661743,
+          0.0016724933171238566,
+          0.0008060237557337791,
+          0.05010031846096818
+        ],
+        "seconds": 0.4029314949984837,
+        "input_tokens": 132
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.5054418030013039,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          6.5660116400759e-05,
+          0.0001584922706792949,
+          0.9985525955226399,
+          0.0012232520902799816
+        ],
+        "seconds": 0.420260116999998,
+        "input_tokens": 156
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business: Business, companies and the economy",
+        "seconds": 1.5360438640018401,
+        "new_tokens": 9
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          4.876659797655965e-05,
+          0.9999200807339883,
+          2.0938877684361172e-05,
+          1.021379035074756e-05
+        ],
+        "seconds": 0.4538150689986651,
+        "input_tokens": 142
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.5033942189984373,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          2.351720670204707e-05,
+          3.739527006974188e-05,
+          0.9997839902533887,
+          0.00015509726983948396
+        ],
+        "seconds": 0.3828701450001972,
+        "input_tokens": 145
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business: Business, companies and the economy",
+        "seconds": 1.3799674750007398,
+        "new_tokens": 9
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          1.2660745255478134e-05,
+          1.9941259955881332e-05,
+          0.9999279717551667,
+          3.942623962209198e-05
+        ],
+        "seconds": 0.38755608899737126,
+        "input_tokens": 133
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business",
+        "seconds": 0.48193628399894806,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          7.941737164367606e-06,
+          1.379228248297536e-05,
+          0.9999481512066324,
+          3.0114773720240875e-05
+        ],
+        "seconds": 0.5938119489983364,
+        "input_tokens": 196
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business: Business, companies and the economy",
+        "seconds": 1.5503746989998035,
+        "new_tokens": 9
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          0.0006041841369147876,
+          0.0003807984098889324,
+          0.013181759277997973,
+          0.9858332581751982
+        ],
+        "seconds": 0.4769411499983107,
+        "input_tokens": 160
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.5519552320001821,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          1.508804037423715e-05,
+          0.9999754451901506,
+          5.7739800744194105e-06,
+          3.6927894006584327e-06
+        ],
+        "seconds": 0.5782458769972436,
+        "input_tokens": 201
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.7611077410001599,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          6.991325038910037e-06,
+          1.1300694592068058e-05,
+          0.9999210672070329,
+          6.0640773336035267e-05
+        ],
+        "seconds": 0.5329387019992282,
+        "input_tokens": 153
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business: Business, companies and the economy",
+        "seconds": 1.5458006570006546,
+        "new_tokens": 9
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          0.0002284374548069056,
+          0.9997428515521692,
+          1.8159922176491738e-05,
+          1.0551070847391777e-05
+        ],
+        "seconds": 0.43318159200134687,
+        "input_tokens": 145
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.6102505449998716,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          1.989827139192538e-05,
+          0.9999670259353409,
+          7.672710845898954e-06,
+          5.403082421146063e-06
+        ],
+        "seconds": 0.3695120219999808,
+        "input_tokens": 134
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.5085649720022047,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          1.1180010429000399e-05,
+          0.9999785479211721,
+          6.81770762397221e-06,
+          3.4543607748165018e-06
+        ],
+        "seconds": 0.45349721900129225,
+        "input_tokens": 145
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.535764594002103,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          0.030251878600250567,
+          0.00989788595037844,
+          0.010634914474610773,
+          0.9492153209747601
+        ],
+        "seconds": 0.4039091519989597,
+        "input_tokens": 143
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.5055858710002212,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          3.575854315098775e-05,
+          0.9999336307405421,
+          1.320372521375093e-05,
+          1.7406991093118133e-05
+        ],
+        "seconds": 0.43213471499984735,
+        "input_tokens": 151
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.5211917939996056,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.999691317116134,
+          0.00011825697439501286,
+          4.506414087138655e-05,
+          0.0001453617685995842
+        ],
+        "seconds": 0.503089149002335,
+        "input_tokens": 144
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.7190427780005848,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          1.0696322268830422e-05,
+          0.9999746642726176,
+          7.453945619626416e-06,
+          7.185459493880131e-06
+        ],
+        "seconds": 0.5002912470008596,
+        "input_tokens": 147
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.5914757050013577,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          2.7563372039335e-05,
+          3.2514530154684666e-05,
+          0.9998139210925895,
+          0.0001260010052164216
+        ],
+        "seconds": 0.5245391240023309,
+        "input_tokens": 153
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business",
+        "seconds": 0.6082926909984963,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          4.711132498558885e-06,
+          6.612611226254711e-06,
+          0.9999819740620957,
+          6.702194179443128e-06
+        ],
+        "seconds": 0.46586336700056563,
+        "input_tokens": 128
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business: Business, companies and the economy",
+        "seconds": 1.5626767169997038,
+        "new_tokens": 9
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          0.0002635530954096853,
+          0.00011104166409078191,
+          6.284471361334871e-05,
+          0.9995625605268862
+        ],
+        "seconds": 0.368238435999956,
+        "input_tokens": 121
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.4894058159989072,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.9954588592653878,
+          0.000544942437408636,
+          0.00031594360898741205,
+          0.0036802546882160297
+        ],
+        "seconds": 0.41665578999891295,
+        "input_tokens": 129
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.5112306480004918,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          1.4444283084545711e-05,
+          2.436075077927212e-05,
+          0.9999293986716343,
+          3.1796294501778756e-05
+        ],
+        "seconds": 0.41199557299842127,
+        "input_tokens": 154
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business: Business, companies and the economy",
+        "seconds": 1.5403625809994992,
+        "new_tokens": 9
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          9.048590854712625e-06,
+          0.9999828847227612,
+          4.877030493211875e-06,
+          3.1896558908814445e-06
+        ],
+        "seconds": 0.5496770030003972,
+        "input_tokens": 154
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.5467408440017607,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.9990962870682032,
+          0.00032806320012740425,
+          0.0002254278787181824,
+          0.00035022185295121054
+        ],
+        "seconds": 0.39704482200249913,
+        "input_tokens": 136
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.5035890459985239,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          5.04656991270956e-06,
+          1.3536474601973434e-05,
+          0.9999740292861604,
+          7.387669324888998e-06
+        ],
+        "seconds": 0.4717857270006789,
+        "input_tokens": 134
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business: Business, companies and the economy",
+        "seconds": 1.523775942998327,
+        "new_tokens": 9
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          4.192746691800424e-05,
+          5.646909670639054e-05,
+          0.0001040344608757925,
+          0.9997975689754998
+        ],
+        "seconds": 0.41835657399860793,
+        "input_tokens": 143
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.5035492569986673,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          0.00014184188812676302,
+          0.00011067852838647926,
+          0.0005477116953444894,
+          0.9991997678881422
+        ],
+        "seconds": 0.3555853770012618,
+        "input_tokens": 128
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.48667812600251636,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.9960359014053505,
+          0.0006244172368054245,
+          0.0004770809483424263,
+          0.0028626004095016464
+        ],
+        "seconds": 0.4362311810000392,
+        "input_tokens": 143
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.5161698919982882,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          4.910801098182494e-05,
+          9.743892097773422e-05,
+          0.021887717321985883,
+          0.9779657357460545
+        ],
+        "seconds": 0.3936878309978056,
+        "input_tokens": 139
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.5104168619982374,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          3.545054714480247e-05,
+          0.999950692267197,
+          8.343075515809529e-06,
+          5.514110142518187e-06
+        ],
+        "seconds": 0.4453800679984852,
+        "input_tokens": 148
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.5496275310033525,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          5.40576098664158e-06,
+          1.0508513829845778e-05,
+          0.9999755615380915,
+          8.524187092102227e-06
+        ],
+        "seconds": 0.4208645329999854,
+        "input_tokens": 151
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business: Business, companies and the economy",
+        "seconds": 1.4967607299986412,
+        "new_tokens": 9
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          2.6026465107417998e-05,
+          0.9999445280280466,
+          7.901009182897706e-06,
+          2.154449766314386e-05
+        ],
+        "seconds": 0.41912072600098327,
+        "input_tokens": 154
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.5506308670010185,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          3.997641936352425e-05,
+          0.9999460787965413,
+          7.198119812026786e-06,
+          6.746664283261443e-06
+        ],
+        "seconds": 0.5329431150021264,
+        "input_tokens": 198
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.6535108299976855,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          0.8911281738535226,
+          0.10358181694825944,
+          0.0018797451242065653,
+          0.0034102640740114876
+        ],
+        "seconds": 0.4763952049979707,
+        "input_tokens": 149
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.5373258580002584,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.9978121639168529,
+          0.0004440544680882573,
+          0.00021632417459790674,
+          0.0015274574404608853
+        ],
+        "seconds": 0.4241555309999967,
+        "input_tokens": 148
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.5281144750006206,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          0.00016470543416344,
+          6.393358261879698e-05,
+          0.9996197811146229,
+          0.00015157986859479333
+        ],
+        "seconds": 0.3984276810006122,
+        "input_tokens": 134
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business",
+        "seconds": 0.5029539359966293,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          2.6135086941857464e-05,
+          4.673225052749439e-05,
+          0.7048282282936257,
+          0.29509890436890496
+        ],
+        "seconds": 0.3682022239991056,
+        "input_tokens": 131
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.5108956220028631,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          4.4247118350397386e-05,
+          4.929019609441641e-05,
+          7.011855545731753e-06,
+          0.9998994508300095
+        ],
+        "seconds": 0.3782247400013148,
+        "input_tokens": 129
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.4827421579975635,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          3.858406856610474e-05,
+          6.881490171280311e-05,
+          1.9900737427586696e-05,
+          0.9998727002922935
+        ],
+        "seconds": 0.4161945959967852,
+        "input_tokens": 145
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.5876453849996324,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          6.5064986456299904e-06,
+          9.72072505000765e-06,
+          0.9999671010906875,
+          1.6671685616771215e-05
+        ],
+        "seconds": 0.3830989900015993,
+        "input_tokens": 134
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business",
+        "seconds": 0.5145187489979435,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          0.0008742201817597277,
+          0.0004312871202568295,
+          0.11139689853794792,
+          0.8872975941600356
+        ],
+        "seconds": 0.4430715679991408,
+        "input_tokens": 126
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.6520184999972116,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.9939343883848483,
+          0.0004988703755230081,
+          0.00022937391663105416,
+          0.0053373673229977605
+        ],
+        "seconds": 0.4975935170004959,
+        "input_tokens": 146
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.5853650030003337,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.6269415582221417,
+          0.00733190273967032,
+          0.004652802586790797,
+          0.36107373645139723
+        ],
+        "seconds": 0.5965261179990193,
+        "input_tokens": 147
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.5706512869983271,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.9622750267561377,
+          0.0024438744988520937,
+          0.0014585110621660028,
+          0.033822587682844116
+        ],
+        "seconds": 0.4670767999996315,
+        "input_tokens": 169
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.6338537470001029,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.983721598467915,
+          0.00103641854436013,
+          0.000548341980499681,
+          0.014693641007225136
+        ],
+        "seconds": 0.4454539049984305,
+        "input_tokens": 155
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.5413717240007827,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.3316272034888834,
+          0.046222067869957244,
+          0.047451592690424184,
+          0.5746991359507351
+        ],
+        "seconds": 0.4325710210032412,
+        "input_tokens": 156
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.5746311930015509,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          3.127028218175513e-05,
+          6.062000672576086e-05,
+          8.996449776064923e-06,
+          0.9998991132613163
+        ],
+        "seconds": 0.37413797800036264,
+        "input_tokens": 128
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.48111895699912566,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          0.010881858800112141,
+          0.98842557944421,
+          0.00021460125135006885,
+          0.00047796050432783637
+        ],
+        "seconds": 0.46249860399984755,
+        "input_tokens": 165
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.5939903180005786,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          9.261179885136704e-06,
+          0.9999850022661929,
+          2.656567816053377e-06,
+          3.0799861058025498e-06
+        ],
+        "seconds": 0.46322861299995566,
+        "input_tokens": 177
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.611681905000296,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          4.498646529171597e-05,
+          6.705150284082741e-05,
+          0.00017531619382154455,
+          0.999712645838046
+        ],
+        "seconds": 0.42861487200207193,
+        "input_tokens": 147
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.5225403889999143,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.9995655987369884,
+          0.00016056485440162758,
+          7.214965981064235e-05,
+          0.00020168674879940374
+        ],
+        "seconds": 0.3584751080015849,
+        "input_tokens": 124
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World: World news, politics and international affairs",
+        "seconds": 1.5869496030027221,
+        "new_tokens": 10
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          2.4149327231601098e-05,
+          0.9999598710861094,
+          8.298418823697262e-06,
+          7.681167835315791e-06
+        ],
+        "seconds": 0.3911693260015454,
+        "input_tokens": 135
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.4876821170000767,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 2,
+      "readout": {
+        "probs": [
+          7.139432100284554e-06,
+          1.7705890761050865e-05,
+          0.9999567673978266,
+          1.838727931223327e-05
+        ],
+        "seconds": 0.44292355600191513,
+        "input_tokens": 164
+      },
+      "generate_label": {
+        "answer": "Business",
+        "text": "Business: Business, companies and the economy",
+        "seconds": 1.480910420003056,
+        "new_tokens": 9
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          4.7854136826426294e-05,
+          8.568396101228567e-05,
+          7.177771536099074e-05,
+          0.9997946841868003
+        ],
+        "seconds": 0.49221548000059556,
+        "input_tokens": 166
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.5826648290021694,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          0.0009590884858328789,
+          0.0009127559771075818,
+          0.0005109580266229387,
+          0.9976171975104366
+        ],
+        "seconds": 0.49670206800146843,
+        "input_tokens": 169
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.6061593060003361,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          1.4800116926865916e-05,
+          0.999970200748024,
+          9.874566968377157e-06,
+          5.124568080681891e-06
+        ],
+        "seconds": 0.4254460980009753,
+        "input_tokens": 141
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.5185457719999249,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 3,
+      "readout": {
+        "probs": [
+          2.7247693889419375e-05,
+          7.728595936533274e-05,
+          0.0011575119268758974,
+          0.9987379544198693
+        ],
+        "seconds": 0.38166321300013806,
+        "input_tokens": 138
+      },
+      "generate_label": {
+        "answer": "Technology",
+        "text": "Technology",
+        "seconds": 0.5287740470012068,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          8.089538856439963e-05,
+          0.9998951204332476,
+          1.1748043998356089e-05,
+          1.2236134189773899e-05
+        ],
+        "seconds": 0.38662767200003145,
+        "input_tokens": 142
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.5781684349967691,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 0,
+      "readout": {
+        "probs": [
+          0.9993655066507905,
+          0.00017022263728489262,
+          4.597148740886488e-05,
+          0.00041829922451574504
+        ],
+        "seconds": 0.37086023799929535,
+        "input_tokens": 128
+      },
+      "generate_label": {
+        "answer": "World",
+        "text": "World",
+        "seconds": 0.5317716739991738,
+        "new_tokens": 2
+      }
+    },
+    {
+      "label": 1,
+      "readout": {
+        "probs": [
+          3.946692760618351e-05,
+          0.9999405574130669,
+          1.273696381886861e-05,
+          7.238695508008667e-06
+        ],
+        "seconds": 0.38918236899917247,
+        "input_tokens": 132
+      },
+      "generate_label": {
+        "answer": "Sports",
+        "text": "Sports",
+        "seconds": 0.5047410110018973,
+        "new_tokens": 2
+      }
+    }
+  ],
+  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "seconds_total": 415.0120202270009
+}

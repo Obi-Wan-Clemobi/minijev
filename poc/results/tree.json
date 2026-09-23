@@ -1,0 +1,95 @@
+{
+  "n_tokens": 1000,
+  "max_logit_gap_vs_naive": {
+    "kv": 2.4922192096710205e-05,
+    "packed": 1.5735626220703125e-05
+  },
+  "max_batched_single_gap": 3.40478206772854e-06,
+  "seconds": {
+    "naive": 97.16171741700055,
+    "kv": 10.897129479999421,
+    "packed": 11.58110405700063
+  },
+  "rows": [
+    {
+      "question": "breach_72h",
+      "batched": 0.19970299051680612,
+      "single": 0.1997042241516901,
+      "jev_full_article": 0.804
+    },
+    {
+      "question": "applies_non_eu",
+      "batched": 0.9174772365066233,
+      "single": 0.9174768060942511,
+      "jev_full_article": 0.99
+    },
+    {
+      "question": "dpo_all_orgs",
+      "batched": 0.188380396465966,
+      "single": 0.188380396465966,
+      "jev_full_article": 0.03
+    },
+    {
+      "question": "pre_ticked_consent",
+      "batched": 0.3260909437861581,
+      "single": 0.3260930198949829,
+      "jev_full_article": 0.04
+    },
+    {
+      "question": "right_erasure",
+      "batched": 0.9285313566362425,
+      "single": 0.9285321200278567,
+      "jev_full_article": 0.99
+    },
+    {
+      "question": "data_portability",
+      "batched": 0.9221488728466254,
+      "single": 0.9221486091505573,
+      "jev_full_article": 0.99
+    },
+    {
+      "question": "us_federal_law",
+      "batched": 0.1739053501100162,
+      "single": 0.1739053501100162,
+      "jev_full_article": 0.01
+    },
+    {
+      "question": "criminal_penalties",
+      "batched": 0.09606732319861355,
+      "single": 0.09606830663770573,
+      "jev_full_article": 0.108
+    },
+    {
+      "question": "instrument_type",
+      "batched": 0.8013134880418192,
+      "single": 0.8013130058568749,
+      "jev_full_article": 1.0
+    },
+    {
+      "question": "max_fine",
+      "batched": 0.3672356494337615,
+      "single": 0.3672355194898831,
+      "jev_full_article": 1.0
+    },
+    {
+      "question": "individual_rights",
+      "batched": 0.9839905510644659,
+      "single": 0.9839906637132007,
+      "jev_full_article": 1.0
+    },
+    {
+      "question": "penalty_severity",
+      "batched": 0.7698208746384217,
+      "single": 0.7698203679897428,
+      "jev_full_article": 1.0
+    },
+    {
+      "question": "compliance_burden",
+      "batched": 0.6201900032039559,
+      "single": 0.6201934079860236,
+      "jev_full_article": 0.75
+    }
+  ],
+  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "seconds_total": 179.3097397900001
+}
