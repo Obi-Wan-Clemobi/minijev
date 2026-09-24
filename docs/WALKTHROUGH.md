@@ -20,41 +20,38 @@ third-party measurements), **Inferred** (our reasoning). **Measured** means a re
 - **We built a laptop-sized version** (`poc/`) on a small open model (Qwen2.5, 0.5B and 1.5B parameters). Then we
   measured it. The *mechanism* reproduces exactly. The *quality* does not reproduce, because it comes from Jev's model
   and training, which are secret.
-- **We compared minijev with a generation baseline:** the same model, on the same laptop, generates its answer as text.
-  - For a single one-word answer, the readout is a little faster, or equal.
-  - It is about 7× faster when you want probabilities.
-  - It is 5–6× faster for 13 questions than the usual LLM patterns.
-  - Against the best LLM set-up (prompt caching, one-word answers), the advantage decreases to 1.4–2×.
+- **We compared minijev with generation baselines:** the same model, on the same laptop, generates its answer.
+  - A readout is the same computation as "generate 1 token and return its logprobs". Any LLM API with logprobs can
+    do it, and at 13 questions it is only 1.0–1.3× slower than minijev.
+  - Against the usual LLM patterns, minijev is much faster: 1.6× for one written label, 7× for written
+    probabilities, and 5–7× for 13 questions sent one by one or as one JSON call.
+  - Most of the saving at 13 questions (84–85%) comes from one prefill of the state. Prompt caching copies it.
   - See §6.
 
 ---
 
 ## 2. What we did, step by step
 
-1. **We reviewed DESIGN.md.** The core idea was correct. Several details were wrong or guessed: the API shape, how
-   Score works, and the confidence formula.
-2. **We did research.** We read these sources:
+1. **We did research.** We read these sources:
    - All ~60 pages of TypeSafe's docs, the launch blog and its FAQ, and the TechCrunch article.
    - A real Jev client from a launch partner (Browser Use).
    - Several open-source clones, the founder's blog, and TypeSafe's public GitHub.
    - We sorted each claim into **Stated** (TypeSafe says so), **Observed** (visible in real outputs or code), or
      **Inferred** (our reasoning). The result is RESEARCH.md.
-3. **We built a proof of concept** in `poc/`, about 330 lines of Python. It runs requests in Jev's format from start
-   to end on a CPU.
-4. **We ran seven experiments** on the 0.5B and 1.5B models. They cover speed, correctness, bias, agreement with Jev's
-   published answers, calibration, and generation vs readout.
-5. **We found TypeSafe's exact confidence formulas** in its own open-source code. With them, our numbers match Jev's
+2. **We found TypeSafe's exact confidence formulas** in its own open-source code. With them, our numbers match Jev's
    documentation.
-6. **We corrected DESIGN.md and the README** to match what we learned.
+3. **We wrote the design** (DESIGN.md) from that evidence: the API shape, the readouts, and the calibration plan.
+4. **We built a proof of concept** in `poc/`, about 330 lines of Python plus tests. It runs requests in Jev's format
+   from start to end on a CPU.
+5. **We ran seven experiments** on the 0.5B and 1.5B models. They cover speed, correctness, bias, agreement with Jev's
+   published answers, calibration, and generation vs readout.
 
 ```mermaid
 flowchart LR
-    A["Review<br/>DESIGN.md"] --> B["Research: docs, blog, press,<br/>real client, clones,<br/>founder's blog, GitHub"]
-    B --> C["RESEARCH.md<br/>evidence table"]
-    B --> D["Build the POC<br/>poc/"]
-    D --> E["Experiments<br/>0.5B and 1.5B"]
-    E --> F["Fix DESIGN.md<br/>and README"]
-    C --> F
+    B["Research: docs, blog, press,<br/>real client, clones,<br/>founder's blog, GitHub"] --> C["RESEARCH.md<br/>evidence table"]
+    C --> D["DESIGN.md"]
+    D --> P["Build the POC<br/>poc/"]
+    P --> E["Experiments<br/>0.5B and 1.5B"]
     E --> G["This walkthrough"]
 ```
 
@@ -250,7 +247,7 @@ This is the actual response, from `poc/results/demo.json`:
 |---|---|---|
 | `naive` | Prefill state + branch again for every branch | The reference: obviously correct |
 | `kv` | Prefill the state once, keep its internal memory (the "KV cache"), run each branch on top, then rewind | The practical mode; servers use it |
-| `packed` | **One** forward pass over `[state][branch 1][branch 2]…`, with an attention mask so that no branch sees another, and position numbers that restart after the state | Exactly "one pass, in parallel, in isolation". It also explains Jev's limit of "state + longest question". |
+| `packed` | **One** forward pass over `[state][branch 1][branch 2]…`, with an attention mask so that no branch sees another, and position numbers that restart after the state | Exactly "one pass, in parallel, in isolation". It is consistent with Jev's limit of "state + longest question", but `kv` is consistent with that limit too. |
 
 ```mermaid
 flowchart TB
@@ -292,7 +289,8 @@ All three modes give the same numbers (R2 below). The diagram shows the packed m
 **R2 — The three modes give the same answers** (the core check).
 - Naive, kv, and packed agree to 0.00002 in raw scores. That difference is floating-point noise.
 - We asked TypeSafe's 13 GDPR questions together and one at a time. The answers changed by 0.0000034 or less.
-- This result reproduces Jev's isolation result exactly.
+- minijev isolates branches by construction (the attention mask), so this checks our implementation. It is not
+  evidence about how Jev works.
 
 **R3 — One prefill of the state gives ~9× the speed.** We asked 13 questions on a 1,000-token state. The naive mode
 took 93 s. The shared state took 10 s. Added questions are "almost free" only when the state is much longer than the
@@ -322,8 +320,8 @@ xychart-beta
     bar [54, 0, 9, 0]
 ```
 
-A pointwise judgement (each option on its own) cannot have this bias, because of its design. Jev removed this bias
-in training (Inferred).
+A pointwise judgement (each option on its own) cannot have this bias, because of its design. The 0% is therefore a
+check of the implementation, not a measurement. Jev removed this bias in training (Inferred).
 
 **R5 — How near are we to Jev's published answers?** We ran the exact inputs from Jev's docs.
 - **1.5B is much nearer than 0.5B.** On Score, the mean error was 0.62 levels for 0.5B and 0.22 levels for 1.5B.
@@ -331,14 +329,19 @@ in training (Inferred).
 - **The 0.5B failure comes from model capacity, not from the method.** 0.5B rated every bug report "workaround
   exists", from a misaligned icon to a total login outage.
 - **Both sizes judge Noul questions differently from Jev.** Both counted "Used Python occasionally" as *strong in Python*.
+- **The samples are small:** 15 Nouls, 10 Scores, and 8 Choices. "9 of 10" has a wide interval, and one example
+  changes a Choice result by 12 points. Treat R5 as a direction, not a measurement.
+- **R5 is not a held-out test.** These documented cases were public while we chose the prompt template.
 
 **R6 — Calibration on BoolQ** (400 yes/no reading questions with known answers):
 
+Each interval is a 95% bootstrap interval, written as [low–high].
+
 | | 0.5B | 1.5B |
 |---|---:|---:|
-| Accuracy (always saying "yes" scores 0.615) | 0.652 | 0.782 |
-| Calibration error (ECE), raw | 0.161 | 0.099 |
-| ECE after temperature scaling | **0.053** | **0.060** |
+| Accuracy (always saying "yes" scores 0.615) | 0.652 [0.608–0.698] | 0.782 [0.743–0.825] |
+| Calibration error (ECE), raw | 0.161 [0.130–0.215] | 0.099 [0.076–0.144] |
+| ECE after temperature scaling | **0.053** [0.043–0.108] | **0.060** [0.047–0.104] |
 | Fitted temperature (1 = already calibrated) | 2.72 | 1.93 |
 | ECE after "contextual calibration" (subtracting an "N/A"-state prior) | 0.350, worse | 0.221, worse |
 
@@ -355,8 +358,14 @@ xychart-beta
   change any answer.
 - **One popular method made the results worse.** Contextual calibration subtracts the model's answer for an "N/A"
   state. It made ECE worse at both sizes. For a yes/no question, "N/A" is itself evidence for "No".
-- **Calibrated does not mean accurate.** 0.5B becomes honest about its uncertainty. But its accuracy is only a little
-  better than the base rate.
+- **Calibrated does not mean accurate.** 0.5B becomes honest about its uncertainty. But its accuracy interval
+  includes 0.615, so it is not measurably better than the answer "yes" for every item.
+- **The two sizes calibrate equally well.** Their ECE intervals after temperature scaling overlap. 0.053 vs 0.060 is
+  not a real difference.
+- **Put the fitted temperature in `poc/minijev.env`** (`MINIJEV_TEMP_NOUL`). The experiment prints the line to use.
+- **Two limits.** The ECE intervals sit mostly above the point value, because ECE on a small resample is biased
+  upward (Inferred). The fitted calibrators are held fixed in the bootstrap, so the intervals show evaluation noise
+  only.
 
 ---
 
@@ -367,65 +376,74 @@ xychart-beta
 We cannot compare with Jev directly. Jev is a different model on different hardware. Also, no `ANTHROPIC_API_KEY`
 was set, so we could not call a cloud LLM (see 6.5).
 
-We *can* use **the same model, on the same laptop, in two ways**. This isolates the method:
+We *can* use **the same model, on the same laptop, in several ways**. This isolates the method:
 - **Generation baseline:** a normal chat completion. The model *generates* its answer token by token (greedy, with a
   KV cache, as every LLM API does). Then code parses the text back into an option.
+- **One generated token with logprobs:** what an LLM API returns when you ask for one token and its log
+  probabilities. This is **the same computation as a readout**. It is the strongest generation baseline, and every
+  comparison below includes it.
 - **minijev:** the same model does a *readout* of the answer probabilities in one pass.
 
-The prompts are as similar as possible: the same system line, state, and options. The generation baseline gets the
-instruction "answer with the name of the best option". minijev does a readout of the option letters (the two paths in
-the §3.1 diagram). The code is in `poc/experiments.py`, in `llm_vs_minijev` and `fanout`. The raw results are in
-`poc/results/llm_vs_minijev.json` (single decisions), `poc/results/fanout.json`, and
-`poc/results/fanout-Qwen2.5-1.5B-Instruct.json` (many questions).
+The prompts are as similar as possible: the same system line, state, and options. The name-generation baseline gets
+the instruction "answer with the name of the best option". minijev and the logprobs baseline read the option letters.
+The code is in `poc/experiments.py`, in `llm_vs_minijev` and `fan_out`. The raw results are in
+`poc/results/llm_vs_minijev.json`, `poc/results/fanout.json`, and `poc/results/fanout-Qwen2.5-1.5B-Instruct.json`.
+
+Each interval below is a 95% bootstrap interval, written as [low–high].
 
 ### 6.2 One decision at a time
 
 The task is AG News topic classification (World / Sports / Business / Technology). We used 120 labelled articles and
 Qwen2.5-0.5B:
 
-| | minijev (readout) | LLM: generate the label | LLM: generate JSON probabilities* |
-|---|---:|---:|---:|
-| Time per decision | **0.44 s** | 0.71 s (1.6× slower) | 3.13 s (7× slower) |
-| Output tokens generated | 0 | 3.1 | 19.9 |
-| Accuracy | 0.883 | 0.908 | 0.683 with a lenient parser, 0.200 with a strict one |
-| Probabilities for every option | yes, in the same pass | no | only when the JSON is right (16 of 60) |
-| Unusable replies | 0 | 0 | 9 of 60, even with the lenient parser |
+| | minijev (readout) | 1 token + logprobs | Generate the label | Generate JSON probabilities* |
+|---|---:|---:|---:|---:|
+| Time per decision | **0.45 s** [0.43–0.46] | **0.45 s** [0.43–0.46] | 0.73 s [0.66–0.79] | 3.19 s [2.77–3.68] |
+| Output tokens generated | 0 | 1 | 3.1 | 19.9 |
+| Accuracy | 0.883 [0.825–0.942] | 0.883 (identical) | 0.908 [0.858–0.958] | 0.833 [0.733–0.917], lenient parser |
+| Probabilities for every option | yes | yes, identical to the readout | no | only as the model writes them |
+| Unusable replies | 0 | 0 | 0 | 1 of 60 (lenient), 44 of 60 (strict) |
 
 ```mermaid
 xychart-beta
     title "One news-topic decision, Qwen2.5-0.5B (mean seconds)"
-    x-axis ["minijev readout", "LLM generates the label", "LLM generates JSON probabilities"]
+    x-axis ["minijev readout", "1 token + logprobs", "generate the label", "generate JSON probabilities"]
     y-axis "seconds" 0 --> 3.5
-    bar [0.44, 0.71, 3.13]
+    bar [0.45, 0.45, 0.73, 3.19]
 ```
 
-*The JSON variant is slow, so we ran it on the first 60 items only. On those same 60 items, minijev scored 0.883.
-The "lenient" parser also accepts replies in the shape `{"topic": …, "probability": …}`. We applied it afterwards to
-the replies saved in `poc/results/llm_vs_minijev.json`.
+*The JSON variant is slow, so it ran on the first 60 items only. On those 60 items, minijev scored 0.883
+[0.800–0.967]. The strict parser accepts only the requested shape, `{"World": 0.1, "Sports": 0.7, …}`. The lenient
+parser (`parse_probs_lenient`) also accepts the shape that the model usually writes, `{"topic": "Business",
+"probability": 0.7}`, and loose key spellings.
 
 The results show these points:
-- **For one short answer, generation is only a little slower.** To generate one or two tokens costs almost the same
-  forward pass as a readout of them.
-- **Both methods give the answers of the same model.** They picked the same topic 94% of the time. The difference
-  between 0.908 and 0.883 is 3 articles out of 120. That is noise.
-- **When you want probabilities, generation is 7× slower, and most replies are wrong.**
-  - We asked for one probability per option. The model usually replied `{"topic": "Technology", "probability": 0.7}`.
-    That is one answer and one number, not a distribution.
-  - The probabilities it gave had only four values: 0.5, 0.7, 0.8, and 0.9.
-  - The request for probabilities also decreased accuracy: 0.683 vs 0.883.
-- **minijev gives the full distribution in the same pass, every time, with nothing to parse.**
+- **The readout and "1 token + logprobs" are the same thing.** Their probabilities differ by 0.0. Their times are
+  equal. Any LLM API that returns logprobs gives a readout.
+- **For one short answer, generation of the label is 1.6× slower.** It generates 3 tokens where the readout
+  generates none.
+- **Both methods give the answers of the same model.** They picked the same topic 94% of the time. The accuracy
+  intervals overlap, so 0.908 vs 0.883 is not a real difference.
+- **Written probabilities are 7× slower and poor.** The model usually wrote one answer and one number, not a
+  distribution. The numbers it wrote took only a few values: 0.5, 0.7, 0.8, 0.9.
+- **The readout's probabilities are not calibrated either.** Its ECE is 0.100 [0.055–0.156]. The readout gives a full
+  distribution in the same pass, but it needs temperature scaling (§5 R6) before its numbers are honest.
 
 ### 6.3 Many questions about one state
 
 The state is the GDPR article, shortened to its first 500 tokens. The request has the first N of TypeSafe's 13
-cookbook questions. Every question is a Choice, so all methods answer exactly the same thing. We compared four
+cookbook questions. Every question is a Choice, so all methods answer exactly the same thing. We compared six
 methods:
 
-1. **LLM, one call per question.** This is the usual method. Each call sends the state again with one question.
-2. **LLM, one call per question, with the state cached.** The calls reuse the KV cache of the state, as hosted APIs
-   cache a shared prompt prefix. This is the **strongest generation baseline**.
-3. **LLM, one call, JSON answers.** One prompt contains all questions. The model generates `{"q1": …, "q2": …}`.
-4. **minijev.** One packed pass does a readout of the probabilities for every answer.
+1. **One call per question.** Each call sends the state again with one question. This is the usual method.
+2. **One call per question, state cached.** The calls reuse the KV cache of the state, as hosted APIs cache a shared
+   prompt prefix.
+3. **All questions in one batch, state cached.** The state is prefilled once. All questions are decoded together,
+   one token for every question per step.
+4. **One generated token with logprobs per question, state cached.** The same computation as a readout, but one
+   call per question.
+5. **One call, JSON answers.** One prompt contains all questions. The model generates `{"q1": …, "q2": …}`.
+6. **minijev.** One packed pass does a readout of the probabilities for every answer.
 
 ```mermaid
 flowchart TB
@@ -437,93 +455,99 @@ flowchart TB
         direction LR
         b0["prefill state once"] --> b1["prefill q1, generate answer"] --> b2["prefill q2, generate answer"] --> b3["… 13 times"]
     end
-    subgraph m3["3. One JSON call"]
+    subgraph m3["3. One batch, state cached"]
+        direction LR
+        e0["prefill state once"] --> e1["prefill all questions<br/>as one padded batch"] --> e2["decode all answers together,<br/>one step per token"]
+    end
+    subgraph m4["4. 1 token + logprobs, state cached"]
+        direction LR
+        f0["prefill state once"] --> f1["prefill q1, take logprobs"] --> f2["prefill q2, take logprobs"] --> f3["… 13 times"]
+    end
+    subgraph m5["5. One JSON call"]
         direction LR
         c1["prefill state + all 13 questions"] --> c2["generate ~9 tokens per answer,<br/>one token at a time"]
     end
-    subgraph m4["4. minijev"]
+    subgraph m6["6. minijev"]
         direction LR
         d1["prefill state + all 13 branches<br/>in one pass"] --> d2["readout of every answer's probabilities;<br/>generate nothing"]
     end
-    m1 ~~~ m2 ~~~ m3 ~~~ m4
+    m1 ~~~ m2 ~~~ m3 ~~~ m4 ~~~ m5 ~~~ m6
 ```
 
-Each cell gives the wall-clock seconds for the full batch. The raw data is in `poc/results/fanout*.json`.
+Each cell gives the median wall-clock seconds of 3 runs for the full batch. The runs rotate through the methods in a
+random order, so that a slow drift of the CPU speed affects all methods equally. The files also hold every single
+run.
 
 **Qwen2.5-0.5B**
 
-| Questions | 1. Per question | 2. Per question, cached | 3. One JSON call | 4. minijev | minijev vs strongest baseline |
-|---:|---:|---:|---:|---:|---:|
-| 1 | 2.48 s | 2.48 s | 3.94 s | **2.28 s** | 1.1× |
-| 4 | 9.07 s | 3.48 s | 8.02 s | **2.67 s** | 1.3× |
-| 13 | 30.95 s | 8.96 s | 28.86 s (2 unparseable) | **6.27 s** | 1.4× (and 4.6–4.9× vs 1 and 3) |
-
-```mermaid
-xychart-beta
-    title "13 questions on one state, Qwen2.5-0.5B (seconds)"
-    x-axis ["1. per question", "2. cached", "3. one JSON call", "4. minijev"]
-    y-axis "seconds" 0 --> 35
-    bar [30.95, 8.96, 28.86, 6.27]
-```
+| Questions | 1. Per question | 2. Cached | 3. Batch, cached | 4. 1 token + logprobs | 5. One JSON call | 6. minijev |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 2.47 | 2.42 | 2.34 | 2.23 | 4.08 | 2.52 |
+| 4 | 8.33 | 3.40 | 2.45 | 2.72 | 8.39 | 2.69 |
+| 13 | 31.40 | 9.57 | 10.14 | 6.14 | 30.89 | **5.71** |
 
 **Qwen2.5-1.5B**
 
-| Questions | 1. Per question | 2. Per question, cached | 3. One JSON call | 4. minijev | minijev vs strongest baseline |
-|---:|---:|---:|---:|---:|---:|
-| 1 | 6.31 s | 6.64 s | 9.72 s | 6.83 s | 0.9× (noise: an earlier run gave 1.4×) |
-| 4 | 28.59 s | 8.86 s | 22.47 s | **6.22 s** | 1.4× |
-| 13 | 75.66 s | 25.33 s | 78.28 s | **12.44 s** | **2.0×** (and 6.1–6.3× vs 1 and 3) |
+| Questions | 1. Per question | 2. Cached | 3. Batch, cached | 4. 1 token + logprobs | 5. One JSON call | 6. minijev |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 5.46 | 5.60 | 5.50 | 5.21 | 8.59 | 5.05 |
+| 4 | 23.36 | 8.89 | 6.92 | 7.27 | 22.39 | 6.33 |
+| 13 | 90.72 | 24.69 | 26.79 | 16.10 | 79.22 | **12.29** |
 
 ```mermaid
 xychart-beta
-    title "13 questions on one state, Qwen2.5-1.5B (seconds)"
-    x-axis ["1. per question", "2. cached", "3. one JSON call", "4. minijev"]
-    y-axis "seconds" 0 --> 85
-    bar [75.66, 25.33, 78.28, 12.44]
+    title "13 questions on one state, Qwen2.5-1.5B (median seconds)"
+    x-axis ["1. per question", "2. cached", "3. batch", "4. 1 token + logprobs", "5. JSON", "6. minijev"]
+    y-axis "seconds" 0 --> 95
+    bar [90.72, 24.69, 26.79, 16.10, 79.22, 12.29]
 ```
 
-With a single question, both methods prefill the same ~620 tokens. minijev saves only the generation of 2 tokens.
-Thus the two results are within the run-to-run noise.
+**How large is the noise?** The spread of the 3 runs is about ±10% for most cells. Examples at 13 questions: the
+0.5B readout took 5.60–5.72 s, and method 4 took 5.39–6.14 s. Thus a ratio below about 1.2× is not a real
+difference. With 1 question, all methods except JSON are equal within the noise. With 4 questions at 0.5B, methods
+3, 4, and 6 are equal within the noise.
 
-The methods scale differently for these reasons:
-- **1. Per question** prefills the 500-token state again for each question. Cost ≈ N × state.
-- **3. One JSON call** prefills the state once. But then it *generates* about 9 tokens per answer, one at a time.
-  Cost ≈ N × 9 generated tokens, and each generated token is expensive (6.4).
-- **2. Per question, cached** prefills the state once, as minijev does. The remaining cost is 2–3 generated tokens per
-  answer (33 in total for 13 questions) and one short call per question.
-- **4. minijev** prefills the state once. Each question adds only its own short branch. With 13 questions, it
-  prefills 1,371 tokens in total and generates none.
+**The result, against each baseline, at 13 questions:**
 
-**The honest conclusion.** The strongest generation baseline uses prompt caching and one-word answers. Against it,
-minijev is only **1.3–1.4× faster at 0.5B and 1.4–2.0× at 1.5B** for 4–13 questions. For a single question, the two
-are about equal. This result is expected. To generate the first token of a one-word answer, the model calculates the
-probability of that token. minijev is the limit of that optimization. It stops at the first token and takes the
-probability of every option, not a sample of one. §6.6 shows where the time goes.
+| minijev is faster than … | 0.5B | 1.5B |
+|---|---:|---:|
+| 1. One call per question | 5.5× | 7.4× |
+| 5. One JSON call | 5.4× | 6.4× |
+| 2. One call per question, cached | 1.7× | 2.0× |
+| 3. One batch, cached | 1.8× | 2.2× |
+| 4. 1 token + logprobs, cached | 1.08× (noise) | 1.3× |
 
-The large differences come from the usual LLM methods:
-- Send the state again for each question: 4.9–6.1× slower at 13 questions.
-- Ask for JSON: 4.6–6.3× slower.
-- Ask for probabilities: 7× slower, and most replies are malformed (§6.2).
+The fair conclusion:
+- **Against the strongest generation baseline (method 4), the readout has almost no advantage.** Method 4 does the
+  same computation, one question per call. The 1.3× at 1.5B comes from 13 separate calls instead of one pass. At
+  0.5B, the difference is within the noise.
+- **The large gains come against the usual patterns:** a state sent again for each question, JSON output, or
+  written answers.
+- **Batching the decode did not help on this CPU** (§6.4). A decode step for 13 questions took 0.57 s, against
+  0.13 s for one question. The padding of the batch also added prefill work.
 
-At 13 questions, how often did the generation methods pick the same option as minijev?
-- **0.5B:** 69% for per-question calls, cached or not. The two per-question methods agreed with each other 100%.
-  62% for JSON.
-- **1.5B:** 92% for per-question calls and 100% for JSON.
+At 13 questions, how often did each method pick the same option as minijev?
+- **Method 4:** 100% at both sizes. It is the same computation.
+- **Methods 1–3 (the model generates the name):** 69% at 0.5B, 92% at 1.5B. The three methods agreed with each other
+  100%.
+- **Method 5 (JSON):** 62% at 0.5B, 100% at 1.5B.
 
-These questions are harder, and the small model is sensitive to the prompt format: "answer with the name" vs a readout of
-the letter. In the JSON call, the model also generates the 13 answers in one stream, so they can affect each other.
-They are not isolated, as Jev's answers are.
+The difference comes from the prompt format: "answer with the name" vs a readout of the letter. The small model is
+sensitive to it. In the JSON call, the model also generates the 13 answers in one stream, so they can affect each
+other. They are not isolated, as Jev's answers are.
 
 ### 6.4 Why prefill is cheaper than generation
 
-We measured on this laptop, 0.5B in fp32, from 180 completions and 120 readouts:
+We measured this directly on this laptop. The setup: 0.5B in fp32, a 600-token context, 20 decode steps, median of
+3 runs.
 
-| | Cost per token |
-|---|---:|
-| **Prefill** (all prompt tokens go through each weight matrix together) | **3.1 ms** |
-| **Generation** (decode: each new token needs a full pass by itself, which loads all ~2 GB of weights from memory again) | **140 ms** |
+| | Cost per token | Range of the 3 runs |
+|---|---:|---:|
+| **Prefill** (all prompt tokens go through each weight matrix together) | **3.1 ms** | 3.08–3.15 ms |
+| **Generation** (decode: each new token needs a full pass by itself, which loads all ~2 GB of weights from memory again) | **161 ms** | 156–162 ms |
 
-Here, a generated token costs about **45× a prefilled token**. This one fact explains all results in 6.2 and 6.3.
+Here, a generated token costs about **50× a prefilled token**. A separate profile run measured 130 ms per decode
+step. Thus this cost changes by about 20% between runs.
 
 ```mermaid
 flowchart TB
@@ -531,7 +555,7 @@ flowchart TB
         direction LR
         w1[("model weights<br/>~2 GB")] --> x1["applied to all the prompt's<br/>tokens together, one load"]
     end
-    subgraph decode["Generation (decode): 140 ms per token"]
+    subgraph decode["Generation (decode): ~130–160 ms per token"]
         direction LR
         w2[("model weights<br/>~2 GB")] --> x2["applied to one new token"] --> x3["append it; the next token<br/>needs the weights again"]
         x3 --> w2
@@ -540,19 +564,23 @@ flowchart TB
 ```
 
 During generation, most of each pass moves the weights from memory to the processor: ~2 GB for one token. Prefill
-moves the weights once for the full prompt and uses its time for arithmetic. Generation cannot batch its tokens in
-the same way, because each token depends on the token before it.
+moves the weights once for the full prompt and uses its time for arithmetic. Generation cannot process its tokens
+together in the same way, because each token depends on the token before it.
+
+**Batching makes decode cheaper per token, but not free on a CPU.** A decode step for 13 questions at once took
+0.57 s, and a step for one question took 0.13 s (Measured). Per token, that is 3× cheaper. A GPU has much more
+arithmetic per byte of memory, so on a GPU a batch of 13 costs almost the same as a batch of 1 (Inferred).
 
 This is also why cloud APIs charge more for output than for input. It is also why Jev can make output free: Jev
 never generates. Jev's founder gives this argument about GPUs in his blog post *(KV) Cache Rules Everything Around Me*.
 
-The difference also increased with model size. From 0.5B to 1.5B, the 13-question generation times increased 2.4–2.8×:
-- one call per question: 31 s → 76 s;
-- cached: 9.0 s → 25 s;
-- JSON: 29 s → 78 s.
+From 0.5B to 1.5B, the 13-question generation times increased 2.6–2.9×:
+- one call per question: 31 s → 91 s;
+- cached: 9.6 s → 25 s;
+- JSON: 31 s → 79 s.
 
-The readout time increased only 2.0×, from 6.3 s to 12.4 s. This agrees with the fact that each generated token must
-load three times as many weights.
+The readout time increased 2.2×, from 5.7 s to 12.3 s. Generation is more sensitive to model size, because each
+generated token must load all the weights again (Inferred).
 
 ### 6.5 What about a cloud LLM such as Claude?
 
@@ -565,6 +593,8 @@ We did not measure this, because this environment has no `ANTHROPIC_API_KEY`. Tw
   evals (evals.typesafe.ai) report about 0.4 s per case for Jev. They report approximately 10–90 s for LLM workflows
   and up to ~190 s for single LLM prompts. Those numbers include larger models and reasoning, so they are not a
   controlled comparison.
+- **Many hosted APIs do not return logprobs.** Without logprobs, the strongest baseline (method 4) is not available,
+  and the fair comparison is method 2 or method 5.
 
 To add the cloud point, do these steps:
 1. Set `ANTHROPIC_API_KEY`.
@@ -572,160 +602,110 @@ To add the cloud point, do these steps:
    questions.
 3. Add its results as one more column to the tables above. The adapter returns answers in Jev's format.
 
-### 6.6 Summary: how minijev is faster, and why
+### 6.6 Summary: where the time goes
 
 **The results.** With the same model on the same laptop, minijev is:
-- **a little faster, or equal, for a single one-word answer.** The only saving is the generation of 2–3 tokens. The
-  speed-up was 1.6× on short news items (0.44 vs 0.71 s). On a 500-token state, the difference was within noise.
-- **about 7× faster** when you want probabilities. It also gives them: complete distributions, no parsing, and no
-  malformed replies.
-- **about 5–6× faster for 13 questions on one state** than the usual LLM methods: one call per question, or one JSON
-  call.
-- **1.4× (0.5B) to 2.0× (1.5B) faster at 13 questions than the strongest generation baseline**, which uses prompt
-  caching and one-word answers. That baseline still returns one answer per question, not probabilities.
+- **as fast as "1 token + logprobs"** for a single decision, because it is the same computation.
+- **1.6× faster than generation of a one-word label** for a single decision.
+- **7× faster than generation of written probabilities**, which are also malformed or poor.
+- **5–7× faster for 13 questions on one state** than the usual methods: one call per question, or one JSON call.
+- **1.7–2.0× faster at 13 questions than cached generation of one-word answers.**
+- **1.0–1.3× faster than the strongest baseline**, cached "1 token + logprobs" per question. That baseline needs an
+  API that returns logprobs.
 
 #### How: count the tokens that each method prefills and generates
 
-Each method does only two types of work: **prefill** and **generation** (decode). On this laptop, prefill cost 3.1 ms
-per token and generation cost 140 ms per token (§6.4). Multiply and add these costs. The token counts alone then
-predict the 13-question results:
+Each method does two types of work: **prefill** and **generation** (decode). Use the costs of §6.4: 3.1 ms per
+prefilled token and 161 ms per generated token. For the batch, use the measured 0.57 s per decode step. Multiply
+and add:
 
-| 13 questions, 0.5B | Tokens prefilled | Tokens generated | Predicted: 3.1 ms × prefilled + 140 ms × generated | Measured |
-|---|---:|---:|---:|---:|
-| 1. One call per question | 8,247 | 33 | 25.6 s + 4.6 s = **30.2 s** | 30.95 s |
-| 2. One call per question, cached | 1,347 | 33 | 4.2 s + 4.6 s = **8.8 s** | 8.96 s |
-| 3. One JSON call | 1,218 | 124 | 3.8 s + 17.4 s = **21.1 s** | 28.86 s* |
-| 4. minijev | 1,371 | **0** | 4.3 s + 0 s = **4.3 s** | 6.27 s* |
+| 13 questions, 0.5B | Tokens prefilled | Tokens generated | Predicted | Measured | Error |
+|---|---:|---:|---:|---:|---:|
+| 1. One call per question | 8,247 | 33 | 25.6 s + 5.3 s = **30.9 s** | 31.4 s | −2% |
+| 2. One call per question, cached | 1,347 | 33 | 4.2 s + 5.3 s = **9.5 s** | 9.6 s | −1% |
+| 3. One batch, cached | 2,057 (with padding) | 33, in ~3 steps | 6.4 s + 1.7 s = **8.1 s** | 10.1 s | −20% |
+| 4. 1 token + logprobs, cached | 1,371 | 0 | 4.3 s | 6.1 s | −30% |
+| 5. One JSON call | 1,218 | 124 | 3.8 s + 20.0 s = **23.8 s** | 30.9 s | −23% |
+| 6. minijev | 1,371 | 0 | 4.3 s | 5.7 s | −25% |
 
 ```mermaid
 xychart-beta
     title "13 questions, 0.5B: measured (bars) vs predicted from token counts (line)"
-    x-axis ["1. per question", "2. cached", "3. one JSON call", "4. minijev"]
+    x-axis ["1. per question", "2. cached", "3. batch", "4. 1 token + logprobs", "5. JSON", "6. minijev"]
     y-axis "seconds" 0 --> 35
-    bar [30.95, 8.96, 28.86, 6.27]
-    line [30.2, 8.8, 21.1, 4.3]
+    bar [31.4, 9.6, 10.1, 6.1, 30.9, 5.7]
+    line [30.9, 9.5, 8.1, 4.3, 23.8, 4.3]
 ```
 
-*The two prediction errors have known causes:
-- **Method 3:** each generated token also attends to the full 1,200-token prompt. Thus generation cost about 200 ms
-  per token here, not the 140 ms that we measured with short prompts.
-- **Method 4:** the single packed pass calculates attention over the full 1,371 × 1,371 grid. This includes the
-  blocks that the mask then hides (§4.3). There are also fixed overheads.
+The token counts predict the two per-question methods within 2%. They under-predict the other four by 20–30%. The
+causes (Inferred, except where marked):
+- **Method 3:** the padded suffix prefill took 5.0 s in the profile, not the 4.4 s that 1,482 tokens predict.
+  The batch also needs its own copy of the state cache for each row.
+- **Method 4:** 13 separate `generate()` calls, each with fixed overhead.
+- **Method 5:** each generated token also attends to the full 1,200-token prompt and to the answers so far. This
+  makes each step slower than the 161 ms measured at a fixed context.
+- **Method 6:** the single packed pass calculates attention over the full 1,371 × 1,371 grid. This includes the
+  blocks that the mask then hides (§4.3).
 
-The table shows these points:
-- **Methods 2 and 4 prefill almost the same tokens.** The only difference is 33 generated tokens, which cost 4.6 s.
-- **Methods 1 and 3 are slow for opposite reasons.** Method 1 prefills the state 13 times (8,247 tokens). Method 3
-  generates 124 tokens.
+#### Why: two independent savings
+
+1. **minijev prefills the state once.** All questions are branches from a single prefill of the state (§3.2).
+   Thirteen questions cost one state plus 13 short branches, not 13 states. An LLM pipeline copies this with prompt
+   caching (method 2).
+2. **minijev stops at the first answer token and takes its probabilities.** An LLM that generates its answer pays
+   161 ms for each extra token. "1 token + logprobs" (method 4) copies this saving exactly.
+
+A third, smaller saving comes from one pass for all branches, instead of one call per question. The measurements
+separate the three:
 
 ```mermaid
 flowchart LR
-    subgraph llm["An LLM answering 13 questions"]
-        direction TB
-        l1["prefill the state<br/>(13 times, unless cached)"] --> l2["generate each answer,<br/>one token at a time<br/>(140 ms per token)"] --> l3["parse the text;<br/>retry if malformed"]
-    end
-    subgraph mj["minijev answering 13 questions"]
-        direction TB
-        m1["prefill the state once<br/>+ 13 short branches"] --> m2["readout of every option's probability<br/>in that same pass"] --> m3["typed answers<br/>+ probabilities"]
-    end
-    llm ~~~ mj
-```
-
-#### Why: three reasons
-
-1. **minijev never generates.** An LLM produces its answer one token at a time. Each token needs its own pass
-   through the full model. Here that cost 140 ms per token, 45× the prefill cost of one token. The reason is that each
-   generated token loads all ~2 GB of weights from memory again (§6.4). minijev stops at the exact position where the
-   model *would* start to generate, and does the readout there. Thus it pays only the cheap prefill rate.
-2. **minijev prefills the state once.** All questions are branches from a single prefill of the state (§3.2).
-   Thirteen questions cost one state plus 13 short branches, not 13 states. An LLM pipeline can copy this part with
-   prompt caching (method 2).
-3. **The same pass gives the full distribution of every answer.** The probabilities for every option are already
-   available at the readout position. An LLM must *generate* the probabilities to give them: 19.9 tokens per answer in
-   §6.2, and most replies were malformed. minijev has nothing to parse and nothing to retry.
-
-#### Is it only caching?
-
-No. Caching is one of two independent factors. The measurements separate them:
-
-```mermaid
-flowchart LR
-    A["LLM, one call per question<br/>0.5B: 31 s · 1.5B: 76 s"] -->|"cache the state<br/>(any LLM API can do this)"| B["LLM with caching<br/>0.5B: 9.0 s · 1.5B: 25 s"] -->|"generate nothing<br/>(needs a readout)"| C["minijev<br/>0.5B: 6.3 s · 1.5B: 12.4 s"]
+    A["one call per question<br/>0.5B: 31.4 s · 1.5B: 90.7 s"] -->|"cache the state"| B["cached<br/>0.5B: 9.6 s · 1.5B: 24.7 s"] -->|"stop at the first token,<br/>take its logprobs"| C["1 token + logprobs<br/>0.5B: 6.1 s · 1.5B: 16.1 s"] -->|"one pass for<br/>all branches"| D["minijev<br/>0.5B: 5.7 s · 1.5B: 12.3 s"]
 ```
 
 | 13 questions on one state | 0.5B | 1.5B |
 |---|---:|---:|
-| LLM, one call per question, no cache | 30.95 s | 75.66 s |
-| … plus caching the state (reason 2) | 8.96 s (−22.0 s) | 25.33 s (−50.3 s) |
-| … plus generating nothing, i.e. minijev (reason 1) | 6.27 s (−2.7 s) | 12.44 s (−12.9 s) |
-| Share of the total saving: caching / no generation | 89% / 11% | 80% / 20% |
+| One call per question, no cache | 31.40 s | 90.72 s |
+| … plus caching the state | 9.57 s (−21.8 s) | 24.69 s (−66.0 s) |
+| … plus stopping at the first token (logprobs) | 6.14 s (−3.4 s) | 16.10 s (−8.6 s) |
+| … plus one pass for all branches (minijev) | 5.71 s (−0.4 s) | 12.29 s (−3.8 s) |
+| Share of the total saving: caching / first token / one pass | 85% / 13% / 2% | 84% / 11% / 5% |
 
-- **Against the simplest generation method, most of the saving comes from caching.** The reason is that this test has
-  a large state: 13 questions on a 500-token article.
-- **When there is nothing to cache, all of the gain comes from no generation.** With one question per state (§6.2),
-  minijev was 1.6× faster than generation of a label and 7× faster than generation of probabilities.
-- **The one-JSON-call method also prefills the state only once, but it is still 4.6–6.3× slower.** All of that
-  difference comes from generation.
-- **The share of the saving from no generation increases** with model size (11% → 20%). It also increases with the
-  quantity that the LLM generates: labels < JSON < probabilities.
-
-Thus caching explains why it is slow to send the state again for each question. Caching does not explain why minijev
-is faster than an LLM that already caches. That part comes from the readout: there is no decode phase.
-
-#### When minijev is not faster
-
-- **A single short answer.** The generation of 2–3 tokens adds little to the prefill that both methods must do. On a
-  500-token state, the two methods were equal.
-- **The strongest generation baseline** uses prompt caching and one-word answers. It prefills the same tokens as
-  minijev and pays only for the few tokens that it generates. minijev is the limit of that optimization: it generates
-  zero tokens and takes the probability of every option, not a sample of one.
+- **Most of the saving comes from caching** in this test, because the state (500 tokens) is large and the answers
+  are short.
+- **The second saving is generation.** It increases with the length of the written answer: one-word labels < JSON <
+  probabilities.
+- **The one-pass layout adds little on a CPU.** On a GPU, one pass keeps all branches in one kernel launch
+  (Inferred, not measured).
 
 #### What applies to GPUs, and to Jev
 
-The difference between prefill and generation is not specific to this laptop:
 - On GPUs, generation is also the bottleneck, because memory bandwidth limits each token. That is why APIs charge more
   for output than for input. Jev's founder uses this argument for a model that never generates (§3.2).
-- A GPU makes both methods faster in absolute terms. It does not change the count: minijev generates nothing.
+- A GPU makes all methods faster in absolute terms. It makes batched decode much cheaper than on this CPU (§6.4).
+- Jev's price and latency need more than the readout: RESEARCH.md §3.9 shows what the published numbers allow.
 
-**The method does not make the model more accurate.** The answers are the model's own answers. Single decisions had
-94% identical picks, and the 1.5B fan-out had up to 100%. The method changes the cost and the structure, and it gives
-probabilities at no extra cost. That is exactly what Jev sells, without Jev's better model and training.
-
----
-
-## 7. What changed in DESIGN.md
-
-- **§2 Known vs inferred** now contains the evidence table from the research.
-- **§4 API** now matches Jev's real API:
-  - Score takes `criteria` as an ordered list. There is no `levels` field.
-  - `score` is in level units 0…n−1 and comes with a `legend`.
-  - Noul accepts optional `criteria`.
-  - The model never sees question ids.
-  - `latency_ms` is marked as our extension.
-- **§5.1 Judges:** the claim that stated confidence is less well calibrated is now balanced. Tian et al. 2023 found
-  the opposite for chat-tuned models. The section also refers to TypeSafe's adapter as a ready Claude baseline.
-- **§5.2 Labels and templates:**
-  - Noul uses a readout of Yes/No, not letters.
-  - Score judges one level at a time.
-  - Choice has a pointwise option and a two-stage plan for large option sets.
-  - The template is the one that works in our tests.
-- **§5.4 Shared prefix** adds the packed one-pass mode and the three-way equivalence check.
-- **§5.5 Maths** uses TypeSafe's two confidence formulas.
-- **§6 Calibration:** temperature scaling is now the primary method. Contextual calibration is optional, with the
-  measured reason.
-- **§8, §9, §12, §13** record verified versions, measured speed, the status of each experiment, and new measured risks.
+**The method does not make the model more accurate.** The answers are the model's own answers. The readout and
+"1 token + logprobs" pick the same option every time. The method changes the cost and the structure, and it gives
+probabilities at no extra cost. That is the interface that Jev sells, without Jev's model and training.
 
 ---
 
-## 8. Next steps
+## 7. Next steps
 
 1. **Package the POC** (Phase 2). Move `poc/` into `src/minijev` with a pydantic API and a CLI.
-2. **Make calibration sets for Choice and Score.** Check whether a temperature fitted on one dataset transfers to another.
+2. **Make calibration sets for Choice and Score.** Check whether a temperature fitted on one dataset transfers to
+   another. Put the fitted values in `poc/minijev.env`.
 3. **Add a two-stage Choice** for more than 25 options, as Jev does.
-4. **Add the Claude baseline (E2).** Set `ANTHROPIC_API_KEY` and run TypeSafe's adapter on the same data. This gives
+4. **Test distillation** (RESEARCH.md §3.9). Fine-tune the 1.5B model with LoRA on soft labels from averaged Claude
+   samples. Add option-shuffle augmentation. Measure agreement, ECE, and the `permutation` result against the base
+   model.
+5. **Add the Claude baseline (E2).** Set `ANTHROPIC_API_KEY` and run TypeSafe's adapter on the same data. This gives
    the cloud-LLM comparison that this walkthrough does not include.
-5. **With a Jev API key, run the cheap tests** in RESEARCH.md §8.
+6. **With a Jev API key, run the cheap tests** in RESEARCH.md §8:
    - A shuffle of the options shows whether Jev judges options together or one at a time.
    - The step in latency shows where the two-stage Choice starts.
+   - A repeated state vs a nonce-prefixed state shows whether Jev caches states across requests.
 
 ---
 

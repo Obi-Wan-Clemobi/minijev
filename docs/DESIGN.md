@@ -275,7 +275,8 @@ separates `state` from `questions` (Inferred).
    - Restart `position_ids` at `len(PREFIX)` in every branch.
    - Read the logits at the last token of each branch.
 
-   This layout explains Jev's context limit: "state plus the *longest* question" (32k), with a separate total (64k).
+   This layout is consistent with Jev's context limit: "state plus the *longest* question" (32k), with a separate
+   total (64k). The kv layout is consistent with that limit too.
    Two errors to prevent: (a) do the readout for each branch at **its own last token**; (b) the mask must cover the prefix and the
    branch itself, and nothing else.
 4. Keep a **naive** mode, which encodes everything again for each branch, as the reference.
@@ -299,8 +300,8 @@ This bug gives no error.
 Cost model: `T ≈ c·len(state) + Σ c·len(suffix_i)`. The cost is still *linear* in the number of questions. But the
 slope is small when the state is long and the questions are short. **Measured** on this laptop (RESEARCH.md §7.3 R3):
 - The naive mode encoded a 1,000-token state again for 23 branches and took 93 s. The shared state took 10 s.
-- On a CPU, the kv and packed modes cost approximately the same. The packed layout gives an advantage on a GPU,
-  where all branches run in one kernel launch.
+- On a CPU, the kv and packed modes cost approximately the same. On a GPU, the packed layout runs all branches in
+  one kernel launch (Inferred, not measured).
 - Added questions are cheap only when the state is the largest part. Each pointwise Score level repeats its question
   text, so these levels are the expensive part of a branch set.
 
@@ -309,6 +310,14 @@ Let `z_i` = the combined logit for label i, and T = the calibrated temperature. 
 is the yes/no log-odds of item i.
 
 - **Probabilities**: `p = softmax(z / T)` over the declared labels only.
+- **Why a softmax over yes/no log-odds, for pointwise items.** Let `q_i` = P(yes) for item i. Assume that
+  exactly one item is correct, and that the branches judge independently (each branch sees only its own item).
+  Then P(only item i is correct) = `q_i · Π_{j≠i} (1 − q_j)` = `[q_i / (1 − q_i)] · Π_j (1 − q_j)`. The last factor
+  is the same for every i. Thus P(i) ∝ `q_i / (1 − q_i)`, which is `softmax(log-odds)`. Normalizing `q_i` directly
+  has no such derivation.
+  - A consequence: two items with `q` = 0.99 and 0.999 get about 0.09 and 0.91. The odds differ by 10×.
+  - A temperature fitted on Noul log-odds does not transfer to this softmax. Fit `T` for Score and pointwise Choice
+    on their own labeled data.
 - **Noul**: return `P(yes)` from the yes/no pair. There is no confidence, because one number fully describes a
   distribution with two outcomes.
 - **Choice**: `choice = argmax p`, and `confidence = (p_max − 1/k) / (1 − 1/k)`. It is 0 for a uniform distribution
@@ -352,6 +361,18 @@ flowchart LR
 
 minijev stores the result as `calibration.json` → `{ "noul": {"T": 2.72}, "choice": {"T": …}, ... }`, with model and
 template as keys. Fit it again after each template change.
+
+**In the POC, the dials are in `poc/minijev.env`.** `ask()` and `Engine()` read them through `Settings.load()`.
+A `MINIJEV_*` environment variable overrides the same line in the file. The dials are:
+- `MINIJEV_TEMP_NOUL`, `MINIJEV_TEMP_CHOICE`, `MINIJEV_TEMP_SCORE`: the temperature per primitive.
+- `MINIJEV_BIAS_NOUL`: the Platt shift `b`. Use it with `MINIJEV_TEMP_NOUL = 1/a`.
+- `MINIJEV_CHOICE_MODE`, `MINIJEV_SCORE_MODE`: the default readout (listwise or pointwise).
+- `MINIJEV_MIN_LABEL_MASS`: the warning threshold of the §5.3 diagnostic.
+- `MINIJEV_MODEL`, `MINIJEV_THREADS`, `MINIJEV_ATTN`: the runtime.
+
+`experiments.py calibration` prints the fitted values in the format of the file. The shipped file holds the
+uncalibrated defaults. The experiments always use those defaults, so the file cannot change a measured result.
+The temperature is model-specific: change it when you change `MINIJEV_MODEL`.
 
 **Lesson:** calibration is a property of *groups* of predictions on a *distribution* of data. A temperature fitted
 on sentiment data can be wrong for support tickets. SemIf measured temperatures from 1.2 to 2.5 for different
@@ -411,7 +432,7 @@ Machine: Intel i7-8850H (6 cores), 32 GB RAM, x86_64 macOS, no CUDA. PyTorch can
 | numpy | **< 2** | torch 2.2.2 was compiled against numpy 1.x |
 | transformers, peft | **transformers 4.49.0** (verified); peft to match | Phase 0 passed: it loads Qwen2.5-0.5B/1.5B-Instruct on torch 2.2.2 + numpy 1.26.4, passes custom 4D attention masks through unchanged, and accepts `logits_to_keep` index tensors. Newer families (Qwen3+) need newer transformers; whether that runs on torch 2.2.2 is unknown (not tested) |
 | model (dev) | Qwen2.5-0.5B-Instruct (verified) | fast iteration on CPU; calibratable but weak: 0.652 on BoolQ vs a 0.615 base rate |
-| model (quality) | Qwen2.5-1.5B-Instruct (verified) | 0.782 on BoolQ, much closer to Jev on Score; ~3× slower |
+| model (quality) | Qwen2.5-1.5B-Instruct (verified) | 0.782 on BoolQ, much closer to Jev on Score; 2.2× slower readout, 2.6–2.9× slower generation (measured) |
 | API | FastAPI + pydantic | mirrors the Jev HTTP API |
 | eval | numpy, scikit-learn, matplotlib | ECE, Brier, reliability plots |
 | Claude | `anthropic` SDK, `ANTHROPIC_API_KEY` | ClaudeJudge, synthetic data, pipeline |
@@ -452,7 +473,9 @@ diagram (PNG) · latency p50/p95.
 - **E8 Pointwise vs listwise** Score and Choice: accuracy, calibration, and sensitivity to option order.
 - **E9 Agreement with Jev's published outputs**, on its doc examples and <https://evals.typesafe.ai/>.
 - **E10 Generation vs readout.** Tell the same model to *generate* its answer, as a label or as JSON. Compare this
-  with the minijev *readout*. Measure latency, output tokens, parse failures, accuracy, and calibration.
+  with the minijev *readout*. Measure latency, output tokens, parse failures, accuracy, and calibration. Include the
+  two strongest generation baselines: one generated token with logprobs (the same computation as a readout), and
+  batched decode of all questions with the state cached. Without them, the comparison favours the readout.
 
 **Status in the POC** (RESEARCH.md §7.3, WALKTHROUGH.md):
 
@@ -461,7 +484,7 @@ diagram (PNG) · latency p50/p95.
 | E1 | Done for Noul on BoolQ (R6) |
 | E3 | Done (R3) |
 | E4 | Done as option rotations (R4) |
-| E7 | Isolation and numbers-only levels done (R2, R5) |
+| E7 | Numbers-only levels done (R5). Isolation holds by construction of the mask (R2): a code check, not a measurement of Jev |
 | E8 | Order sensitivity done (R4) |
 | E9 | Doc examples done at 0.5B and 1.5B (R5) |
 | E10 | Done; see WALKTHROUGH.md |
@@ -531,8 +554,9 @@ Each phase ends with something that you can run, and a clear done-check.
 
 Phases 0–5 are the core learning path. After Phase 5, you understand the mechanism from start to end.
 
-**Status (2026-09-23).** `poc/` demonstrates Phases 0–3, as two flat files, not the `src/minijev` layout. Parts of
-Phases 4–5 are done:
+**Status (2026-09-23).** `poc/` demonstrates Phases 0, 1, and 3, as two flat files, not the `src/minijev` layout.
+Phase 2 is partly done: all primitives and the `ask()` contract work, and `poc/tests/` has unit tests for the maths,
+the attention mask, and the mode equivalence. The pydantic API and the CLI remain. Parts of Phases 4–5 are done:
 - Noul calibration on BoolQ with temperature, Platt, and contextual calibration.
 - Choice accuracy and calibration on AG News, in the generation-vs-readout comparison (E10).
 
@@ -562,9 +586,9 @@ Green is done in the POC. Yellow is partly done. Grey is not started.
 
 - **Tokenization surprises:** single-token labels are different for each model. `labels.py` must assert this at load
   time.
-- **Small-model judgment quality (measured).** Raw 0.5B is *overconfident* (T = 2.72 on BoolQ). Its accuracy is only
-  a little better than the base rate (0.652 vs 0.615). After temperature scaling, it is calibrated but gives almost no
-  information. 1.5B gets 0.782. Calibration ≠ accuracy.
+- **Small-model judgment quality (measured).** Raw 0.5B is *overconfident* (T = 2.72 on BoolQ). Its accuracy,
+  0.652 [0.608–0.698], is not measurably better than the base rate of 0.615. After temperature scaling, it is
+  calibrated but gives almost no information. 1.5B gets 0.782 [0.743–0.825]. Calibration ≠ accuracy.
 - **Label and position bias in listwise Choice** (Zheng et al. 2024). Measured: a rotation of the options changed the
   winner in 54% of rotations at 0.5B and 9% at 1.5B. To decrease the bias, use pointwise Choice, or average over
   option orders.

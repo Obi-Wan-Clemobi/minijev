@@ -3,8 +3,8 @@
 *Status: research snapshot, 2026-09-23. We read the sources on that date. Jev version `jev-1.13.0`.*
 
 This file is the companion to [DESIGN.md](DESIGN.md). DESIGN.md says what we will build. This file says what is
-known about Jev, how sure we are, and how this changes the design. §6 lists the DESIGN.md edits, which we applied
-on 2026-09-23. §7 is the runnable POC and its measured results. The writing rules and the glossary are in
+known about Jev, how sure we are, and what it means for the design. §6 maps each finding to its DESIGN.md
+section. §7 is the runnable POC and its measured results. The writing rules and the glossary are in
 [CLAUDE.md](../CLAUDE.md).
 
 **Evidence labels in this file**
@@ -27,12 +27,13 @@ on 2026-09-23. §7 is the runnable POC and its measured results. The writing rul
 3. **The evidence constrains the inference shape well.** Jev encodes the state once. Each question is a branch that
    sees only the state and itself. Four independent pieces of evidence agree: the 64k/32k token budgets, identical
    answers in a batch or alone, latency, and billing (§3.1).
-4. **Score is pointwise.** The docs say that Jev judges each level on its own, without the other levels. DESIGN.md
-   scored levels listwise before (A/B/C in one prompt). We corrected this on 2026-09-23.
+4. **Score is pointwise.** The docs say that Jev judges each level on its own, without the other levels. minijev
+   does the same: one yes/no branch per level, then a softmax across levels (DESIGN.md §5.2, §5.5).
 5. **Choice uses two stages for high cardinality.** Jev scores options independently, then makes an explicit choice
    among the remaining options (Stated, launch blog). Small Choices appear to be one explicit listwise pick (Inferred).
-6. **Several API details in DESIGN.md §4 were wrong**: Score `criteria`, the units of `score`, `legend`, Noul
-   `criteria`, and `usage`. We corrected all of them on 2026-09-23 (§6).
+6. **Jev's API has details that are easy to get wrong**: Score `criteria` is an ordered list, `score` is in level
+   units 0 … n−1 with a `legend`, Noul takes optional `criteria`, and `usage` has only token counts. DESIGN.md §4
+   follows the API reference.
 7. **TypeSafe's own open-source adapter fully defines confidence:**
    - Choice: `(p_max − 1/k)/(1 − 1/k)`.
    - Score: an ordinal statistic, `1 − E|level − mode| / E|level − centre|`. The second expectation is under a
@@ -48,12 +49,16 @@ on 2026-09-23. §7 is the runnable POC and its measured results. The writing rul
 10. **The POC reproduces the mechanism on a laptop (§7).**
     - A 0.5B open model answers requests in Jev's format from label probabilities.
     - The naive, KV-cached, and single-packed-pass evaluations agree to 2.5e-5 in logits. Batched and single agree
-      to 3.4e-6. This replicates TypeSafe's isolation result.
+      to 3.4e-6. This checks our implementation: the attention mask isolates branches by construction.
     - A shared state gives 9× the speed on a 1,000-token state with 23 branches.
     - Small models show the problems that Jev must prevent:
-      - Listwise letter labels have a position bias. The winner changes in 54% of option rotations at 0.5B and 9% at 1.5B. Pointwise gives 0%.
+      - Listwise letter labels have a position bias. The winner changes in 54% of option rotations at 0.5B and 9% at 1.5B. Pointwise gives 0%, by construction.
       - Contextual calibration with "N/A" over-corrects yes/no questions.
       - Temperature scaling on labeled data works: BoolQ ECE goes 0.161 → 0.053 at 0.5B and 0.099 → 0.060 at 1.5B.
+11. **A readout is "generate 1 token with logprobs".** On the same model, the two give identical probabilities in
+    equal time. Against that baseline, with the state cached, minijev is 1.0–1.3× faster at 13 questions. The large
+    speed-ups (5–7×) are against the usual patterns: one uncached call per question, or JSON output (§7.3 R7).
+    Jev's speed therefore needs more than the readout. §3.9 gives what the published numbers allow.
 
 ---
 
@@ -100,7 +105,7 @@ him elsewhere. These posts are relevant:
 
 ## 2. Evidence table
 
-This table replaces the table in DESIGN.md §2.
+DESIGN.md §2 summarizes this table.
 
 | # | Claim | Source | Status |
 |---|---|---|---|
@@ -287,7 +292,7 @@ and with this price and latency. These numbers cannot decide the question.
 
 A model that answers in the same pass that processes the input has **no decode phase**. It does not load the cache
 again for each token, and it keeps no KV cache between steps. That is exactly the packed prefix tree of §3.1. It is
-also why output tokens can be "too cheap to meter" (Inferred, but now from the founder's own argument).
+also why output tokens can be "too cheap to meter" (Inferred, from the founder's own argument).
 
 ```mermaid
 flowchart TB
@@ -302,7 +307,7 @@ flowchart TB
     llm ~~~ jev
 ```
 
-The POC measured the same difference on a laptop CPU: 3.1 ms per prefilled token vs 140 ms per generated token
+The POC measured the same difference on a laptop CPU: 3.1 ms per prefilled token vs 130–161 ms per generated token
 (§7.3 R7).
 
 **"Parallel sampler"** has at least two possible meanings:
@@ -392,6 +397,79 @@ Lessons for minijev:
 
 ---
 
+### 3.9 Speed and quality: what the numbers allow (Inferred)
+
+This section adds arithmetic to §3.4 and §3.5. All of it is **Inferred**. The inputs are rows 19, 21, and 32.
+
+**Fixed cost.** Small requests take 111–114 ms round trip (row 21). Thus about 100 ms is network plus fixed cost.
+The single-question request on the 11.8k-token state took 0.21 s. That leaves about 110 ms of compute, which is
+about 100k tokens/s for one request.
+
+**What that rate allows.** Assume one H100 at 50% use (≈500 TFLOP/s in bf16) and 2 FLOPs per active parameter per
+token. Then 100k tokens/s allows only ≈2.5B active parameters. That conflicts with "not small" (row 2). Three
+explanations fit the data:
+
+| Explanation | What it allows | Agrees with |
+|---|---|---|
+| MoE with few active parameters, FP8 | ≈5B active, large total | "not small", the price (§3.4) |
+| Several GPUs per request (tensor or sequence parallel) | ≈15–25B active on 8 GPUs | the price, if the GPUs are shared well |
+| The state was already in a cross-request cache | any size that fits the marginal rate below | the marginal cost of questions |
+
+**The extra questions do not fit a cold state.** The 12 added questions add about 1k tokens (23 branches plus the
+hidden template, row 22). They added 60 ms: about 17k tokens/s. If the state went through at 100k tokens/s in the
+same pass, the branches would add about 10 ms, not 60 ms. The cookbook sent the same article 5 times. A
+cross-request prefix cache explains both numbers:
+- The 0.21 s is mostly fixed cost. The state is not prefilled again.
+- 17k tokens/s is the true prefill rate. At 500 TFLOP/s, that is ≈15–20B active parameters. This agrees with the
+  price estimate of §3.4.
+- Jev still bills the full state (row 19). A cache hit is margin for TypeSafe, not a saving for the customer.
+
+§8 item 7 tests this. Browser Use (row 21, ≈5.3k tokens, median 178 ms) gives ≈66k tokens/s after 100 ms of fixed
+cost. Its pages change, so it gets fewer cache hits. Its rate is between the two numbers above.
+
+**The serving stack, not only the model, makes it fast.**
+- **Prefill only.** No KV cache stays in memory for a decode phase. The work is compute-bound, so the scheduler can
+  pack many requests into large batches with high use of the GPU. An LLM server must keep memory free for decode.
+- **Tree attention kernels.** A block mask in FlexAttention or FlashAttention varlen, or cascade attention (attend to
+  the shared state once, then to each branch). These do not calculate the hidden blocks that the POC's dense mask
+  calculates (WALKTHROUGH.md §6.6).
+- **Batched serving explains the noise.** The std of ≈0.005 on borderline values (row 20) is the batch-invariance
+  effect of §3.6.
+
+**Quality: most agreement comes from the interface.** SemIf's open 4B model reaches 0.845 agreement on 102 rows,
+against 0.883 for Jev (§3.8, Observed, third party). Jev's measurable lead on agreement is small. TypeSafe scores
+Jev against the average of two frontier models (row 32). The shortest route to a good score on that eval is to
+train on the same targets:
+1. Ask frontier models each question several times.
+2. Average the answers into a soft probability.
+3. Train the fast model on those probabilities with log loss (distillation).
+
+Outcome-based RL (§3.5) then corrects what the teacher gets wrong. Other signs:
+- **The jaggedness list** (row 25) is what a pretrained-LM backbone does: literal reading, weak counting and
+  dates, context rot, and injection through the state.
+- **No consistency training across branches.** P(refund) + P(not refund) = 1.19 (row 26). Each branch is
+  calibrated alone. Nothing makes two branches agree.
+- **"Not an LLM" can be an architecture change.** An example is bidirectional attention over the state, as in
+  encoder conversions such as LLM2Vec. It usually helps classification. It keeps the shared state: the state is
+  encoded once, and the branches attend to it. It also removes text generation.
+
+**The work that TypeSafe must do:**
+
+| Work item | Content | Hard part |
+|---|---|---|
+| Backbone | An open-weight model, changed to a readout-only model: branch masks, label or head readout, no LM loss | Keep the pretrained knowledge |
+| Data engine | LLM-written states for many domains. Typed questions. Soft labels from many frontier samples, or from generators where the true probability is known by construction ("statistically well-understood", §3.5) | Coverage and label quality at millions of decisions. TypeSafe says this is half of the company. |
+| Objectives | Stage 1: log loss or Brier on soft labels. Stage 2: RL against sampled outcomes, reward = a proper scoring rule | Soft labels copy the teacher's biases. Only outcomes correct them. |
+| Invariance | Shuffle options and labels. Paraphrase. Flip polarity (`criteria.true` means "no"). Add irrelevant state and injected text. | One generator and one eval for each item. The docs still list polarity and context rot as weaknesses. |
+| Long state | Train on states up to 32k tokens | Context rot (row 25) |
+| Per-primitive work | Pointwise Score normalization. The two-stage Choice up to 255 options. | Stage 2 needs its own data |
+| Eval harness | Calibration (ECE, reliability) per domain. Agreement with the frontier average. A regression suite for each jaggedness item. | The docs publish the jaggedness list, so TypeSafe tracks it |
+| Serving | Prefill-only engine: tree packing, state cache, request batching, FP8, token accounting with the hidden template (row 22) | Batch-invariant numerics |
+
+**Scale of the distillation data.** With these assumptions: 10M decisions × 5 samples × 2 teachers × ≈2k tokens
+≈ 2×10¹¹ teacher tokens. At ≈$3 per million tokens, that costs ≈$600k. This is affordable for a funded company.
+The assumptions are ours. The real numbers are unknown.
+
 ## 4. How minijev maps onto Jev
 
 | Jev behaviour | minijev mechanism | Fidelity |
@@ -417,101 +495,22 @@ training (Inferred). That is exactly the part that Jev keeps secret.
 
 ---
 
-## 6. Changes to DESIGN.md (applied 2026-09-23)
+## 6. Where DESIGN.md uses this research
 
-**§2 Known vs inferred.** Replace it with the table in §2 above. Specific corrections:
-- The source for "Jev is a transformer" is TechCrunch, not Wikipedia.
-- Add "neither small nor an LLM", the 64k/32k budgets, the isolation evidence, pointwise Score, and the two-stage Choice.
-- The output-tokens row gets the data in row 23.
-
-**§3 Core idea.** The picture is correct for Noul and small Choice. Add a note: Score, and stage 1 of a large Choice,
-is pointwise. It uses one branch per level, each with a yes/no readout, then a softmax across levels.
-
-**§4 API contract.** Correct it to match [the API reference](https://docs.typesafe.ai/api):
-- Score request: `criteria` is an **ordered array** of 2–10 level descriptions. There is no `levels` field.
-  Each entry can be a string, object, array, or null.
-- Score response: `score = Σ i·p_i` in **index units 0 … n−1**, not normalized to [0, 1]. Callers divide by n−1
-  themselves. The response adds `legend` (index → description). The keys of `probabilities` are index strings.
-- Noul: optional `criteria: {"true": …, "false": …}`.
-- Choice: `criteria` values can be `null`. This means that the key alone is the description. At most 255 options.
-- `usage` is `{input_tokens, output_tokens}` only. Mark `latency_ms` as a minijev extension.
-- Round returned values to 2 decimals, as Jev does. Keep full precision in debug output.
-- Never put question ids in the prompt. Put Choice option names and descriptions in the prompt.
-
-**§5.1 Judges.** Change "verbalized confidence tends to be worse calibrated". The literature does not agree:
-- Kadavath et al. 2022: token probabilities are well calibrated for *pretrained* models.
-- Xiong et al. 2024: verbalized confidence is overconfident.
-- Tian et al. 2023: for *RLHF* models (ChatGPT, GPT-4, Claude), verbalized confidence is **better** calibrated than
-  token probabilities. It decreases ECE by about 50% relative. RLHF makes token-probability calibration worse.
-
-Thus E2 is an open experiment, which makes it more useful.
-
-**Do not build ClaudeJudge from the start.** TypeSafe's [system-one-adapter-python](https://github.com/typesafe-ai/system-one-adapter-python)
-(MIT) already answers requests in Jev's format with Anthropic, OpenAI, or Gemini models. It uses verbalized per-label
-distributions through structured output. It is the LLM baseline that TypeSafe itself uses.
-- Use it without changes, or copy its prompts and schema.
-- Note one difference from Jev: it asks all questions in one call, so they are *not* isolated.
-
-**§5.2 Labels and templates.**
-- **Score: pointwise by default.** One branch per level: "Does this answer fit? Yes/No". Take the log-odds per level,
-  then a softmax across levels. Keep listwise as an ablation (E8 below).
-- **Noul:** use a readout of `Yes`/`No` tokens, not `A`/`B`. This matches Jev's semantic yes/no behaviour and prevents letter
-  selection bias (Zheng et al. 2024). Render the optional `criteria.true` / `criteria.false`.
-- **More than 52 options:** use two stages (Jev's method) or verified single-token pairs such as `AA`, `AB`
-  (openjev-sglang). Keep the startup check that every label is a single token.
-
-**§5.4 Shared prefix.** Add the **packed single-pass** mode:
-- One sequence that contains the prefix and every branch.
-- An additive 4D mask, so that each branch sees only the prefix and its own causal past.
-- `position_ids` that restart at `len(prefix)` in every branch.
-- Read the logits at the last token of each branch.
-
-This is the most literal version of "one forward pass", and it explains the 64k/32k budgets. The done-check: the
-naive, KV, and packed modes give the same probabilities.
-
-**§5.5 Maths.**
-- Score is `Σ i·p_i` (see §4).
-- Confidence: use TypeSafe's two functions (§3.3). Choice does not change. Score becomes the ordinal statistic, which
-  gives lower confidence to a Score split across distant levels than to one split across adjacent levels. The POC
-  already uses both.
-
-**§6 Calibration.**
-- One temperature per primitive is not necessarily sufficient. SemIf found temperatures from 1.23 to 2.50 for
-  different workloads.
-- Fit per primitive *and* per dataset. Report how well T transfers between datasets. This changes the §6 "lesson"
-  into a measurement.
-- Add PriDe (Zheng et al. 2024) as an alternative to contextual calibration for label bias in listwise Choice.
-
-**§7 Training.** Cite RLCR (Damani et al. 2025) as the published RL method with a Brier reward, for the stretch goal.
-
-**§9 Evaluation.** Add three experiments:
-- **E7 Replicate Jev's documented behaviours.** Batched vs single, numbers-only Score levels, and Noul vs yes/no
-  Choice. The inputs and Jev's answers are public.
-- **E8 Pointwise vs listwise Score and Choice.** Accuracy, ECE, and permutation sensitivity.
-- **E9 Agreement with Jev's published outputs.** Doc examples and <https://evals.typesafe.ai/>; SemIf did this for 102 rows.
-
-**§13 Risks and open questions.**
-- The ">52 options" question has an answer: Jev uses two stages.
-- Add letter-label selection bias (Zheng et al. 2024) as a named risk.
-- Add bf16 prefix-reuse argmax changes (SemIf) as a numerical risk, if a GPU path is added later.
-
-**§14 Reading list.** Add the verified papers in §9 below.
-
-**Lessons from the POC (§7.3).**
-- **§5.2 Choice.** Offer `choice_mode: "pointwise"`, one yes/no branch per option.
-  - It gives exactly the same answer for every option order. Listwise letters changed the winner in 54% of option
-    rotations (R4).
-  - On 8 documented Choices, agreement with Jev's picks does not favour either method. Pointwise vs listwise was 6/8
-    vs 4/8 at 0.5B and 5/8 vs 6/8 at 1.5B (R5).
-  - If listwise stays the default, average over a few option orders (k× the branches) or apply PriDe.
-- **§5.4 Execution modes.** On a CPU, KV branching ≈ packed (R3). Packed still calculates the masked attention
-  blocks, so its cost increases as (total length)². Keep KV as the CPU default. Keep packed as the one-pass
-  demonstration and the equivalence test.
-- **§6 Contextual calibration.** "N/A" over-corrects yes/no questions (R5). Make it opt-in per primitive, and justify
-  it on labeled data. See R6 for the BoolQ numbers.
-- **§8 Stack.** The Phase 0 check passed with exactly these pins: Python 3.12, torch 2.2.2, numpy 1.26.4, transformers 4.49.0.
-- **§13 Risks.** Add that pointwise readouts on small models show a "say yes to the plausible level" bias (R5).
-  To correct it, levels need contrastive descriptions, a larger model, or training.
+| Finding | Section here | DESIGN.md |
+|---|---|---|
+| Known vs inferred facts about Jev | §2 | §2 |
+| Request and response shape: Score `criteria` as an ordered list, `score` in level units, `legend`, Noul `criteria`, `usage` | Jev API reference | §4 |
+| Verbalized vs token-probability confidence: the literature disagrees (Kadavath 2022, Xiong 2024, Tian 2023) | §9 | §5.1 |
+| TypeSafe's adapter as the LLM baseline | §1 | §5.1 |
+| Noul reads Yes/No; Score is pointwise; Choice has a pointwise mode and two stages for large sets | §3.2 | §5.2 |
+| Prefix tree: kv and packed modes, the three-mode equivalence check | §3.1, §7.3 R2 | §5.4 |
+| Pointwise normalization, confidence formulas | §3.3 | §5.5 |
+| Temperature per primitive and per dataset; contextual calibration is opt-in | §3.8, §7.3 R5–R6 | §6 |
+| RL with a proper-scoring-rule reward (RLCR) | §3.5 | §7 |
+| Verified stack pins | §7.2 | §8 |
+| Experiments E7–E10 | §7.3 | §9 |
+| Letter-label bias, pointwise "say yes" bias, bf16 prefix-reuse changes | §3.6, §7.3 R4–R5 | §13 |
 
 ---
 
@@ -523,7 +522,7 @@ naive, KV, and packed modes give the same probabilities.
 1. Requests and responses in Jev's format from a local 0.5B model (R1). The model generates no text. The answers come
    from label-token probabilities, and confidence uses TypeSafe's own formulas.
 2. The prefix tree in three modes (naive, KV branching, and one packed pass). All three give the same numbers (R2).
-   The POC replicates isolation: batched equals single.
+   Batched equals single. The mask makes this true by construction, so it is a check of the code.
 3. Latency against the number of questions and the length of the state (R3).
 4. Sensitivity to option order: listwise vs pointwise Choice (R4).
 5. Agreement with Jev's published answers on its documented inputs, at 0.5B and 1.5B (R5).
@@ -534,13 +533,20 @@ naive, KV, and packed modes give the same probabilities.
 ```bash
 cd poc
 uv sync                                   # Python 3.12, torch 2.2.2, numpy<2, transformers 4.49.0
-uv run python experiments.py demo         # also: tree, latency, jevdocs, permutation, calibration, all
+uv run python experiments.py demo         # also: tree, latency, jevdocs, permutation, calibration,
+                                          #       llm_vs_minijev, fanout, all
 uv run python experiments.py jevdocs --model Qwen/Qwen2.5-1.5B-Instruct
+uv run pytest                             # 21 tests, ~20 s; -m "not model" skips the model tests
 ```
+
+`ask()` reads its dials from `poc/minijev.env`: temperatures, the Platt shift, readout modes, and the model
+(DESIGN.md §6). The experiments ignore that file and always use the uncalibrated defaults.
 
 The code has two files:
 - `minijev_poc.py` (~300 lines): prompt pieces, the three tree evaluators, primitives, and `ask()`.
 - `experiments.py`: one function per experiment.
+- `tests/`: pytest cases. `uv run pytest` runs all of them (~20 s). `uv run pytest -m "not model"` skips the cases
+  that load the 0.5B model.
 
 The raw outputs go to `poc/results/*.json`. The POC caches BoolQ and the pinned GDPR article in `poc/data/`, which
 git ignores.
@@ -572,9 +578,11 @@ label tokens. Thus the restricted softmax does not hide a broken prompt. This is
 | TypeSafe's 13 GDPR questions on a 1,000-token state (23 branches) | 2.5e-5 | 1.6e-5 |
 
 The differences are fp32 noise from the order of reductions. We asked each of the 13 questions alone and all
-together. The cookbook's tracked numbers changed by **3.4e-6** or less. This replicates TypeSafe's result that batched
-equals single. Thus "one forward pass, in parallel and in isolation" is exactly achievable. A block attention mask
-and position ids that restart after the state give the same answers as KV branching or full re-encoding.
+together. The cookbook's tracked numbers changed by **3.4e-6** or less. This is a test of our implementation, not
+evidence about Jev: the attention mask makes minijev's branches isolated by construction. The result shows that
+"one forward pass, in parallel and in isolation" is exactly achievable. A block attention mask and position ids that
+restart after the state give the same answers as KV branching or full re-encoding. `poc/tests/test_engine.py`
+checks both properties.
 
 **R3. Latency (E3).** Minimum of 2 runs, in seconds, over the first N of TypeSafe's 13 GDPR questions.
 The 3 Scores become 13 level branches. Thus 13 questions make 23 branches, with a total of ≈1,070 tokens.
@@ -612,7 +620,8 @@ The table shows these points:
 On a 0.5B model, **the option position controls most listwise answers**. This is the selection bias of Zheng et al.
 2024. At 1.5B, the bias decreases but does not disappear. The remaining changes are all on the one truly ambiguous
 question: "return reason" changes its winner in 3 of 4 rotations. A pointwise judgement gives the same answer for
-every order, because of its design. The remaining difference is fp32 noise. Thus pointwise is the cheapest available
+every order, because of its design: a branch never sees the other options. The pointwise rows are therefore a check
+of the implementation, not a measurement. The remaining difference is fp32 noise. Thus pointwise is the cheapest available
 correction for this bias. It is also the basis of the listwise-vs-pointwise test that we propose for real Jev (§8).
 
 **R5. Agreement with Jev's published answers.** This is agreement with Jev, not accuracy. It covers 15 Noul,
@@ -631,7 +640,8 @@ correction for this bias. It is also the basis of the listwise-vs-pointwise test
 | Choice (pointwise): same pick as Jev | 6/8 | 5/8 | 5/8 | 5/8 |
 
 How to read the table:
-- **The samples are very small.** A difference of one example on 8 Choices is noise. Thus this comparison of
+- **The samples are very small.** A difference of one example on 8 Choices is noise. These cases were also public
+  while we chose the prompt template, so R5 is not a held-out test. Thus this comparison of
   listwise and pointwise Choice favours neither method. R4 is the stronger argument for pointwise.
 - **Model size is most important for Score.** From 0.5B to 1.5B, the pointwise Score error decreases from 0.62 to
   0.22 levels. The 0.5B failure came from capacity, not from the pointwise method. At 1.5B, pointwise is the best
@@ -654,49 +664,61 @@ These failure modes cause the numbers:
 - The base rate is 61.5% "yes". Thus the answer "yes" for every item scores 0.615.
 - The fitted calibrators are 2-fold cross-fitted: fit on one half, score on the other half.
 - ECE uses 10 bins over the top-label confidence range [0.5, 1].
+- The intervals are 95% bootstrap intervals over the 400 items, with the fitted calibrators held fixed.
+- The model outputs come from a fresh run. The cache in `poc/results/calibration_logodds*.json` is reused only when
+  the model, n, and a hash of every prompt piece match.
 
-| Variant | 0.5B acc | 0.5B ECE | 0.5B Brier | 1.5B acc | 1.5B ECE | 1.5B Brier |
-|---|---:|---:|---:|---:|---:|---:|
-| Raw | 0.652 | 0.161 | 0.241 | 0.782 | 0.099 | 0.160 |
-| Contextual ("N/A" state) | 0.620 | 0.350 | 0.345 | 0.675 | 0.221 | 0.249 |
-| Temperature | 0.652 | **0.053** | 0.211 | 0.782 | 0.060 | 0.152 |
-| Contextual + temperature | 0.620 | 0.111 | 0.219 | 0.675 | 0.088 | 0.192 |
-| Platt (a·z + b) | 0.670 | 0.066 | 0.210 | 0.782 | **0.047** | 0.152 |
+| Variant | 0.5B acc | 0.5B ECE | 1.5B acc | 1.5B ECE |
+|---|---:|---:|---:|---:|
+| Raw | 0.652 [0.608–0.698] | 0.161 [0.130–0.215] | 0.782 [0.743–0.825] | 0.099 [0.076–0.144] |
+| Contextual ("N/A" state) | 0.620 | 0.350 [0.304–0.394] | 0.675 | 0.221 [0.185–0.267] |
+| Temperature | 0.652 | **0.053** [0.043–0.108] | 0.782 | 0.060 [0.047–0.104] |
+| Contextual + temperature | 0.620 | 0.111 [0.079–0.160] | 0.675 | 0.088 [0.060–0.132] |
+| Platt (a·z + b) | 0.670 [0.623–0.715] | 0.066 [0.045–0.122] | 0.782 | **0.047** [0.041–0.095] |
 
-Temperature fitted on all 400 items: **T = 2.72** at 0.5B and **T = 1.93** at 1.5B. NLL from raw to temperature:
-0.734 → 0.607 at 0.5B, and 0.528 → 0.463 at 1.5B.
+Brier score, raw → temperature: 0.241 → 0.211 at 0.5B, and 0.160 → 0.152 at 1.5B. NLL: 0.734 → 0.607 at 0.5B, and
+0.528 → 0.463 at 1.5B. Fitted on all 400 items: **T = 2.72** at 0.5B and **T = 1.93** at 1.5B. Platt: a = 0.343,
+b = 0.208 at 0.5B, and a = 0.514, b = 0.072 at 1.5B. `poc/minijev.env` takes these values.
 
 The results show these points:
-- **Both raw models are overconfident (T > 1). The larger model is less overconfident and much more accurate.** Raw
-  0.5B gave 104 of 400 answers with ≥ 0.95 confidence. Only 86% of them were correct. After temperature scaling, the
-  bins agree with accuracy: mean confidence 0.82 → 83% correct, and 0.875 → 89% correct.
+- **Both raw models are overconfident (T > 1).** Raw 0.5B gave 104 of 400 answers with ≥ 0.95 confidence. Only 86%
+  of them were correct. After temperature scaling, the bins agree with accuracy: mean confidence 0.82 → 83% correct,
+  and 0.875 → 89% correct.
 - **Temperature scaling works as the theory says.** Accuracy does not change, because temperature cannot move the
-  argmax. ECE decreases by 67% at 0.5B and 39% at 1.5B. Brier and NLL also improve. This confirms DESIGN.md §6 step 2
-  on a laptop.
-- **The Platt bias term can move the decision threshold.** This gave a small accuracy gain at 0.5B (0.652 → 0.670)
-  and no gain at 1.5B.
+  argmax. At 0.5B, the ECE intervals before and after do not overlap. At 1.5B they overlap, but NLL and Brier also
+  improve.
+- **The two sizes calibrate equally well.** 0.053 vs 0.060 is within the intervals.
+- **The larger model is much more accurate.** 0.782 vs 0.652, with intervals that do not overlap.
+- **The Platt bias term can move the decision threshold.** At 0.5B, accuracy went 0.652 → 0.670. The intervals
+  overlap, so this is not a clear gain.
 - **Contextual calibration makes the results worse at both sizes**, for the reason in R5. The mean P(yes) increases
   to 0.96 at 0.5B and 0.84 at 1.5B.
-- **Calibration ≠ accuracy, now measured** (DESIGN.md §13). The 0.5B model is calibratable. But on BoolQ, it is only
-  a little better than the answer "yes" for every item.
+- **Calibration ≠ accuracy, measured** (DESIGN.md §13). The accuracy interval of 0.5B includes 0.615. Thus 0.5B is
+  calibratable, but on BoolQ it is not measurably better than the answer "yes" for every item.
 
 Limits of these results:
-- n = 400. Thus each fold has 200 items, and ECE differences of less than about 0.03 are noise.
+- ECE on a resample is biased upward, so the intervals sit mostly above the point value (Inferred).
 - BoolQ is public. It is possible that the training data of the models contains it (unknown).
+- The datasets come from the Hugging Face datasets-server API, which has no revision pin. The GDPR article is pinned.
 - We used one prompt template. DESIGN.md §13 says to fit again after each template change.
 
 **R7. Generation vs readout (E10).** The same model on the same CPU *generates* its answer, or minijev does a
-*readout*. The full tables are in [WALKTHROUGH.md §6](WALKTHROUGH.md).
-- **Cost per token:** a generated token costs 140 ms, and a prefilled token costs 3.1 ms. That is about 45×.
-- **Single decision:** on short news items, the readout is 1.6× faster than generation of a one-word label, with 94%
-  identical picks. On a 500-token state, the two are within noise, because the only saving is 2 generated tokens.
-- **Probabilities:** the readout is 7× faster than generation of JSON probabilities. The 0.5B model generated most
-  of these incorrectly (only 16 of 60 in the requested format).
-- **Fan-out:** at 13 questions on one state, the readout is 4.6–4.9× faster (0.5B) and 6.1–6.3× faster (1.5B) than
-  one call per question or one JSON call. The strongest generation baseline is one call per question with the KV
-  cache of the state reused (prompt caching). Against it, the readout is 1.4× faster at 0.5B and 2.0× at 1.5B.
-- **Conclusion:** the advantage comes from one prefill of the state *and* no generation. Prompt caching copies the
-  first half.
+*readout*. The full tables are in [WALKTHROUGH.md §6](WALKTHROUGH.md). The strongest baseline is "1 generated token
+with logprobs", which is the same computation as a readout.
+- **Cost per token**, measured directly at a 600-token context: prefill 3.1 ms, decode 161 ms (about 50×). A second
+  run gave 130 ms per decode step. A batched decode step for 13 questions cost 0.57 s.
+- **Single decision** (AG News, n = 120): the readout and "1 token + logprobs" give identical probabilities in equal
+  time (0.45 s). Generation of the label takes 0.73 s (1.6×). The accuracy intervals of all three overlap.
+- **Probabilities:** generation of JSON probabilities takes 3.19 s (7×). With the lenient parser, accuracy is 0.833
+  on 60 items. With the strict parser, only 16 of 60 replies are usable. The readout's own ECE is 0.100
+  [0.055–0.156], so it also needs calibration.
+- **Fan-out, 13 questions on a 500-token state** (median of 3 interleaved runs, spread about ±10%):
+  - minijev is 5.4–7.4× faster than one call per question or one JSON call.
+  - It is 1.7–2.0× faster than cached generation of one-word answers.
+  - It is 1.08× (within noise) at 0.5B and 1.3× at 1.5B faster than cached "1 token + logprobs" per question.
+  - Batched decode did not beat sequential cached generation on this CPU.
+- **Conclusion:** caching the state gives 84–85% of the saving. Stopping at the first token gives 11–13%. One pass for
+  all branches gives 2–5%. An LLM API with prompt caching and logprobs copies the first two.
 
 **What the POC does not show:**
 - Jev's accuracy, which comes from its model and training.
@@ -722,6 +744,17 @@ each documented property.
    non-adjacent levels, for example a bimodal "calm or furious" case. In this case, the ordinal and peak formulas
    give different values.
 6. **E6 calibration** (already in DESIGN.md) on ground-truth labels, not frontier-model consensus.
+7. **A cross-request state cache (§3.9).** Send one long state twice. Then send it with a random nonce at the start,
+   which makes a cache hit impossible. If the fresh request is much slower, Jev caches states across requests.
+8. **The true prefill rate.** On fresh (nonce) states, change the state length from 1k to 30k tokens. The slope of
+   latency against length gives tokens/s, and from it a range for the active parameter count (§3.9).
+9. **Complement consistency.** Ask pairs of opposite Nouls (`X` and `not X`) on many states. Row 26 shows one sum
+   of 1.19. A distribution of these sums shows whether Jev trains branches for consistency.
+
+Experiments that do not need a Jev key:
+- **Distillation.** Fine-tune the 1.5B model with LoRA on soft labels from averaged Claude samples. Measure agreement
+  and ECE against the base model (DESIGN.md §7). This tests the part of §3.9 that is easiest to copy.
+- **Invariance training.** Add option-shuffle augmentation to that fine-tune, then run `permutation` again.
 
 ---
 
