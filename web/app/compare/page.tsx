@@ -69,6 +69,24 @@ export default function Compare() {
     <div className="px-4 md:px-8 py-8 flex flex-col gap-6">
       <div className="flex flex-col gap-3">
         <h1 className="m-0 text-[32px] font-semibold tracking-tight">Read the answer out, or let the model write it?</h1>
+
+        {/* Color Legend */}
+        <div className="rounded-xl border-2 border-accent bg-surface p-4 flex items-center gap-6 flex-wrap">
+          <span className="text-sm font-semibold text-muted uppercase tracking-wide">Chart Colors:</span>
+          <div className="flex items-center gap-2">
+            <span className="w-4 h-4 rounded bg-accent shrink-0" />
+            <span className="text-sm font-medium">Blue = minijev (readout)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-4 h-4 rounded bg-gen shrink-0" />
+            <span className="text-sm font-medium">Orange = LLM generation</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-4 h-4 rounded bg-accent2 shrink-0" />
+            <span className="text-sm font-medium">Cyan = Readout per request</span>
+          </div>
+        </div>
+
         <div className="rounded-xl border border-line bg-surface p-4 flex flex-col gap-3 max-w-[980px]">
           <p className="m-0 text-[15px] leading-relaxed">
             <span className="font-semibold">Everything on this page is the same model</span> ({model.split("/")[1] ?? "Qwen"}) on this laptop. There is no second or bigger AI here.

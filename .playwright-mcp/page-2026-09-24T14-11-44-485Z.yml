@@ -1,0 +1,250 @@
+- generic [active] [ref=f4e1]:
+  - banner [ref=f4e2]:
+    - link "mj minijev local" [ref=f4e3] [cursor=pointer]:
+      - /url: /
+      - generic [ref=f4e4]: mj
+      - generic [ref=f4e5]: minijev
+      - generic [ref=f4e6]: local
+    - navigation [ref=f4e7]:
+      - link "Playground" [ref=f4e8] [cursor=pointer]:
+        - /url: /
+      - link "Compare" [ref=f4e9] [cursor=pointer]:
+        - /url: /compare
+      - link "Under the hood" [ref=f4e10] [cursor=pointer]:
+        - /url: /hood
+      - link "Findings" [ref=f4e11] [cursor=pointer]:
+        - /url: /findings
+      - link "Weaknesses" [ref=f4e12] [cursor=pointer]:
+        - /url: /weaknesses
+    - generic [ref=f4e14]:
+      - generic [ref=f4e16]: Model
+      - combobox "Model · CPU" [ref=f4e17] [cursor=pointer]:
+        - option "Qwen2.5-0.5B-Instruct" [selected]
+        - option "Qwen2.5-1.5B-Instruct"
+      - generic [ref=f4e18]: · CPU
+    - button "Switch to light theme" [ref=f4e20] [cursor=pointer]
+  - main [ref=f4e23]:
+    - generic [ref=f4e24]:
+      - generic [ref=f4e25]:
+        - heading "What we measured" [level=1] [ref=f4e26]
+        - paragraph [ref=f4e27]: Every chart reads poc/results/*.json. Brackets are 95% bootstrap intervals. Qwen2.5 0.5B and 1.5B on a laptop CPU.
+      - generic [ref=f4e28]:
+        - generic [ref=f4e29]:
+          - generic [ref=f4e30]:
+            - heading [level=2] [ref=f4e31]:
+              - text: Reliability · BoolQ, n = 400
+              - 'button "About: Is the model honest about how sure it is?" [ref=f4e33] [cursor=pointer]'
+            - generic [ref=f4e36]:
+              - 'button "About: Model size" [ref=f4e38] [cursor=pointer]'
+              - generic [ref=f4e41]:
+                - button "0.5B" [pressed] [ref=f4e42] [cursor=pointer]
+                - button "1.5B" [ref=f4e43] [cursor=pointer]
+              - generic [ref=f4e44]:
+                - button "Raw" [ref=f4e45] [cursor=pointer]
+                - button "Temperature" [ref=f4e46] [cursor=pointer]
+                - button "Both" [pressed] [ref=f4e47] [cursor=pointer]
+              - 'button "About: Before or after calibration" [ref=f4e49] [cursor=pointer]'
+          - 'img "Reliability diagram: accuracy against stated confidence" [ref=f4e52]':
+            - generic [ref=f4e54]: "0.5"
+            - generic [ref=f4e55]: "0.6"
+            - generic [ref=f4e56]: "0.7"
+            - generic [ref=f4e57]: "0.8"
+            - generic [ref=f4e58]: "0.9"
+            - generic [ref=f4e59]: "1.0"
+            - generic [ref=f4e60]: "0.4"
+            - generic [ref=f4e61]: "0.6"
+            - generic [ref=f4e62]: "0.8"
+            - generic [ref=f4e63]: "1.0"
+            - generic [ref=f4e64]: stated confidence
+            - 'generic "0.50-0.55: 25 items, confidence 0.52, accuracy 0.32" [ref=f4e65]'
+            - 'generic "0.55-0.60: 31 items, confidence 0.57, accuracy 0.58" [ref=f4e66]'
+            - 'generic "0.60-0.65: 29 items, confidence 0.62, accuracy 0.62" [ref=f4e67]'
+            - 'generic "0.65-0.70: 17 items, confidence 0.68, accuracy 0.47" [ref=f4e68]'
+            - 'generic "0.70-0.75: 37 items, confidence 0.73, accuracy 0.59" [ref=f4e69]'
+            - 'generic "0.75-0.80: 31 items, confidence 0.78, accuracy 0.68" [ref=f4e70]'
+            - 'generic "0.80-0.85: 36 items, confidence 0.83, accuracy 0.69" [ref=f4e71]'
+            - 'generic "0.85-0.90: 33 items, confidence 0.87, accuracy 0.42" [ref=f4e72]'
+            - 'generic "0.90-0.95: 57 items, confidence 0.93, accuracy 0.67" [ref=f4e73]'
+            - 'generic "0.95-1.00: 104 items, confidence 0.98, accuracy 0.86" [ref=f4e74]'
+            - 'generic "0.50-0.55: 78 items, confidence 0.53, accuracy 0.49" [ref=f4e75]'
+            - 'generic "0.55-0.60: 61 items, confidence 0.58, accuracy 0.59" [ref=f4e76]'
+            - 'generic "0.60-0.65: 56 items, confidence 0.62, accuracy 0.70" [ref=f4e77]'
+            - 'generic "0.65-0.70: 53 items, confidence 0.67, accuracy 0.53" [ref=f4e78]'
+            - 'generic "0.70-0.75: 49 items, confidence 0.72, accuracy 0.65" [ref=f4e79]'
+            - 'generic "0.75-0.80: 32 items, confidence 0.77, accuracy 0.78" [ref=f4e80]'
+            - 'generic "0.80-0.85: 29 items, confidence 0.82, accuracy 0.83" [ref=f4e81]'
+            - 'generic "0.85-0.90: 26 items, confidence 0.87, accuracy 0.88" [ref=f4e82]'
+            - 'generic "0.90-0.95: 15 items, confidence 0.92, accuracy 1.00" [ref=f4e83]'
+            - 'generic "0.95-1.00: 1 items, confidence 0.97, accuracy 1.00" [ref=f4e84]'
+          - generic [ref=f4e85]:
+            - generic [ref=f4e86]: raw · ECE 0.161
+            - generic [ref=f4e88]: T = 2.72 · ECE 0.053
+            - generic [ref=f4e90]: dot size = items in the bin · dashed = perfect calibration
+        - generic [ref=f4e91]:
+          - generic [ref=f4e92]:
+            - generic [ref=f4e93]:
+              - heading [level=2] [ref=f4e94]:
+                - text: Calibration error (ECE) · lower is better
+                - 'button "About: Calibration error (ECE)" [ref=f4e96] [cursor=pointer]'
+              - generic [ref=f4e99]: axis 0–0.40
+            - generic [ref=f4e100]:
+              - generic [ref=f4e101]: 0.5B · raw
+              - 'img "0.5B · raw: 0.161, interval 0.130 to 0.215" [ref=f4e102]'
+              - generic [ref=f4e105]: 0.161 [0.130–0.215]
+            - generic [ref=f4e106]:
+              - generic [ref=f4e107]: 0.5B · temperature
+              - 'img "0.5B · temperature: 0.053, interval 0.043 to 0.108" [ref=f4e108]'
+              - generic [ref=f4e111]: 0.053 [0.043–0.108]
+            - generic [ref=f4e112]:
+              - generic [ref=f4e113]: 0.5B · contextual "N/A"
+              - 'img "0.5B · contextual \"N/A\": 0.350, interval 0.304 to 0.394" [ref=f4e114]'
+              - generic [ref=f4e117]: 0.350 [0.304–0.394]
+            - generic [ref=f4e118]:
+              - generic [ref=f4e119]: 1.5B · raw
+              - 'img "1.5B · raw: 0.099, interval 0.076 to 0.144" [ref=f4e120]'
+              - generic [ref=f4e123]: 0.099 [0.076–0.144]
+            - generic [ref=f4e124]:
+              - generic [ref=f4e125]: 1.5B · temperature
+              - 'img "1.5B · temperature: 0.060, interval 0.047 to 0.104" [ref=f4e126]'
+              - generic [ref=f4e129]: 0.060 [0.047–0.104]
+            - generic [ref=f4e130]:
+              - generic [ref=f4e131]: 1.5B · Platt
+              - 'img "1.5B · Platt: 0.047, interval 0.041 to 0.095" [ref=f4e132]'
+              - generic [ref=f4e135]: 0.047 [0.041–0.095]
+            - paragraph [ref=f4e136]: Temperature scaling helps at both sizes. The calibrated 0.5B and 1.5B intervals overlap. Contextual calibration with an "N/A" state makes it worse.
+          - generic [ref=f4e137]:
+            - generic [ref=f4e138]:
+              - heading "Accuracy vs always \"yes\"" [level=2] [ref=f4e139]
+              - generic [ref=f4e140]:
+                - generic [ref=f4e141]: Qwen2.5-0.5B
+                - 'img "Qwen2.5-0.5B: 0.652, interval 0.608 to 0.698" [ref=f4e142]'
+                - generic [ref=f4e146]: 0.652 [0.608–0.698]
+              - generic [ref=f4e147]:
+                - generic [ref=f4e148]: Qwen2.5-1.5B
+                - 'img "Qwen2.5-1.5B: 0.782, interval 0.743 to 0.825" [ref=f4e149]'
+                - generic [ref=f4e153]: 0.782 [0.743–0.825]
+              - paragraph [ref=f4e154]: "Orange line: base rate 0.615. The 0.5B interval crosses it."
+            - generic [ref=f4e155]:
+              - heading "Option order changes the winner" [level=2] [ref=f4e156]
+              - generic [ref=f4e157]:
+                - generic [ref=f4e158]:
+                  - generic [ref=f4e159]: 0.5B listwise
+                  - generic [ref=f4e162]: 54%
+                - generic [ref=f4e163]:
+                  - generic [ref=f4e164]: 0.5B pointwise
+                  - generic [ref=f4e167]: 0%
+                - generic [ref=f4e168]:
+                  - generic [ref=f4e169]: 1.5B listwise
+                  - generic [ref=f4e172]: 9%
+                - generic [ref=f4e173]:
+                  - generic [ref=f4e174]: 1.5B pointwise
+                  - generic [ref=f4e177]: 0%
+              - paragraph [ref=f4e178]: 8 Choices, every rotation. Pointwise is 0% by construction.
+      - generic [ref=f4e179]:
+        - generic [ref=f4e180]:
+          - heading [level=2] [ref=f4e181]:
+            - text: The order flaw, and three fixes · 0.5B
+            - 'button "About: The order flaw" [ref=f4e183] [cursor=pointer]'
+          - paragraph [ref=f4e186]: 120 news articles, each asked 4 times with the options in a different order. The right answer is known. If the model only read the content, the order would never change its answer.
+        - generic [ref=f4e187]:
+          - generic [ref=f4e188]:
+            - generic [ref=f4e189]:
+              - text: Which letter does the model pick?
+              - 'button "About: Favourite letters" [ref=f4e191] [cursor=pointer]'
+            - generic [ref=f4e194]:
+              - generic [ref=f4e195]:
+                - generic [ref=f4e196]: 20%
+                - generic [ref=f4e199]: 27%
+              - generic [ref=f4e202]:
+                - generic [ref=f4e203]: 26%
+                - generic [ref=f4e206]: 26%
+              - generic [ref=f4e209]:
+                - generic [ref=f4e210]: 25%
+                - generic [ref=f4e213]: 23%
+              - generic [ref=f4e216]:
+                - generic [ref=f4e217]: 30%
+                - generic [ref=f4e220]: 25%
+            - generic [ref=f4e223]:
+              - generic [ref=f4e224]: A
+              - generic [ref=f4e225]: B
+              - generic [ref=f4e226]: C
+              - generic [ref=f4e227]: D
+            - generic [ref=f4e228]:
+              - generic [ref=f4e229]: model picks this letter
+              - generic [ref=f4e231]: right answer is at this letter
+          - generic [ref=f4e233]:
+            - generic [ref=f4e234]:
+              - generic [ref=f4e235]: Way of asking
+              - generic [ref=f4e236]:
+                - text: Cost
+                - 'button "About: Cost" [ref=f4e238] [cursor=pointer]'
+              - generic [ref=f4e241]:
+                - text: Answer flips
+                - 'button "About: Answer flips" [ref=f4e243] [cursor=pointer]'
+              - generic [ref=f4e246]:
+                - text: Accuracy
+                - 'button "About: Accuracy" [ref=f4e248] [cursor=pointer]'
+              - generic [ref=f4e251]:
+                - text: ECE
+                - 'button "About: Calibration error (ECE)" [ref=f4e253] [cursor=pointer]'
+            - generic [ref=f4e256]:
+              - generic [ref=f4e257]:
+                - generic [ref=f4e258]: As-is (listwise)
+                - generic [ref=f4e260]: all options at once; the model picks a letter
+              - generic [ref=f4e261]: 1 branch
+              - generic [ref=f4e262]: 0.200 [0.13–0.28]
+              - generic [ref=f4e268]: 0.838 [0.78–0.89]
+              - generic [ref=f4e274]: "0.130"
+            - generic [ref=f4e275]:
+              - generic [ref=f4e276]:
+                - generic [ref=f4e277]: Debiased
+                - generic [ref=f4e279]: divide out the model's liking for each letter
+              - generic [ref=f4e280]: 1 branch
+              - generic [ref=f4e281]: 0.175 [0.12–0.24]
+              - generic [ref=f4e287]: 0.844 [0.79–0.90]
+              - generic [ref=f4e293]: "0.125"
+            - generic [ref=f4e294]:
+              - generic [ref=f4e295]:
+                - generic [ref=f4e296]: All orders averaged
+                - generic [ref=f4e298]: every option in every position once
+              - generic [ref=f4e299]: 4 branches
+              - generic [ref=f4e300]: 0.033 [0.01–0.07]
+              - generic [ref=f4e306]: 0.881 [0.82–0.93]
+              - generic [ref=f4e312]: "0.074"
+            - generic [ref=f4e313]:
+              - generic [ref=f4e314]:
+                - generic [ref=f4e315]: Pointwise
+                - generic [ref=f4e317]: each option judged on its own
+              - generic [ref=f4e318]: 4 branches
+              - generic [ref=f4e319]: 0.000 [0.00–0.00]
+              - generic [ref=f4e324]: 0.850 [0.78–0.91]
+              - generic [ref=f4e330]: "0.086"
+      - generic [ref=f4e331]:
+        - generic [ref=f4e332]:
+          - generic [ref=f4e333]:
+            - heading "Agreement with Jev's published answers" [level=2] [ref=f4e334]
+            - generic [ref=f4e335]: not accuracy · small samples · not held out
+          - generic [ref=f4e336]:
+            - generic [ref=f4e337]: Noul · same side of 0.5
+            - generic [ref=f4e338]: 0.5B 11/15
+            - generic [ref=f4e342]: 1.5B 12/15
+          - generic [ref=f4e346]:
+            - generic [ref=f4e347]: Score · same rounded level
+            - generic [ref=f4e348]: 0.5B 5/10
+            - generic [ref=f4e352]: 1.5B 9/10
+          - generic [ref=f4e356]:
+            - generic [ref=f4e357]: Choice · same pick (listwise)
+            - generic [ref=f4e358]: 0.5B 4/8
+            - generic [ref=f4e362]: 1.5B 6/8
+        - generic [ref=f4e366]:
+          - heading "Cost per token · 0.5B, 600-token context" [level=2] [ref=f4e367]
+          - generic [ref=f4e368]:
+            - generic [ref=f4e369]:
+              - generic [ref=f4e370]: prefill
+              - generic [ref=f4e373]: 3.1 ms
+            - generic [ref=f4e374]:
+              - generic [ref=f4e375]: decode
+              - generic [ref=f4e378]: 161 ms
+          - paragraph [ref=f4e379]: A generated token costs about 51× a prefilled one on this CPU. A readout generates none.
+  - button "Open Next.js Dev Tools" [ref=f4e385] [cursor=pointer]
+  - alert [ref=f4e389]

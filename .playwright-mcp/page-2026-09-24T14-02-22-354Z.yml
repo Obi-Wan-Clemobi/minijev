@@ -1,0 +1,369 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - link "mj minijev local" [ref=e3] [cursor=pointer]:
+      - /url: /
+      - generic [ref=e4]: mj
+      - generic [ref=e5]: minijev
+      - generic [ref=e6]: local
+    - navigation [ref=e7]:
+      - link "Playground" [ref=e8] [cursor=pointer]:
+        - /url: /
+      - link "Compare" [ref=e9] [cursor=pointer]:
+        - /url: /compare
+      - link "Under the hood" [ref=e10] [cursor=pointer]:
+        - /url: /hood
+      - link "Findings" [ref=e11] [cursor=pointer]:
+        - /url: /findings
+      - link "Weaknesses" [ref=e12] [cursor=pointer]:
+        - /url: /weaknesses
+    - generic [ref=e14]:
+      - generic [ref=e16]: Model
+      - combobox "Model · CPU" [ref=e17] [cursor=pointer]:
+        - option "Qwen2.5-0.5B-Instruct" [selected]
+        - option "Qwen2.5-1.5B-Instruct"
+      - generic [ref=e18]: · CPU
+    - button "Switch to light theme" [ref=e20] [cursor=pointer]
+  - main [ref=e23]:
+    - generic [ref=e746]:
+      - generic [ref=e747]:
+        - generic [ref=e748]: Examples
+        - 'button "About: Examples" [ref=e750] [cursor=pointer]'
+        - generic [ref=e753]:
+          - button "Support ticket" [ref=e754] [cursor=pointer]
+          - button "Jev doc cases" [ref=e755] [cursor=pointer]
+          - button "GDPR · 13 questions" [ref=e756] [cursor=pointer]
+        - generic [ref=e757]: Evaluation
+        - 'button "About: Evaluation" [ref=e759] [cursor=pointer]'
+        - generic [ref=e762]:
+          - button "naive" [ref=e763] [cursor=pointer]
+          - button "kv" [ref=e764] [cursor=pointer]
+          - button "packed" [pressed] [ref=e765] [cursor=pointer]
+        - button "Run ⌘↵" [ref=e767] [cursor=pointer]:
+          - text: Run
+          - generic [ref=e770]: ⌘↵
+      - generic [ref=e771]:
+        - generic [ref=e773]:
+          - generic [ref=e774]:
+            - generic [ref=e775]:
+              - button "Form" [ref=e776] [cursor=pointer]
+              - button "JSON" [ref=e777] [cursor=pointer]
+            - 'button "About: Form or JSON" [ref=e781] [cursor=pointer]'
+            - generic [ref=e784]: 264 tokens in the last run
+          - generic [ref=e785]:
+            - generic [ref=e786]:
+              - generic [ref=e787]: State · your text
+              - 'button "About: State (your text)" [ref=e789] [cursor=pointer]'
+            - textbox "State · your text" [ref=e792]:
+              - /placeholder: "Type or paste any text: a message, a review, a paragraph…"
+              - text: Hi, my Stripe integration has failed for 3 days. Losing sales. Help ASAP.
+            - generic [ref=e793]: text state · prefilled once, shared by every branch
+          - generic [ref=e794]:
+            - heading "Questions · 3" [level=2] [ref=e795]
+            - generic [ref=e796]:
+              - button "Yes/no" [ref=e798] [cursor=pointer]
+              - button "Choice" [ref=e802] [cursor=pointer]
+              - button "Scale" [ref=e806] [cursor=pointer]
+          - region "Question urgency" [ref=e809]:
+            - generic [ref=e810]:
+              - generic [ref=e811]: Question id
+              - textbox "Question id" [ref=e812]: urgency
+              - 'button "About: Question name" [ref=e814] [cursor=pointer]'
+              - generic [ref=e817]:
+                - button "Move question up" [disabled] [ref=e818] [cursor=pointer]
+                - button "Move question down" [ref=e821] [cursor=pointer]
+              - button "Remove question urgency" [ref=e824] [cursor=pointer]
+            - generic [ref=e827]:
+              - generic [ref=e828]: Type
+              - combobox "Type" [ref=e829] [cursor=pointer]:
+                - option "Noul · yes/no" [selected]
+                - option "Choice · pick one"
+                - option "Score · scale"
+              - 'button "About: Question kind" [ref=e831] [cursor=pointer]'
+              - generic [ref=e834]: 1 branch
+            - generic [ref=e836]: Question
+            - textbox "Question" [ref=e837]:
+              - /placeholder: Ask one question about the state
+              - text: Does this message express urgency?
+            - generic [ref=e838]:
+              - 'button "About: Yes means / No means" [ref=e840] [cursor=pointer]'
+              - generic [ref=e843]:
+                - text: Yes means (optional)
+                - textbox "Yes means (optional)" [ref=e844]
+              - generic [ref=e845]:
+                - text: No means (optional)
+                - textbox "No means (optional)" [ref=e846]
+          - region "Question team" [ref=e847]:
+            - generic [ref=e848]:
+              - generic [ref=e849]: Question id
+              - textbox "Question id" [ref=e850]: team
+              - 'button "About: Question name" [ref=e852] [cursor=pointer]'
+              - generic [ref=e855]:
+                - button "Move question up" [ref=e856] [cursor=pointer]
+                - button "Move question down" [ref=e859] [cursor=pointer]
+              - button "Remove question team" [ref=e862] [cursor=pointer]
+            - generic [ref=e865]:
+              - generic [ref=e866]: Type
+              - combobox "Type" [ref=e867] [cursor=pointer]:
+                - option "Noul · yes/no"
+                - option "Choice · pick one" [selected]
+                - option "Score · scale"
+              - 'button "About: Question kind" [ref=e869] [cursor=pointer]'
+              - combobox "Readout mode" [ref=e872] [cursor=pointer]:
+                - 'option "asked: default" [selected]'
+                - 'option "asked: listwise (all at once)"'
+                - 'option "asked: pointwise (one by one)"'
+                - 'option "asked: all orders averaged"'
+              - 'button "About: How the question is asked" [ref=e874] [cursor=pointer]'
+              - generic [ref=e877]: 1 branch
+            - generic [ref=e879]: Question
+            - textbox "Question" [ref=e880]:
+              - /placeholder: Ask one question about the state
+              - text: Which team should handle this?
+            - generic [ref=e881]:
+              - generic [ref=e882]:
+                - generic [ref=e884]:
+                  - text: Option
+                  - 'button "About: Option name" [ref=e886] [cursor=pointer]'
+                - generic [ref=e889]:
+                  - text: Description (optional)
+                  - 'button "About: Option description" [ref=e891] [cursor=pointer]'
+              - generic [ref=e895]:
+                - generic [ref=e896]: A
+                - textbox "Option 1 name" [ref=e897]: billing
+                - textbox "Option 1 description" [ref=e898]: Payments, invoices, refunds
+                - button "Remove option billing" [ref=e899] [cursor=pointer]
+              - generic [ref=e902]:
+                - generic [ref=e903]: B
+                - textbox "Option 2 name" [ref=e904]: technical
+                - textbox "Option 2 description" [ref=e905]: Integrations, bugs, outages
+                - button "Remove option technical" [ref=e906] [cursor=pointer]
+              - generic [ref=e909]:
+                - generic [ref=e910]: C
+                - textbox "Option 3 name" [ref=e911]: sales
+                - textbox "Option 3 description" [ref=e912]: Pricing, new plans
+                - button "Remove option sales" [ref=e913] [cursor=pointer]
+              - button "Add option" [ref=e916] [cursor=pointer]
+          - region "Question tone" [ref=e919]:
+            - generic [ref=e920]:
+              - generic [ref=e921]: Question id
+              - textbox "Question id" [ref=e922]: tone
+              - 'button "About: Question name" [ref=e924] [cursor=pointer]'
+              - generic [ref=e927]:
+                - button "Move question up" [ref=e928] [cursor=pointer]
+                - button "Move question down" [disabled] [ref=e931] [cursor=pointer]
+              - button "Remove question tone" [ref=e934] [cursor=pointer]
+            - generic [ref=e937]:
+              - generic [ref=e938]: Type
+              - combobox "Type" [ref=e939] [cursor=pointer]:
+                - option "Noul · yes/no"
+                - option "Choice · pick one"
+                - option "Score · scale" [selected]
+              - 'button "About: Question kind" [ref=e941] [cursor=pointer]'
+              - combobox "Readout mode" [ref=e944] [cursor=pointer]:
+                - 'option "asked: default" [selected]'
+                - 'option "asked: listwise (all at once)"'
+                - 'option "asked: pointwise (one by one)"'
+              - 'button "About: How the question is asked" [ref=e946] [cursor=pointer]'
+              - generic [ref=e949]: 4 branches
+            - generic [ref=e951]: Question
+            - textbox "Question" [ref=e952]:
+              - /placeholder: Ask one question about the state
+              - text: How upset is the customer?
+            - generic [ref=e953]:
+              - generic [ref=e954]:
+                - text: Levels, lowest first
+                - 'button "About: Scale levels" [ref=e956] [cursor=pointer]'
+              - generic [ref=e959]:
+                - generic [ref=e960]: "0"
+                - textbox "Level 0" [ref=e961]: calm
+                - button "Move level 0 up" [disabled] [ref=e962] [cursor=pointer]
+                - button "Move level 0 down" [ref=e965] [cursor=pointer]
+                - button "Remove level 0" [ref=e968] [cursor=pointer]
+              - generic [ref=e971]:
+                - generic [ref=e972]: "1"
+                - textbox "Level 1" [ref=e973]: mildly annoyed
+                - button "Move level 1 up" [ref=e974] [cursor=pointer]
+                - button "Move level 1 down" [ref=e977] [cursor=pointer]
+                - button "Remove level 1" [ref=e980] [cursor=pointer]
+              - generic [ref=e983]:
+                - generic [ref=e984]: "2"
+                - textbox "Level 2" [ref=e985]: frustrated
+                - button "Move level 2 up" [ref=e986] [cursor=pointer]
+                - button "Move level 2 down" [ref=e989] [cursor=pointer]
+                - button "Remove level 2" [ref=e992] [cursor=pointer]
+              - generic [ref=e995]:
+                - generic [ref=e996]: "3"
+                - textbox "Level 3" [ref=e997]: angry
+                - button "Move level 3 up" [ref=e998] [cursor=pointer]
+                - button "Move level 3 down" [disabled] [ref=e1001] [cursor=pointer]
+                - button "Remove level 3" [ref=e1004] [cursor=pointer]
+              - button "Add level" [ref=e1007] [cursor=pointer]
+          - region "Calibration" [ref=e1010]:
+            - generic [ref=e1011]:
+              - heading "Calibration" [level=2] [ref=e1014]
+              - generic [ref=e1015]: the dials change the answers instantly · no need to run the model
+            - generic [ref=e1016]:
+              - button "Raw · T = 1" [pressed] [ref=e1017] [cursor=pointer]
+              - button "0.5B BoolQ · T = 2.72" [ref=e1018] [cursor=pointer]
+              - button "0.5B Platt · T = 2.92, b = 0.21" [ref=e1019] [cursor=pointer]
+              - button "1.5B BoolQ · T = 1.93" [ref=e1020] [cursor=pointer]
+              - 'button "About: Calibration presets" [ref=e1022] [cursor=pointer]'
+            - generic [ref=e1025]:
+              - generic [ref=e1026]:
+                - generic [ref=e1027]:
+                  - generic [ref=e1028]: Temperature · yes/no (Noul)
+                  - 'button "About: Temperature · yes/no" [ref=e1030] [cursor=pointer]'
+                  - generic [ref=e1033]: "1.00"
+                  - button "Reset Temperature · yes/no (Noul)" [disabled] [ref=e1035] [cursor=pointer]
+                - slider "Temperature · yes/no (Noul)" [ref=e1038] [cursor=pointer]: "1"
+                - generic [ref=e1039]:
+                  - generic [ref=e1040]: "0.25"
+                  - generic [ref=e1041]: "1"
+                  - generic [ref=e1042]: "4"
+              - generic [ref=e1043]:
+                - generic [ref=e1044]:
+                  - generic [ref=e1045]: Bias · yes/no (Noul)
+                  - 'button "About: Bias · yes/no" [ref=e1047] [cursor=pointer]'
+                  - generic [ref=e1050]: "0.00"
+                  - button "Reset Bias · yes/no (Noul)" [disabled] [ref=e1052] [cursor=pointer]
+                - slider "Bias · yes/no (Noul)" [ref=e1055] [cursor=pointer]: "0"
+                - generic [ref=e1056]:
+                  - generic [ref=e1057]: "-2"
+                  - generic [ref=e1058]: "0"
+                  - generic [ref=e1059]: "2"
+              - generic [ref=e1060]:
+                - generic [ref=e1061]:
+                  - generic [ref=e1062]: Temperature · multiple choice
+                  - 'button "About: Temperature · multiple choice" [ref=e1064] [cursor=pointer]'
+                  - generic [ref=e1067]: "1.00"
+                  - button "Reset Temperature · multiple choice" [disabled] [ref=e1069] [cursor=pointer]
+                - slider "Temperature · multiple choice" [ref=e1072] [cursor=pointer]: "1"
+                - generic [ref=e1073]:
+                  - generic [ref=e1074]: "0.25"
+                  - generic [ref=e1075]: "1"
+                  - generic [ref=e1076]: "4"
+              - generic [ref=e1077]:
+                - generic [ref=e1078]:
+                  - generic [ref=e1079]: Temperature · scale (Score)
+                  - 'button "About: Temperature · scale" [ref=e1081] [cursor=pointer]'
+                  - generic [ref=e1084]: "1.00"
+                  - button "Reset Temperature · scale (Score)" [disabled] [ref=e1086] [cursor=pointer]
+                - slider "Temperature · scale (Score)" [ref=e1089] [cursor=pointer]: "1"
+                - generic [ref=e1090]:
+                  - generic [ref=e1091]: "0.25"
+                  - generic [ref=e1092]: "1"
+                  - generic [ref=e1093]: "4"
+            - generic [ref=e1094]:
+              - generic [ref=e1095]: Needs a Run
+              - text: press Run after you change these
+            - generic [ref=e1096]:
+              - generic [ref=e1097]:
+                - generic [ref=e1098]:
+                  - text: Multiple choice asked as
+                  - 'button "About: Default for multiple choice" [ref=e1100] [cursor=pointer]'
+                - combobox [ref=e1103] [cursor=pointer]:
+                  - option "listwise" [selected]
+                  - option "pointwise"
+                  - option "averaged"
+              - generic [ref=e1104]:
+                - generic [ref=e1105]:
+                  - text: Scale questions asked as
+                  - 'button "About: Default for scales" [ref=e1107] [cursor=pointer]'
+                - combobox [ref=e1110] [cursor=pointer]:
+                  - option "pointwise" [selected]
+                  - option "listwise"
+            - generic [ref=e1111]:
+              - generic [ref=e1112]:
+                - text: Warn below label mass
+                - 'button "About: Warn below label mass" [ref=e1114] [cursor=pointer]'
+              - spinbutton [ref=e1117]: "0.5"
+            - generic [ref=e1118]:
+              - paragraph [ref=e1119]: "poc/minijev.env: MINIJEV_TEMP_NOUL=1.00 MINIJEV_BIAS_NOUL=0.000 MINIJEV_TEMP_CHOICE=1.00 MINIJEV_TEMP_SCORE=1.00 MINIJEV_CHOICE_MODE=listwise MINIJEV_SCORE_MODE=pointwise"
+              - 'button "About: Save as defaults" [ref=e1121] [cursor=pointer]'
+        - generic [ref=e1125]:
+          - generic [ref=e1126]:
+            - tablist "Response views" [ref=e1127]:
+              - tab "Answers" [selected] [ref=e1128] [cursor=pointer]
+              - tab "JSON" [ref=e1129] [cursor=pointer]
+              - tab "cURL" [ref=e1130] [cursor=pointer]
+              - tab "Raw logits" [ref=e1131] [cursor=pointer]
+            - 'button "About: Views" [ref=e1133] [cursor=pointer]'
+            - generic [ref=e1136]: ● 200
+            - generic [ref=e1137]: 996 ms
+          - generic [ref=e1138]:
+            - paragraph [ref=e1139]: Raw answers (all dials at their defaults). Move a calibration dial to compare.
+            - article [ref=e1140]:
+              - generic [ref=e1141]:
+                - generic [ref=e1142]:
+                  - generic [ref=e1143]: urgency
+                  - generic [ref=e1144]: Noul · Does this message express urgency?
+                  - generic [ref=e1145]: "0.98"
+                  - generic [ref=e1146]:
+                    - text: P(yes)
+                    - 'button "About: P(yes)" [ref=e1148] [cursor=pointer]'
+                - generic [ref=e1156]:
+                  - generic [ref=e1157]: 0 · No
+                  - generic [ref=e1158]: "0.5"
+                  - generic [ref=e1159]: Yes · 1
+            - article [ref=e1160]:
+              - generic [ref=e1161]:
+                - generic [ref=e1162]:
+                  - generic [ref=e1163]: team
+                  - generic [ref=e1164]: Choice · listwise · Which team should handle this?
+                - generic [ref=e1165]:
+                  - generic "Integrations, bugs, outages" [ref=e1166]:
+                    - generic [ref=e1167]: technical
+                    - generic [ref=e1171]: "0.97"
+                  - generic "Payments, invoices, refunds" [ref=e1172]:
+                    - generic [ref=e1173]: billing
+                    - generic [ref=e1177]: "0.02"
+                  - generic "Pricing, new plans" [ref=e1178]:
+                    - generic [ref=e1179]: sales
+                    - generic [ref=e1183]: "0.01"
+              - generic [ref=e1184]:
+                - img "confidence 0.96" [ref=e1185]
+                - generic [ref=e1188]: "0.96"
+                - generic [ref=e1189]:
+                  - text: confidence
+                  - 'button "About: Confidence" [ref=e1191] [cursor=pointer]'
+            - article [ref=e1194]:
+              - generic [ref=e1195]:
+                - generic [ref=e1196]:
+                  - generic [ref=e1197]: tone
+                  - generic [ref=e1198]: Score · pointwise · How upset is the customer?
+                  - generic [ref=e1199]: "1.92"
+                  - generic [ref=e1200]: of 3
+                - generic [ref=e1201]:
+                  - generic [ref=e1202]:
+                    - generic [ref=e1203]: "0.09"
+                    - generic [ref=e1208]: "0.08"
+                    - generic [ref=e1213]: "0.65"
+                    - generic [ref=e1218]: "0.18"
+                  - generic [ref=e1223]: ▲ E[level] = 1.92
+                  - generic [ref=e1226]:
+                    - generic "calm" [ref=e1227]: 0 · calm
+                    - generic "mildly annoyed" [ref=e1228]: 1 · mildly annoyed
+                    - generic "frustrated" [ref=e1229]: 2 · frustrated
+                    - generic "angry" [ref=e1230]: 3 · angry
+              - generic [ref=e1231]:
+                - img "ordinal confidence 0.55" [ref=e1232]
+                - generic [ref=e1235]: "0.55"
+                - generic [ref=e1236]:
+                  - text: ordinal confidence
+                  - 'button "About: Scale confidence" [ref=e1238] [cursor=pointer]'
+          - generic [ref=e1241]:
+            - generic [ref=e1242]: input 264
+            - generic [ref=e1243]: output 0
+            - generic [ref=e1244]:
+              - text: latency
+              - generic [ref=e1245]: 996 ms
+            - generic [ref=e1246]: Qwen/Qwen2.5-0.5B-Instruct
+            - 'button "About: Cost of this request" [ref=e1248] [cursor=pointer]'
+            - generic [ref=e1251]: label mass ≥ 0.998 on every branch
+  - button "Open Next.js Dev Tools" [ref=e741] [cursor=pointer]
+  - alert [ref=e745]
+  - 'tooltip "Run (⌘↵) Ask the model. It reads your text and questions once and gives a probability for every allowed answer. It does not write any words back. That is the whole idea: read the answer out instead of generating it. After a run, the calibration dials change the answers instantly."':
+    - generic: Run (⌘↵)
+    - generic: Ask the model. It reads your text and questions once and gives a probability for every allowed answer.
+    - generic: "It does not write any words back. That is the whole idea: read the answer out instead of generating it."
+    - generic: After a run, the calibration dials change the answers instantly.

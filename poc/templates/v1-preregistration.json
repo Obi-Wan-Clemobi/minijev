@@ -1,0 +1,240 @@
+{
+  "version": "v1",
+  "locked_at": "2026-09-24",
+  "sha256": "c98e15d33a8a0ecd51e52cfa81f716d1e0c081946c0372b8ee574f2d23d77310",
+  "note": "These templates were chosen with E1-E13 test cases visible. Future changes must use disjoint held-out splits for validation. This preregistration establishes baseline templates for contamination tracking.",
+  "primitives": {
+    "system": {
+      "description": "System message prepended to all requests",
+      "template": "You are a precise classifier. You read a STATE and answer one QUESTION about it."
+    },
+    "noul": {
+      "description": "Yes/no question template",
+      "format": {
+        "without_criteria": [
+          "QUESTION: {instructions}",
+          "Answer with Yes or No."
+        ],
+        "with_true_criteria": [
+          "QUESTION: {instructions}",
+          "Yes means: {criteria.true}",
+          "Answer with Yes or No."
+        ],
+        "with_false_criteria": [
+          "QUESTION: {instructions}",
+          "No means: {criteria.false}",
+          "Answer with Yes or No."
+        ],
+        "with_both_criteria": [
+          "QUESTION: {instructions}",
+          "Yes means: {criteria.true}",
+          "No means: {criteria.false}",
+          "Answer with Yes or No."
+        ]
+      },
+      "labels": {
+        "yes": [
+          "Yes",
+          "yes",
+          "YES"
+        ],
+        "no": [
+          "No",
+          "no",
+          "NO"
+        ]
+      }
+    },
+    "choice": {
+      "description": "Multiple choice question templates",
+      "modes": {
+        "listwise": {
+          "description": "All options presented with letter labels",
+          "format": [
+            "QUESTION: {instructions}",
+            "OPTIONS:",
+            "{letter}) {key}: {description}",
+            "Answer with the letter of the best option."
+          ],
+          "labels": [
+            "A",
+            "B",
+            "C",
+            "D",
+            "E",
+            "F",
+            "G",
+            "H",
+            "J",
+            "K",
+            "L",
+            "M",
+            "N",
+            "O",
+            "P",
+            "Q",
+            "R",
+            "S",
+            "T",
+            "U",
+            "V",
+            "W",
+            "X",
+            "Y",
+            "Z"
+          ],
+          "note": "Letter 'I' is skipped: common first word attracts unrelated probability mass"
+        },
+        "pointwise": {
+          "description": "Each option judged independently (Jev stage 1 for large option sets)",
+          "format": [
+            "QUESTION: {instructions}",
+            "PROPOSED ANSWER: {key}: {description}",
+            "Is the proposed answer correct for this state? Answer with Yes or No."
+          ],
+          "labels": {
+            "yes": [
+              "Yes",
+              "yes",
+              "YES"
+            ],
+            "no": [
+              "No",
+              "no",
+              "NO"
+            ]
+          }
+        },
+        "averaged": {
+          "description": "Every option shown at every letter position once (rotation-based debiasing)",
+          "format": [
+            "QUESTION: {instructions}",
+            "OPTIONS:",
+            "{letter}) {key}: {description}",
+            "Answer with the letter of the best option."
+          ],
+          "labels": [
+            "A",
+            "B",
+            "C",
+            "D",
+            "E",
+            "F",
+            "G",
+            "H",
+            "J",
+            "K",
+            "L",
+            "M",
+            "N",
+            "O",
+            "P",
+            "Q",
+            "R",
+            "S",
+            "T",
+            "U",
+            "V",
+            "W",
+            "X",
+            "Y",
+            "Z"
+          ],
+          "note": "Generates k branches for k options, each showing a different rotation order"
+        }
+      }
+    },
+    "score": {
+      "description": "Ordinal scale question templates",
+      "modes": {
+        "pointwise": {
+          "description": "Each level judged independently (default, matches Jev behavior)",
+          "format": [
+            "QUESTION: {instructions}",
+            "PROPOSED ANSWER: {level}",
+            "Is the proposed answer correct for this state? Answer with Yes or No."
+          ],
+          "labels": {
+            "yes": [
+              "Yes",
+              "yes",
+              "YES"
+            ],
+            "no": [
+              "No",
+              "no",
+              "NO"
+            ]
+          }
+        },
+        "listwise": {
+          "description": "All levels presented with letter labels (ablation mode)",
+          "format": [
+            "QUESTION: {instructions}",
+            "LEVELS:",
+            "{letter}) {level}",
+            "Answer with the letter of the level that fits best."
+          ],
+          "labels": [
+            "A",
+            "B",
+            "C",
+            "D",
+            "E",
+            "F",
+            "G",
+            "H",
+            "J",
+            "K",
+            "L",
+            "M",
+            "N",
+            "O",
+            "P",
+            "Q",
+            "R",
+            "S",
+            "T",
+            "U",
+            "V",
+            "W",
+            "X",
+            "Y",
+            "Z"
+          ]
+        }
+      }
+    }
+  },
+  "chat_template": {
+    "description": "Templates are inserted into model-specific chat format",
+    "structure": [
+      "tokenizer.apply_chat_template([",
+      "  {role: 'system', content: SYSTEM},",
+      "  {role: 'user', content: 'STATE:\\n{state}\\n\\n{question_block}'}",
+      "], add_generation_prompt=True)"
+    ]
+  },
+  "constants": {
+    "content_free_state": "N/A",
+    "skipped_letters": [
+      "I"
+    ],
+    "skipped_letters_reason": "I is a common first word of answers, attracts unrelated probability mass"
+  },
+  "code_references": {
+    "file": "poc/minijev_poc.py",
+    "functions": {
+      "noul_block": "lines 203-211",
+      "choice_block": "lines 214-219",
+      "proposal_block": "lines 222-230",
+      "score_listwise_block": "lines 233-238"
+    },
+    "constants": {
+      "SYSTEM": "line 34",
+      "LETTERS": "line 37",
+      "YES": "line 38",
+      "NO": "line 38"
+    }
+  }
+}

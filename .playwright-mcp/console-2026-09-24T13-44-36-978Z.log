@@ -1,0 +1,42 @@
+[    3691ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:776
+[    3738ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:776
+[   27368ms] [ERROR] Access to fetch at 'http://localhost:8000/v1/model' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:3000/:0
+[   27368ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8000/v1/model:0
+[   50756ms] [ERROR] Access to fetch at 'http://localhost:8000/v1/ask' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:3000/:0
+[   50756ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8000/v1/ask:0
+[   66869ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/v1/ask:0
+[   74381ms] [ERROR] Access to fetch at 'http://localhost:8000/v1/model' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:3000/:0
+[   74382ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8000/v1/model:0
+[  100858ms] [ERROR] Access to fetch at 'http://localhost:8000/v1/model' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:3000/:0
+[  100858ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8000/v1/model:0
+[  127148ms] [ERROR] Access to fetch at 'http://localhost:8000/v1/model' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:3000/:0
+[  127148ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8000/v1/model:0
+[  153404ms] [ERROR] Access to fetch at 'http://localhost:8000/v1/model' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:3000/:0
+[  153404ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8000/v1/model:0
+[  163619ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:776
+[  164555ms] [LOG] [Fast Refresh] done in 1036ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:776
+[  165735ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/hmr?id=GgPwvyI8MqhJkZiyyoDia' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0_90u2t._.js:16348
+[  166740ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/hmr?id=GgPwvyI8MqhJkZiyyoDia' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0_90u2t._.js:16348
+[  167746ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/hmr?id=GgPwvyI8MqhJkZiyyoDia' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0_90u2t._.js:16348
+[  168749ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/hmr?id=GgPwvyI8MqhJkZiyyoDia' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0_90u2t._.js:16348
+[  169751ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/hmr?id=GgPwvyI8MqhJkZiyyoDia' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0_90u2t._.js:16348
+[  174757ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/hmr?id=GgPwvyI8MqhJkZiyyoDia' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0_90u2t._.js:16348
+[  179760ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/hmr?id=GgPwvyI8MqhJkZiyyoDia' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0_90u2t._.js:16348
+[  180381ms] [ERROR] Access to fetch at 'http://localhost:8000/v1/model' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:3000/weaknesses:0
+[  180381ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8000/v1/model:0
+[  183388ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/v1/model:0
+[  184767ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/hmr?id=GgPwvyI8MqhJkZiyyoDia' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0_90u2t._.js:16348
+[  186396ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/v1/model:0
+[  189403ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/v1/model:0
+[  189775ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/hmr?id=GgPwvyI8MqhJkZiyyoDia' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0_90u2t._.js:16348
+[  192410ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/v1/model:0
+[  194783ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/hmr?id=GgPwvyI8MqhJkZiyyoDia' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0_90u2t._.js:16348
+[  195417ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/v1/model:0
+[  196513ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/?_rsc=z-WvnMdJkLBCISnm:0
+[  196515ms] [ERROR] Failed to fetch RSC payload for http://localhost:3000/. Falling back to browser navigation. TypeError: Failed to fetch
+    at fetchInternal (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0_90u2t._.js:10831:12)
+    at createFetch (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0_90u2t._.js:4909:38)
+    at async fetchServerResponse (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0_90u2t._.js:4601:21)
+    at async navigateToUnknownRoute (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0_90u2t._.js:11646:20) @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1052
+[  196523ms] [ERROR] WebSocket is already in CLOSING or CLOSED state. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:1559
+[  196532ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/__nextjs_original-stack-frames:0
