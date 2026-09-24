@@ -2,83 +2,218 @@
   "rows": [
     {
       "questions": 1,
+      "input_tokens_packed": 619,
       "generate_per_question": {
-        "seconds": 2.478070397999545,
+        "seconds": 2.470063442000537,
+        "seconds_all": [
+          2.470063442000537,
+          2.7017211109996424,
+          2.3659614770003827
+        ],
         "output_tokens": 2,
         "parse_failures": 0,
         "agrees_with_readout": 1.0
       },
       "generate_per_question_cached": {
-        "seconds": 2.48245150799994,
+        "seconds": 2.4178889350005193,
+        "seconds_all": [
+          2.0654328539967537,
+          2.4178889350005193,
+          2.742474475002382
+        ],
+        "output_tokens": 2,
+        "parse_failures": 0,
+        "agrees_with_readout": 1.0
+      },
+      "generate_batched_cached": {
+        "seconds": 2.3371704290038906,
+        "seconds_all": [
+          2.0154390530005912,
+          2.4762973640026757,
+          2.3371704290038906
+        ],
         "output_tokens": 2,
         "parse_failures": 0,
         "agrees_with_readout": 1.0,
-        "agrees_with_uncached": 1.0
+        "agrees_with_per_question_cached": 1.0
+      },
+      "generate_1_token_logprobs_cached": {
+        "seconds": 2.231489559999318,
+        "seconds_all": [
+          2.202076521003619,
+          2.231489559999318,
+          2.3234371240032488
+        ],
+        "output_tokens": 1,
+        "parse_failures": 0,
+        "agrees_with_readout": 1.0
       },
       "generate_one_json": {
-        "seconds": 3.936752048000926,
+        "seconds": 4.07855902799929,
+        "seconds_all": [
+          3.7544363779961714,
+          4.07855902799929,
+          4.445544477996009
+        ],
         "output_tokens": 11,
         "parse_failures": 0,
         "agrees_with_readout": 1.0
       },
       "readout_packed": {
-        "seconds": 2.283133151999209,
-        "input_tokens": 619
+        "seconds": 2.515826078997634,
+        "seconds_all": [
+          2.515826078997634,
+          2.355066951997287,
+          2.9177533569964
+        ],
+        "output_tokens": 0,
+        "parse_failures": 0,
+        "agrees_with_readout": 1.0
       }
     },
     {
       "questions": 4,
+      "input_tokens_packed": 748,
       "generate_per_question": {
-        "seconds": 9.071029484999599,
+        "seconds": 8.333997630004887,
+        "seconds_all": [
+          8.333997630004887,
+          8.286155936999421,
+          9.637793879999663
+        ],
         "output_tokens": 8,
         "parse_failures": 0,
         "agrees_with_readout": 1.0
       },
       "generate_per_question_cached": {
-        "seconds": 3.482354599997052,
+        "seconds": 3.3968934479999007,
+        "seconds_all": [
+          3.3968934479999007,
+          3.2123694100009743,
+          3.4400542860021233
+        ],
+        "output_tokens": 8,
+        "parse_failures": 0,
+        "agrees_with_readout": 1.0
+      },
+      "generate_batched_cached": {
+        "seconds": 2.4487664039988886,
+        "seconds_all": [
+          2.4487664039988886,
+          2.4486035270019784,
+          4.791461480999715
+        ],
         "output_tokens": 8,
         "parse_failures": 0,
         "agrees_with_readout": 1.0,
-        "agrees_with_uncached": 1.0
+        "agrees_with_per_question_cached": 1.0
+      },
+      "generate_1_token_logprobs_cached": {
+        "seconds": 2.7212179690031917,
+        "seconds_all": [
+          2.5268194610034698,
+          2.7756032120014424,
+          2.7212179690031917
+        ],
+        "output_tokens": 4,
+        "parse_failures": 0,
+        "agrees_with_readout": 1.0
       },
       "generate_one_json": {
-        "seconds": 8.018625655000506,
+        "seconds": 8.391780214995379,
+        "seconds_all": [
+          7.890629148001608,
+          8.391780214995379,
+          9.188453022004978
+        ],
         "output_tokens": 35,
         "parse_failures": 0,
         "agrees_with_readout": 0.5
       },
       "readout_packed": {
-        "seconds": 2.6692936350009404,
-        "input_tokens": 748
+        "seconds": 2.6926169260041206,
+        "seconds_all": [
+          2.3576949139969656,
+          2.6926169260041206,
+          3.103561156000069
+        ],
+        "output_tokens": 0,
+        "parse_failures": 0,
+        "agrees_with_readout": 1.0
       }
     },
     {
       "questions": 13,
+      "input_tokens_packed": 1371,
       "generate_per_question": {
-        "seconds": 30.952844052000728,
+        "seconds": 31.39852024600259,
+        "seconds_all": [
+          31.39852024600259,
+          35.795513027995185,
+          29.944460439997783
+        ],
         "output_tokens": 33,
         "parse_failures": 0,
         "agrees_with_readout": 0.6923076923076923
       },
       "generate_per_question_cached": {
-        "seconds": 8.96417192700028,
+        "seconds": 9.570257241000945,
+        "seconds_all": [
+          8.485765236997395,
+          10.758692782001162,
+          9.570257241000945
+        ],
+        "output_tokens": 33,
+        "parse_failures": 0,
+        "agrees_with_readout": 0.6923076923076923
+      },
+      "generate_batched_cached": {
+        "seconds": 10.135060355998576,
+        "seconds_all": [
+          10.653966263002076,
+          10.030201982997824,
+          10.135060355998576
+        ],
         "output_tokens": 33,
         "parse_failures": 0,
         "agrees_with_readout": 0.6923076923076923,
-        "agrees_with_uncached": 1.0
+        "agrees_with_per_question_cached": 1.0
+      },
+      "generate_1_token_logprobs_cached": {
+        "seconds": 6.1369829480026965,
+        "seconds_all": [
+          5.394345715001691,
+          6.1369829480026965,
+          6.13788048299466
+        ],
+        "output_tokens": 13,
+        "parse_failures": 0,
+        "agrees_with_readout": 1.0
       },
       "generate_one_json": {
-        "seconds": 28.85916097399968,
+        "seconds": 30.893795140000293,
+        "seconds_all": [
+          27.982504131003225,
+          32.532365174003644,
+          30.893795140000293
+        ],
         "output_tokens": 124,
         "parse_failures": 2,
         "agrees_with_readout": 0.6153846153846154
       },
       "readout_packed": {
-        "seconds": 6.269386113999644,
-        "input_tokens": 1371
+        "seconds": 5.712253392004641,
+        "seconds_all": [
+          5.712253392004641,
+          5.722026802999608,
+          5.597558813999058
+        ],
+        "output_tokens": 0,
+        "parse_failures": 0,
+        "agrees_with_readout": 1.0
       }
     }
   ],
   "model": "Qwen/Qwen2.5-0.5B-Instruct",
-  "seconds_total": 111.20514936299878
+  "seconds_total": 420.89110728800006
 }

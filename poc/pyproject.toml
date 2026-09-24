@@ -11,3 +11,11 @@ dependencies = [
 
 [tool.uv]
 package = false
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = ["model: loads Qwen2.5-0.5B-Instruct (downloads ~1 GB on first run)"]

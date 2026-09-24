@@ -22,8 +22,10 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
+from pathlib import Path
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, DynamicCache
@@ -35,6 +37,50 @@ CONTENT_FREE_STATE = "N/A"
 LETTERS = list("ABCDEFGHJKLMNOPQRSTUVWXYZ")
 YES, NO = ["Yes", "yes", "YES"], ["No", "no", "NO"]
 MODES = ("naive", "kv", "packed")
+SETTINGS_FILE = Path(__file__).with_name("minijev.env")
+
+
+@dataclass(frozen=True)
+class Settings:
+    """The dials of ask() and Engine. Each field is MINIJEV_<FIELD> in minijev.env or in the environment.
+
+    Precedence: environment variable > minijev.env > the defaults below. The defaults are the
+    uncalibrated behaviour that the experiments measure; experiments always use Settings().
+    """
+
+    model: str = MODEL
+    threads: int = 6
+    attn: str = "eager"  # or "sdpa"
+    temp_noul: float = 1.0  # temperature T: logits are divided by T. T > 1 = less confident
+    temp_choice: float = 1.0
+    temp_score: float = 1.0
+    bias_noul: float = 0.0  # Platt shift b, added to the Noul log-odds after the temperature
+    choice_mode: str = "listwise"  # or "pointwise": one yes/no branch per option, order-invariant
+    score_mode: str = "pointwise"  # or "listwise": all levels in one prompt (ablation)
+    min_label_mass: float = 0.5  # warn when less next-token probability than this is on the labels
+
+    @classmethod
+    def load(cls, path: Path = SETTINGS_FILE) -> "Settings":
+        values = {}
+        if path.exists():
+            for line in path.read_text().splitlines():
+                line = line.split("#", 1)[0].strip()
+                if "=" in line:
+                    k, v = line.split("=", 1)
+                    values[k.strip()] = v.strip().strip("\"'")
+        values.update({k: v for k, v in os.environ.items() if k.startswith("MINIJEV_")})
+        known = {"MINIJEV_" + f.name.upper(): f for f in fields(cls)}
+        unknown = sorted(set(values) - set(known))
+        if unknown:
+            raise ValueError(f"unknown settings {unknown}; known: {sorted(known)}")
+        s = cls(**{f.name: type(f.default)(values[k]) for k, f in known.items() if k in values})
+        assert s.choice_mode in ("listwise", "pointwise"), f"MINIJEV_CHOICE_MODE={s.choice_mode!r}"
+        assert s.score_mode in ("listwise", "pointwise"), f"MINIJEV_SCORE_MODE={s.score_mode!r}"
+        assert min(s.temp_noul, s.temp_choice, s.temp_score) > 0, "temperatures must be > 0"
+        return s
+
+    def temperature(self, qtype: str) -> float:
+        return {"noul": self.temp_noul, "choice": self.temp_choice, "score": self.temp_score}[qtype]
 
 
 def render(value) -> str:
@@ -61,7 +107,9 @@ class Branch:
 
 
 class Engine:
-    def __init__(self, model: str = MODEL, attn: str = "eager", threads: int = 6):
+    def __init__(self, model: str | None = None, attn: str | None = None, threads: int | None = None):
+        s = Settings.load() if None in (model, attn, threads) else Settings()
+        model, attn, threads = model or s.model, attn or s.attn, threads or s.threads
         torch.set_num_threads(threads)
         self.tok = AutoTokenizer.from_pretrained(model)
         self.model = AutoModelForCausalLM.from_pretrained(
@@ -286,9 +334,11 @@ def raw_scores(engine: Engine, req: dict, mode: str = "packed") -> tuple[dict, d
     return raw, usage
 
 
-def answer(q: dict, logits: list[float], temperature: float = 1.0) -> dict:
+def answer(q: dict, logits: list[float], temperature: float = 1.0, bias: float = 0.0) -> dict:
+    """Uncalibrated at the defaults. bias applies to Nouls only (the Platt shift)."""
     if q["type"] == "noul":
-        return {"type": "noul", "noul": 1 / (1 + math.exp(-(logits[0] - logits[1]) / temperature))}
+        t = (logits[0] - logits[1]) / temperature + bias
+        return {"type": "noul", "noul": 1 / (1 + math.exp(-t)) if t >= 0 else math.exp(t) / (1 + math.exp(t))}
     p = softmax(logits, temperature)
     if q["type"] == "choice":
         keys = list(q["criteria"])
@@ -315,16 +365,29 @@ def rounded(x):
     return x
 
 
-def ask(engine: Engine, req: dict, mode: str = "packed", temperatures: dict | None = None, debug: bool = False) -> dict:
-    """The Jev contract: {state, questions} in, {model, answers, usage} out."""
+def with_modes(q: dict, s: Settings) -> dict:
+    """Fill in the readout mode from the settings when the question does not set it."""
+    if q["type"] == "choice":
+        return {"choice_mode": s.choice_mode, **q}
+    if q["type"] == "score":
+        return {"score_mode": s.score_mode, **q}
+    return q
+
+
+def ask(engine: Engine, req: dict, mode: str = "packed", settings: Settings | None = None, debug: bool = False) -> dict:
+    """The Jev contract: {state, questions} in, {model, answers, usage} out.
+
+    settings defaults to Settings.load(): minijev.env plus MINIJEV_* environment variables.
+    """
+    s = settings or Settings.load()
+    req = {**req, "questions": {qid: with_modes(q, s) for qid, q in req["questions"].items()}}
     raw, usage = raw_scores(engine, req, mode)
-    temps = temperatures or {}
     answers, warnings = {}, []
     for qid, q in req["questions"].items():
-        a = answer(q, raw[qid]["logits"], temps.get(q["type"], 1.0))
+        a = answer(q, raw[qid]["logits"], s.temperature(q["type"]), s.bias_noul if q["type"] == "noul" else 0.0)
         answers[qid] = a if debug else rounded(a)
         low = min(raw[qid]["mass"])
-        if low < 0.5:  # the model wanted to say something other than a label: prompt problem
+        if low < s.min_label_mass:  # the model wanted to say something other than a label: prompt problem
             warnings.append(f"{qid}: only {low:.2f} of next-token mass is on the labels")
     resp = {"model": f"minijev-poc ({engine.name})", "answers": answers, "usage": usage}
     if debug:
