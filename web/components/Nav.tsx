@@ -13,9 +13,11 @@ export function Nav() {
   const { model, models, switchModel, switching } = useStore();
   // Use useState with effect to avoid hydration mismatch - server and client start with same value
   const [dark, setDark] = useState(true);  // Default matches layout.tsx
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Set initial state from DOM after mount
+    // Intentional sync with DOM after hydration to avoid mismatch
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDark(document.documentElement.classList.contains("dark"));
 
     // Listen for theme changes
