@@ -1,0 +1,18 @@
+# Optional: run the playground in Docker instead of uv + npm. First start downloads the model (~1 GB for 0.5B).
+#   docker compose up --build        then open http://localhost:3000
+services:
+  api:
+    build: ./poc
+    ports: ["8000:8000"]
+    volumes:
+      - hf-cache:/hf              # model weights survive rebuilds
+      - ./poc/data:/app/data      # cached datasets and the pinned GDPR article
+      - ./poc/minijev.env:/app/minijev.env:ro   # edit dials without a rebuild; restart the api
+  web:
+    build:
+      context: ./web
+      args: { NEXT_PUBLIC_API_URL: "http://localhost:8000" }
+    ports: ["3000:3000"]
+    depends_on: [api]
+volumes:
+  hf-cache:

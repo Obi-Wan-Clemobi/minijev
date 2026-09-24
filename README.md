@@ -10,6 +10,9 @@ small transformer. We built minijev to understand the mechanism. It is not a cop
 - **[poc/](poc/)** is a working proof of concept: `cd poc && uv sync && uv run python experiments.py demo`
   - Calibration temperatures and other dials: `poc/minijev.env` (DESIGN.md §6).
   - Tests: `cd poc && uv run pytest`.
+- **[web/](web/)** is a local web playground for the POC. Run the API with `cd poc && uv run uvicorn server:app --port 8000`.
+  Then run `cd web && npm install && npm run dev` and open http://localhost:3000. `docker compose up --build` runs
+  both parts in Docker instead.
 - **[CLAUDE.md](CLAUDE.md)** gives the project writing rules and the glossary. The general rules (modified ASD-STE100) are in `~/.claude/CLAUDE.md`.
 
 Status: design, research, and a working proof of concept for Phases 0, 1, and 3, and part of Phase 2 (DESIGN.md §12).

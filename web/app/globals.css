@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg: #ffffff; --surface: #fafafa; --card: #ffffff; --fg: #171717; --muted: #5c5c5c;
+  --line: #e5e5e5; --track: #f0f0f0; --accent: #0068d6; --accent2: #7cb4f0; --soft: #dbeafe;
+  --gen: #d97706; --ghost: #a3a3a3; --ok: #16a34a; --warn: #b45309; --inv-bg: #171717; --inv-fg: #ffffff;
+}
+.dark {
+  --bg: #000000; --surface: #050505; --card: #0a0a0a; --fg: #ededed; --muted: #a1a1a1;
+  --line: #262626; --track: #1a1a1a; --accent: #3b9eff; --accent2: #1f5a99; --soft: #0f2a47;
+  --gen: #d97706; --ghost: #5c5c5c; --ok: #22c55e; --warn: #f5a524; --inv-bg: #ededed; --inv-fg: #000000;
+}
+
+@theme inline {
+  --color-bg: var(--bg); --color-surface: var(--surface); --color-card: var(--card); --color-fg: var(--fg);
+  --color-muted: var(--muted); --color-line: var(--line); --color-track: var(--track); --color-accent: var(--accent);
+  --color-accent2: var(--accent2); --color-soft: var(--soft); --color-gen: var(--gen); --color-ghost: var(--ghost);
+  --color-ok: var(--ok); --color-warn: var(--warn); --color-inv-bg: var(--inv-bg); --color-inv-fg: var(--inv-fg);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body { background: var(--bg); color: var(--fg); font-family: var(--font-geist-sans), system-ui, sans-serif; }
+button, a, input[type="range"], select { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input[type="range"] { accent-color: var(--accent); }
+@media (prefers-reduced-motion: no-preference) {
+  .anim { transition: width 250ms ease, height 250ms ease, left 250ms ease, bottom 250ms ease, stroke-dasharray 250ms ease, opacity 200ms ease; }
+}

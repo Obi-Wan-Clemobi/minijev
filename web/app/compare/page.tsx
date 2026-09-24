@@ -1,0 +1,143 @@
+"use client";
+import { useEffect, useState } from "react";
+import { RaceBars, Waterfall, type RaceRow } from "@/components/Charts";
+import { Icon } from "@/components/Icon";
+import { api, type CompareResponse } from "@/lib/api";
+import { useStore } from "@/lib/store";
+
+const METHODS: { id: string; name: string; sub: string; tone: RaceRow["tone"]; slow?: boolean }[] = [
+  { id: "readout", name: "minijev readout", sub: "one packed pass, no decode", tone: "accent" },
+  { id: "logprobs_cached", name: "1 token + logprobs, cached", sub: "the same computation, one call per question", tone: "accent2" },
+  { id: "generate_cached", name: "Generate the name, cached", sub: "prompt caching, greedy decode", tone: "gen" },
+  { id: "generate_json", name: "One JSON call", sub: "all answers in one stream", tone: "gen" },
+  { id: "generate_uncached", name: "Generate, one call per question", sub: "state prefilled every time", tone: "gen", slow: true },
+];
+
+type Rec = { questions: number; [k: string]: unknown };
+
+export default function Compare() {
+  const { req, model } = useStore();
+  const [picked, setPicked] = useState<string[]>(METHODS.filter((m) => !m.slow).map((m) => m.id));
+  const [res, setRes] = useState<CompareResponse | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [recorded, setRecorded] = useState<Record<string, Rec[]> | null>(null);
+  const [recModel, setRecModel] = useState("0.5B");
+
+  useEffect(() => {
+    api.results().then((r) => setRecorded({ "0.5B": r["0.5B"].fanout, "1.5B": r["1.5B"].fanout })).catch(() => {});
+  }, []);
+
+  const run = async () => {
+    setBusy(true); setErr(null);
+    try { setRes(await api.compare(req, picked)); } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+  };
+
+  const live: RaceRow[] = res ? METHODS.filter((m) => res.methods[m.id]).map((m) => {
+    const r = res.methods[m.id];
+    return { name: m.name, sub: m.sub, sec: r.seconds, tone: m.tone,
+      note: `${r.output_tokens} out · ${m.id === "readout" ? "reference" : `agree ${Math.round(r.agrees_with_readout * 100)}%`}` };
+  }).sort((a, b) => b.sec - a.sec) : [];
+
+  const rec = recorded?.[recModel]?.find((r) => r.questions === 13) as Record<string, { seconds: number; seconds_all: number[]; output_tokens: number; agrees_with_readout: number }> | undefined;
+  const recRows: RaceRow[] = rec ? ([
+    ["generate_per_question", "One call per question", "state prefilled 13 times", "gen"],
+    ["generate_one_json", "One JSON call", "all answers in one stream", "gen"],
+    ["generate_batched_cached", "Batch, state cached", "decode 13 rows per step", "gen"],
+    ["generate_per_question_cached", "Per question, state cached", "prompt caching", "gen"],
+    ["generate_1_token_logprobs_cached", "1 token + logprobs, cached", "same maths as a readout", "accent2"],
+    ["readout_packed", "minijev readout", "one packed pass", "accent"],
+  ] as const).map(([k, name, sub, tone]) => ({
+    name, sub, tone, sec: rec[k].seconds, lo: Math.min(...rec[k].seconds_all), hi: Math.max(...rec[k].seconds_all),
+    note: `${rec[k].output_tokens} out · ${k === "readout_packed" ? "reference" : `agree ${Math.round(rec[k].agrees_with_readout * 100)}%`}`,
+  })) : [];
+  const fall = rec ? ["generate_per_question", "generate_per_question_cached", "generate_1_token_logprobs_cached", "readout_packed"].map((k) => rec[k].seconds) : [];
+  const saving = fall.length ? fall[0] - fall[3] : 1;
+  const shares = fall.length ? [fall[0] - fall[1], fall[1] - fall[2], fall[2] - fall[3]].map((x) => Math.round((x / saving) * 100)) : [];
+
+  return (
+    <div className="px-4 md:px-8 py-8 flex flex-col gap-6">
+      <div className="flex items-end gap-6 flex-wrap">
+        <div className="flex flex-col gap-1.5">
+          <h1 className="m-0 text-[32px] font-semibold tracking-tight">Read it out, or generate it?</h1>
+          <p className="m-0 text-[15px] text-muted max-w-[760px] leading-normal">
+            Run your Playground request through the readout and through generation, on the same model and CPU. Every question is asked as a Choice, so every method answers the same thing.
+          </p>
+        </div>
+      </div>
+
+      <section className="rounded-xl border border-line bg-card p-6 flex flex-col gap-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          <h2 className="text-[15px] font-semibold">Your request · {Object.keys(req.questions).length} questions · {model.split("/")[1] ?? "no model"}</h2>
+          <div className="flex-1" />
+          <fieldset className="flex gap-3 flex-wrap text-[13px]">
+            <legend className="sr-only">Methods</legend>
+            {METHODS.filter((m) => m.id !== "readout").map((m) => (
+              <label key={m.id} className="flex items-center gap-1.5">
+                <input type="checkbox" checked={picked.includes(m.id)} className="accent-[var(--accent)]"
+                  onChange={(e) => setPicked((p) => (e.target.checked ? [...p, m.id] : p.filter((x) => x !== m.id)))} />
+                {m.name}{m.slow ? " (slow)" : ""}
+              </label>
+            ))}
+          </fieldset>
+          <button onClick={run} disabled={busy} className="h-10 px-4 rounded-lg bg-inv-bg text-inv-fg text-sm font-medium flex items-center gap-2 disabled:opacity-40">
+            <Icon name="play" size={14} fill />{busy ? "Running… (this takes seconds on a CPU)" : "Run comparison"}
+          </button>
+        </div>
+        {err && <p role="alert" className="text-sm text-warn">{err}</p>}
+        {res ? <RaceBars rows={live} /> : <p className="text-sm text-muted">Not run yet. The readout always runs as the reference.</p>}
+        {res && <p className="text-xs text-muted">One run each, in this order: readout first. Single runs on a laptop CPU vary by about ±10–20%; the recorded results below are medians of 3.</p>}
+        {res && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-[13px] font-mono">
+              <thead><tr className="text-muted text-left"><th className="font-normal py-1.5 pr-4">question</th>{METHODS.filter((m) => res.methods[m.id]).map((m) => <th key={m.id} className="font-normal py-1.5 pr-4">{m.name}</th>)}</tr></thead>
+              <tbody>
+                {Object.keys(res.questions).map((q) => (
+                  <tr key={q} className="border-t border-line">
+                    <td className="py-1.5 pr-4">{q}</td>
+                    {METHODS.filter((m) => res.methods[m.id]).map((m) => {
+                      const v = res.methods[m.id].answers[q], same = v === res.methods.readout.answers[q];
+                      return <td key={m.id} className={`py-1.5 pr-4 ${v === null ? "text-warn" : same ? "" : "text-gen"}`}>{v ?? "unparsed"}</td>;
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <div className="grid xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] gap-6">
+        <section className="rounded-xl border border-line bg-card p-6 flex flex-col gap-3.5">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h2 className="text-[15px] font-semibold">Measured: 13 GDPR questions, 500-token state</h2>
+            <div className="flex-1" />
+            <div className="flex border border-line rounded-lg p-[3px] gap-0.5 font-mono">
+              {["0.5B", "1.5B"].map((m) => (
+                <button key={m} onClick={() => setRecModel(m)} aria-pressed={recModel === m}
+                  className={`h-8 px-3 rounded-[5px] text-[13px] ${recModel === m ? "bg-track text-fg" : "text-muted"}`}>Qwen2.5-{m}</button>
+              ))}
+            </div>
+          </div>
+          <p className="text-xs text-muted">Median of 3 runs in rotating order; whiskers show the full spread. poc/results/fanout*.json.</p>
+          {recRows.length ? <RaceBars rows={recRows} /> : <p className="text-sm text-muted">Start the API to load the recorded results.</p>}
+        </section>
+        <section className="rounded-xl border border-line bg-card p-6 flex flex-col gap-4">
+          <h2 className="text-[15px] font-semibold">Where the time goes · {recModel}</h2>
+          {fall.length > 0 && (
+            <>
+              <Waterfall steps={fall} labels={["one call per question", "cache the state", "stop at the first token", "one pass for all branches"]} />
+              <div className="flex h-2.5 rounded-full overflow-hidden">
+                <div className="anim bg-gen" style={{ width: `${shares[0]}%` }} />
+                <div className="anim bg-accent2" style={{ width: `${shares[1]}%` }} />
+                <div className="anim bg-accent" style={{ width: `${shares[2]}%` }} />
+              </div>
+              <div className="flex justify-between text-xs font-mono"><span>caching {shares[0]}%</span><span>first token {shares[1]}%</span><span>one pass {shares[2]}%</span></div>
+              <p className="text-xs text-muted leading-normal">An LLM API with prompt caching and logprobs copies the first two savings. The large speed-ups come against uncached calls, JSON output, and written answers.</p>
+            </>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}

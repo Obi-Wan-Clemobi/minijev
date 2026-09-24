@@ -200,6 +200,8 @@ xychart-beta
 | `poc/minijev_poc.py` | Prompt building, the three evaluators, the primitives, confidence, and `ask()`, which implements the Jev contract. About 330 lines. |
 | `poc/experiments.py` | One function per experiment. Run `uv run python experiments.py <name>`. |
 | `poc/results/*.json` | Raw outputs of every run. The numbers below come from these files. |
+| `poc/server.py` | A local HTTP API over the POC (FastAPI) for the web playground. |
+| `web/` | The web playground: a question editor, live calibration dials, a readout-vs-generation comparison, and views of the prefix tree and the attention mask. |
 
 ### 4.2 One request, from start to end
 
