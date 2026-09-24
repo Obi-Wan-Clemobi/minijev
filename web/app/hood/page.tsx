@@ -1,25 +1,56 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { Icon } from "@/components/Icon";
+import { RequestEditor, useReady } from "@/components/RequestEditor";
 import { api, type TreeResponse } from "@/lib/api";
 import { useStore } from "@/lib/store";
 
 const show = (t: string) => t.replace(/\n/g, "↵").replace(/ /g, "·");
 
 export default function Hood() {
-  const { req, settings, response } = useStore();
+  const { req, settings, response, run, running } = useStore();
+  const ready = useReady();
   const [tree, setTree] = useState<TreeResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [k, setK] = useState(0);
+  const [showTemplate, setShowTemplate] = useState(false);
 
-  const load = useCallback(() => {
-    api.tree(req, settings).then((t) => { setErr(null); setTree(t); setK((x) => Math.min(x, t.branches.length - 1)); }).catch((e) => setErr(e.message));
-  }, [req, settings]);
-  useEffect(() => { load(); }, [load]);
+  // Tokenizing is cheap (no forward pass), so the layout follows your typing after a short pause.
+  useEffect(() => {
+    if (!ready) return;
+    const t = setTimeout(() => {
+      api.tree(req, settings).then((t) => { setErr(null); setTree(t); setK((x) => Math.min(x, t.branches.length - 1)); })
+        .catch((e) => setErr(e.message));
+    }, 350);
+    return () => clearTimeout(t);
+  }, [req, settings, ready]);
 
-  if (err) return <div className="p-8"><p role="alert" className="text-warn text-sm">{err}</p></div>;
-  if (!tree) return <div className="p-8 text-sm text-muted">Building the prefix tree…</div>;
+  return (
+    <div className="flex-1 grid lg:grid-cols-[minmax(400px,480px)_minmax(0,1fr)]">
+      <aside className="lg:border-r border-line px-4 md:px-6 py-6 lg:sticky lg:top-16 lg:self-start lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto">
+        <RequestEditor presets>
+          <button onClick={run} disabled={!ready || running}
+            className="h-10 px-4 rounded-lg bg-inv-bg text-inv-fg text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-40">
+            <Icon name="play" size={14} fill />{running ? "Running…" : "Run the model for label mass"}
+          </button>
+        </RequestEditor>
+      </aside>
+      <div className="min-w-0">
+        {!ready && <p className="px-4 md:px-8 pt-6 text-sm text-warn">Fix the request on the left to update the tree.</p>}
+        {err && <p role="alert" className="px-4 md:px-8 pt-6 text-warn text-sm">{err}</p>}
+        {!tree ? <p className="p-8 text-sm text-muted">Building the prefix tree…</p> : <Tree tree={tree} k={k} setK={setK} response={response} showTemplate={showTemplate} setShowTemplate={setShowTemplate} />}
+      </div>
+    </div>
+  );
+}
 
-  const B = tree.branches, P = tree.prefix.length, sel = B[k];
+function Tree({ tree, k, setK, response, showTemplate, setShowTemplate }: {
+  tree: TreeResponse; k: number; setK: (i: number) => void; response: ReturnType<typeof useStore>["response"];
+  showTemplate: boolean; setShowTemplate: (v: boolean) => void;
+}) {
+
+  const B = tree.branches, P = tree.prefix.length, sel = B[Math.min(k, B.length - 1)];
+  const [lo, hi] = tree.prefix.state_span;
   const rowH = Math.max(30, Math.min(64, 380 / B.length));
   const svgH = Math.max(240, B.length * rowH + 16);
   const S = 396 / tree.total;
@@ -111,6 +142,32 @@ export default function Hood() {
           </div>
         </section>
       </div>
+
+      <section className="rounded-xl border border-line bg-card p-6 flex flex-col gap-3">
+        <div className="flex items-baseline justify-between gap-3 flex-wrap">
+          <h2 className="text-[15px] font-semibold">Your state, as tokens · {lo === hi ? 0 : hi - lo} of {P} prefix tokens</h2>
+          <label className="flex items-center gap-2 text-xs text-muted">
+            <input type="checkbox" checked={showTemplate} onChange={(e) => setShowTemplate(e.target.checked)} className="accent-[var(--accent)]" />
+            show the template tokens ({lo} before, {P - hi} after)
+          </label>
+        </div>
+        <div className="flex flex-wrap gap-1 font-mono text-[11px]" aria-label="State tokens with positions">
+          {tree.prefix.tokens.map((t, i) => {
+            const inState = i >= lo && i < hi;
+            if (!inState && !showTemplate) return null;
+            return (
+              <span key={i} className={`inline-flex flex-col items-center rounded border px-1.5 py-0.5 ${inState ? "border-line" : "border-dashed border-line opacity-60"}`}>
+                <span className="text-fg whitespace-pre">{show(t)}</span>
+                <span className="text-muted text-[10px]">{i}</span>
+              </span>
+            );
+          })}
+        </div>
+        <p className="text-xs text-muted leading-normal">
+          Each chip is one token with its position. The model sees these once; every branch below attends to all of them. · marks a space and ↵ a newline.
+          A token can join the end of your text with the blank line after it.
+        </p>
+      </section>
 
       <section className="rounded-xl border border-line bg-card p-6 flex flex-col gap-3">
         <div className="flex items-baseline justify-between gap-3 flex-wrap">

@@ -128,7 +128,13 @@ def v1_tree(req: Req):
                              "positions": [len(prefix), len(prefix) + len(b.ids) - 1],
                              "tokens": [e.tok.decode([t]) for t in b.ids]})
             start += len(b.ids)
-    return {"prefix": {"length": len(prefix), "tokens": [e.tok.decode([t]) for t in prefix]},
+    # Where the user's state sits inside the prefix: after the chat template and "STATE:\n", before the blank line.
+    head = e.tok.encode(f"{e._head}STATE:\n", add_special_tokens=False)
+    lo = len(head) if prefix[:len(head)] == head else 0
+    hi = len(prefix)
+    while hi > lo and not e.tok.decode(prefix[hi - 1:hi]).strip():
+        hi -= 1
+    return {"prefix": {"length": len(prefix), "tokens": [e.tok.decode([t]) for t in prefix], "state_span": [lo, hi]},
             "branches": branches, "total": start,
             "max_position": len(prefix) + max((b["length"] for b in branches), default=0) - 1}
 

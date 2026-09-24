@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { RaceBars, Waterfall, type RaceRow } from "@/components/Charts";
 import { Icon } from "@/components/Icon";
+import { RequestEditor, useReady } from "@/components/RequestEditor";
 import { api, type CompareResponse } from "@/lib/api";
 import { useStore } from "@/lib/store";
 
@@ -17,6 +18,7 @@ type Rec = { questions: number; [k: string]: unknown };
 
 export default function Compare() {
   const { req, model } = useStore();
+  const ready = useReady();
   const [picked, setPicked] = useState<string[]>(METHODS.filter((m) => !m.slow).map((m) => m.id));
   const [res, setRes] = useState<CompareResponse | null>(null);
   const [busy, setBusy] = useState(false);
@@ -66,6 +68,15 @@ export default function Compare() {
         </div>
       </div>
 
+      <details className="group rounded-xl border border-line bg-card">
+        <summary className="list-none cursor-pointer px-6 py-4 flex items-center gap-2 text-[15px] font-semibold">
+          <Icon name="down" className="transition-transform group-open:rotate-180" />
+          Edit the request · your own state and questions
+          <span className="text-xs font-normal text-muted ml-2 truncate max-w-[480px]">{typeof req.state === "string" ? req.state : "JSON state"}</span>
+        </summary>
+        <div className="px-6 pb-6 max-w-[720px]"><RequestEditor presets /></div>
+      </details>
+
       <section className="rounded-xl border border-line bg-card p-6 flex flex-col gap-4">
         <div className="flex items-center gap-3 flex-wrap">
           <h2 className="text-[15px] font-semibold">Your request · {Object.keys(req.questions).length} questions · {model.split("/")[1] ?? "no model"}</h2>
@@ -80,7 +91,7 @@ export default function Compare() {
               </label>
             ))}
           </fieldset>
-          <button onClick={run} disabled={busy} className="h-10 px-4 rounded-lg bg-inv-bg text-inv-fg text-sm font-medium flex items-center gap-2 disabled:opacity-40">
+          <button onClick={run} disabled={busy || !ready} className="h-10 px-4 rounded-lg bg-inv-bg text-inv-fg text-sm font-medium flex items-center gap-2 disabled:opacity-40">
             <Icon name="play" size={14} fill />{busy ? "Running… (this takes seconds on a CPU)" : "Run comparison"}
           </button>
         </div>

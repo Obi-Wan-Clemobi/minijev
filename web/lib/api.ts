@@ -33,7 +33,7 @@ export type TreeBranch = {
   question: string; label: string; type: string; pointwise: boolean;
   length: number; start: number; positions: [number, number]; tokens: string[];
 };
-export type TreeResponse = { prefix: { length: number; tokens: string[] }; branches: TreeBranch[]; total: number; max_position: number };
+export type TreeResponse = { prefix: { length: number; tokens: string[]; state_span: [number, number] }; branches: TreeBranch[]; total: number; max_position: number };
 
 export type MethodResult = {
   seconds: number; output_tokens: number; answers: Record<string, string | null>;

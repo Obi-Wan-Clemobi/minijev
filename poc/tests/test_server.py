@@ -49,6 +49,8 @@ def test_tree_layout_adds_up(client):
     assert len(t["branches"]) == 1 + 1 + 4  # Noul, listwise Choice, 4 Score levels
     assert t["total"] == t["prefix"]["length"] + sum(b["length"] for b in t["branches"])
     assert all(b["positions"][0] == t["prefix"]["length"] for b in t["branches"])  # positions restart
+    lo, hi = t["prefix"]["state_span"]
+    assert "".join(t["prefix"]["tokens"][lo:hi]).rstrip() == REQ["state"]  # BPE can merge the last character with the blank line
     assert client.post("/v1/ask", json={**REQ, "settings": DEFAULTS}).json()["usage"]["input_tokens"] == t["total"]
 
 
