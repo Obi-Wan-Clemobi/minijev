@@ -189,14 +189,17 @@ export function Calibration() {
 
       {/* Advanced: Per-Mode Temperature Overrides */}
       <div className="flex flex-col gap-2 pt-2 border-t border-line">
-        <button
+        <div
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className="flex items-center gap-2 text-xs font-medium hover:text-fg text-muted transition-colors"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setShowAdvanced(!showAdvanced); }}
+          className="flex items-center gap-2 text-xs font-medium hover:text-fg text-muted transition-colors cursor-pointer"
         >
           <Icon name={showAdvanced ? "chevron-down" : "chevron-right"} size={12} />
           Per-mode temperature overrides
           <Tip k="perModeTemp" />
-        </button>
+        </div>
         {showAdvanced && (
           <div className="grid sm:grid-cols-2 gap-x-5 gap-y-2.5 pl-5">
             {/* Choice mode overrides */}
