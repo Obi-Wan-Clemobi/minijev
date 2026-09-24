@@ -22,7 +22,7 @@ const DIALS: { key: NumKey; label: string; min: number; max: number; help: HelpK
 ];
 
 export function Calibration() {
-  const { settings, setSettings } = useStore();
+  const { settings, setSettings, stale } = useStore();
   const matches = (p: Partial<Settings>) => Object.entries(p).every(([k, v]) => Math.abs((settings[k as keyof Settings] as number) - (v as number)) < 1e-9);
   return (
     <section aria-label="Calibration" className="rounded-[10px] border border-line bg-surface p-4 flex flex-col gap-3.5">
@@ -65,10 +65,12 @@ export function Calibration() {
           );
         })}
       </div>
-      <div className="flex items-center gap-2 pt-1 border-t border-line text-xs text-muted">
-        <span className="px-1.5 py-0.5 rounded bg-track text-warn font-medium">Needs a Run</span>
-        press Run after you change these
-      </div>
+      {stale && (
+        <div className="flex items-center gap-2 pt-1 border-t border-line text-xs text-muted">
+          <span className="px-1.5 py-0.5 rounded bg-track text-warn font-medium">Needs a Run</span>
+          press Run after you change these
+        </div>
+      )}
       <div className="grid sm:grid-cols-2 gap-3 text-[13px]">
         <label className="flex flex-col gap-1">
           <span className="flex items-center gap-1">Multiple choice asked as <Tip k="defaultChoiceMode" /></span>
