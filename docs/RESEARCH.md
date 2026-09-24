@@ -720,6 +720,21 @@ with logprobs", which is the same computation as a readout.
 - **Conclusion:** caching the state gives 84–85% of the saving. Stopping at the first token gives 11–13%. One pass for
   all branches gives 2–5%. An LLM API with prompt caching and logprobs copies the first two.
 
+**R8. Quality on labelled data (E11).** The same model answers 200 BoolQ and 120 AG News questions in four ways:
+the readout, the calibrated readout, a written answer, and a written probability. Full tables: WALKTHROUGH.md §6.7.
+- A written one-word answer and the readout are equally accurate (BoolQ: 0.630 at 0.5B and 0.820 at 1.5B for both).
+- Written probabilities have the highest ECE in all four cases (0.103–0.288) and are the slowest (up to 17 s per
+  question at 1.5B). At 1.5B on BoolQ they are also less accurate: 0.740 [0.675–0.800] against 0.820 [0.765–0.870].
+- The calibrated readout has the lowest ECE (0.045–0.076) at the same accuracy as the raw readout.
+- For Jev (Inferred): the readout gives the model's own probabilities at no extra cost. Asking a model to write
+  probabilities gives worse ones, so a readout is the better base for calibrated decisions.
+
+**R9. Same answer format (E12).** One request answered in minijev's response JSON three ways by the same model: read
+out, written freely, and written with the format enforced (structured output). Full table: WALKTHROUGH.md §6.8.
+- Reading out is 7–40× faster than free writing; the gap grows with the options and the model size.
+- Free writing broke the format at 0.5B (1 of 3 and 0 of 5 answers usable). An enforced format made every answer
+  usable, but it did not make the written numbers agree with the model's internal probabilities.
+
 **What the POC does not show:**
 - Jev's accuracy, which comes from its model and training.
 - Jev's speed, which comes from its hardware.

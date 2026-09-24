@@ -70,3 +70,19 @@ def test_batched_decode_matches_sequential_greedy(engine):
                                         temperature=None, top_p=None, top_k=None, repetition_penalty=1.0,
                                         pad_token_id=engine.tok.eos_token_id)[0, x.shape[1]:].tolist()
         assert got == ref
+
+
+def test_averaged_choice_ignores_the_option_order(engine):
+    # An ambiguous case, so that the listwise answer can depend on the order.
+    q = {"type": "choice", "instructions": "What is the topic of this news article?", "choice_mode": "averaged",
+         "criteria": {"World": "Politics", "Sports": "Sports", "Business": "Companies", "Technology": "Science"}}
+    state = "The league's owners approved a new streaming deal with a tech giant worth billions."
+    keys = list(q["criteria"])
+    probs = []
+    for r in range(len(keys)):
+        order = keys[r:] + keys[:r]
+        qq = {**q, "criteria": {k: q["criteria"][k] for k in order}}
+        z = raw_scores(engine, {"state": state, "questions": {"q": qq}})[0]["q"]["logits"]
+        probs.append({k: torch.tensor(v).exp().item() for k, v in zip(order, z)})
+    for p in probs[1:]:
+        assert max(abs(p[k] - probs[0][k]) for k in keys) < 1e-4

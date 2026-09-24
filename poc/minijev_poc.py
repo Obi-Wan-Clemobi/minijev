@@ -55,7 +55,7 @@ class Settings:
     temp_choice: float = 1.0
     temp_score: float = 1.0
     bias_noul: float = 0.0  # Platt shift b, added to the Noul log-odds after the temperature
-    choice_mode: str = "listwise"  # or "pointwise": one yes/no branch per option, order-invariant
+    choice_mode: str = "listwise"  # or "pointwise" (one yes/no branch per option) or "averaged" (every rotation)
     score_mode: str = "pointwise"  # or "listwise": all levels in one prompt (ablation)
     min_label_mass: float = 0.5  # warn when less next-token probability than this is on the labels
 
@@ -74,7 +74,7 @@ class Settings:
         if unknown:
             raise ValueError(f"unknown settings {unknown}; known: {sorted(known)}")
         s = cls(**{f.name: type(f.default)(values[k]) for k, f in known.items() if k in values})
-        assert s.choice_mode in ("listwise", "pointwise"), f"MINIJEV_CHOICE_MODE={s.choice_mode!r}"
+        assert s.choice_mode in ("listwise", "pointwise", "averaged"), f"MINIJEV_CHOICE_MODE={s.choice_mode!r}"
         assert s.score_mode in ("listwise", "pointwise"), f"MINIJEV_SCORE_MODE={s.score_mode!r}"
         assert min(s.temp_noul, s.temp_choice, s.temp_score) > 0, "temperatures must be > 0"
         return s
@@ -104,6 +104,7 @@ class Branch:
     classes: list[list[int]]  # per answer class: the token ids (label variants) it owns
     question: str  # question id this branch belongs to
     pointwise: bool = False  # one of several yes/no branches (a Score level or a Choice option)
+    order: list[int] | None = None  # averaged mode: the option index shown at each letter position
 
 
 class Engine:
@@ -254,6 +255,14 @@ def branches_for(engine: Engine, qid: str, q: dict) -> list[Branch]:
         return [Branch(engine.suffix_ids(noul_block(q)), [engine.yes, engine.no], qid)]
     k = len(q["criteria"])
     if q["type"] == "choice":
+        if q.get("choice_mode", "listwise") == "averaged":  # every option at every letter position once
+            keys = list(q["criteria"])
+            out = []
+            for r in range(k):
+                order = [(r + j) % k for j in range(k)]
+                shown = {**q, "criteria": {keys[i]: q["criteria"][keys[i]] for i in order}}
+                out.append(Branch(engine.suffix_ids(choice_block(shown)), engine.letters[:k], qid, order=order))
+            return out
         if q.get("choice_mode", "listwise") == "pointwise":  # Jev's stage 1 for large option sets
             return [
                 Branch(engine.suffix_ids(proposal_block(q, f"{key}: {render_inline(d)}" if d is not None else key)),
@@ -319,13 +328,21 @@ def raw_scores(engine: Engine, req: dict, mode: str = "packed") -> tuple[dict, d
     lp = engine.readouts(prefix, branches, mode)
     elapsed = time.perf_counter() - t0
     raw: dict = {qid: {"logits": [], "mass": []} for qid in req["questions"]}
+    averaged: dict = {}  # question -> summed option probabilities over the rotations
     for b, row in zip(branches, lp):
         z, mass = class_logits(row, b.classes)
         if b.pointwise:
             raw[b.question]["logits"].append(z[0] - z[1])  # this level's (or option's) yes/no log-odds
+        elif b.order is not None:  # one rotation: letter position j showed option b.order[j]
+            p = softmax(z)
+            acc = averaged.setdefault(b.question, [0.0] * len(z))
+            for j, i in enumerate(b.order):
+                acc[i] += p[j] / len(z)
         else:
             raw[b.question]["logits"] = z
         raw[b.question]["mass"].append(mass)
+    for qid, p in averaged.items():  # log of the mean probability: softmax(logits) gives the average back
+        raw[qid]["logits"] = [math.log(max(v, 1e-12)) for v in p]
     usage = {
         "input_tokens": len(prefix) + sum(len(b.ids) for b in branches),
         "output_tokens": 0,

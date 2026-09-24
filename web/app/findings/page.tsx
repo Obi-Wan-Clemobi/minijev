@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
 import { IntervalRow } from "@/components/Charts";
+import { OrderBias } from "@/components/OrderBias";
 import { Tip } from "@/components/Tip";
 import { api } from "@/lib/api";
 
@@ -125,6 +126,8 @@ export default function Findings() {
           </div>
         </div>
       </div>
+
+      <OrderBias data={res[size].order_bias ?? null} size={size} />
 
       <div className="grid xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-6">
         <section className="rounded-xl border border-line bg-card p-6 flex flex-col gap-3">

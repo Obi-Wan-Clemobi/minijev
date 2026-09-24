@@ -693,6 +693,97 @@ probabilities at no extra cost. That is the interface that Jev sells, without Je
 
 ---
 
+### 6.7 Quality: which way of asking gives better answers?
+
+§6.2–6.6 measure speed. This section measures quality, on questions with known answers. The same model answers
+the same questions in four ways (experiment E11, `poc/results/quality*.json`):
+
+1. **Reads out (minijev):** the probability of each allowed answer, from one pass. Nothing is written.
+2. **Reads out, calibrated:** the same, then temperature scaling. T is fitted on one half of the questions and tested
+   on the other half.
+3. **Writes the answer:** the model writes "Yes" or "Sports"; code reads the word back. There is no probability.
+4. **Writes a probability:** the model writes how sure it is: "0.8" for a yes/no question, a JSON object for a topic.
+
+The question sets: 200 BoolQ yes/no questions (62% of the answers are "yes") and 120 AG News articles (4 topics).
+ECE (expected calibration error) is the average gap between stated confidence and actual accuracy; 0 is perfect.
+
+**Yes/no questions (BoolQ, n = 200)**
+
+| Way of asking | 0.5B accuracy | 0.5B ECE | 1.5B accuracy | 1.5B ECE | Time per question (0.5B / 1.5B) |
+|---|---:|---:|---:|---:|---:|
+| Reads out | 0.630 [0.565–0.695] | 0.218 | 0.820 [0.765–0.870] | 0.106 | 0.53 / 1.59 s |
+| Reads out, calibrated | 0.630 | **0.045** | 0.820 | **0.066** | same |
+| Writes the answer | 0.630 | — | 0.820 | — | 0.76 / 2.11 s |
+| Writes a probability | 0.635 | 0.288 | 0.740 [0.675–0.800] | 0.170 | 1.23 / 3.34 s |
+
+**Topics (AG News, n = 120)**
+
+| Way of asking | 0.5B accuracy | 0.5B ECE | 1.5B accuracy | 1.5B ECE | Time per question (0.5B / 1.5B) |
+|---|---:|---:|---:|---:|---:|
+| Reads out | 0.883 [0.825–0.942] | 0.100 | 0.833 [0.767–0.900] | 0.149 | 0.46 / 1.41 s |
+| Reads out, calibrated | 0.883 | **0.076** | 0.833 | **0.052** | same |
+| Writes the answer | 0.908 [0.858–0.958] | — | 0.883 [0.825–0.942] | — | 0.73 / 1.78 s |
+| Writes a probability | 0.892 | 0.160 | 0.875 | 0.103 | 3.06 / 17.26 s |
+
+The results show these points:
+- **A written one-word answer and the readout are equally right.** On BoolQ they agree to three decimals at both
+  sizes. On AG News the written answer is a little higher, but the intervals overlap. The reason (Inferred): a
+  one-word answer is the first token of the same distribution that the readout reads.
+- **Written probabilities are the least honest.** They have the highest ECE in all four cases. At 1.5B on BoolQ they
+  are also less accurate (0.740 against 0.820, intervals that do not overlap). They are the slowest: 17 s per question
+  at 1.5B on AG News, for 39 written tokens.
+- **The calibrated readout is the most honest,** with ECE 0.045–0.076. Calibration never changes an answer, so its
+  accuracy equals the raw readout.
+- **The 0.5B model is not better than chance on BoolQ.** 0.630 is inside the interval around the 0.62 base rate.
+- **1.5B is not better than 0.5B on AG News with the readout** (0.833 against 0.883; the intervals overlap).
+
+The Compare page shows these tables, with the intervals, as section 2.
+
+### 6.8 Same model, same questions, same answer format
+
+The strictest speed test (experiment E12, `poc/results/same_format*.json`, median of 3 runs). Both sides get the same
+state and questions and return the same JSON, for example `{"urgency": {"noul": 0.98}, "team": {"choice": …}}`:
+
+- **Reads out (minijev):** one pass; the JSON is built in code from the read-out probabilities. 0 tokens written.
+- **Writes freely:** the same model gets the questions and the exact JSON shape, and types the whole reply.
+- **Writes with the format enforced (structured output):** the program types the fixed parts (braces, keys, quotes);
+  the model chooses only the content, and only valid tokens: the digits of a number or one of the option names.
+  This is what AI APIs call structured output or JSON mode.
+
+| Request | Model | Reads out | Writes freely | Format enforced |
+|---|---|---:|---:|---:|
+| Support ticket (3 questions) | 0.5B | 0.75 s | 11.72 s · 75 tokens · 1 of 3 usable | 9.08 s · 3 of 3 usable |
+| Jev shoes case (5 Choices) | 0.5B | 1.24 s | 9.26 s · 43 tokens · 0 of 5 usable | 23.06 s · 5 of 5 usable |
+| Support ticket (3 questions) | 1.5B | 2.10 s | 45.34 s · 98 tokens · 3 of 3 usable | 23.73 s · 3 of 3 usable |
+| Jev shoes case (5 Choices) | 1.5B | 3.83 s | 152.35 s · 301 tokens · 4 of 5 usable | 66.88 s · 5 of 5 usable |
+
+"Usable" means that code can read the answer: the right key in the right place, an option name that exists, and a
+number that is a probability. The results show these points:
+- **Reading out is 7–40× faster than free writing** in the same format. The gap grows with the number of options and
+  with the model size, because every written token costs a full pass (about 0.5 s at 1.5B on this CPU).
+- **The small model breaks the format.** At 0.5B it nested questions inside each other and copied the template's
+  `0.0` values; 0 of 5 answers were usable in the shoes case. At 1.5B most answers were usable.
+- **An enforced format makes every answer usable** and is faster than free writing, because the fixed parts cost no
+  choice. It is still 11–19× slower than the readout.
+- **An enforced format does not make the numbers good.** At 0.5B the enforced reply wrote 0.05 for almost every
+  probability, including an urgency that the readout put at 0.98. The written answers agreed with the readout on only
+  1–2 of 3–5 questions. The model's internal probabilities are sensible; its written probabilities are not (§6.7).
+
+### 6.9 What these lessons suggest about Jev (Inferred)
+
+Each weakness of the writing baselines, and of listwise questions, has a clear counter. Jev's published behaviour
+shows several of them:
+
+| Lesson from our runs | What Jev shows | Inference |
+|---|---|---|
+| Written probabilities are poorly calibrated and slow (§6.7) | Output tokens are free; answers are probabilities (row 27) | Jev reads probabilities out; it does not write them |
+| A written reply can break the format (§6.8) | Answers can never fall outside the declared options (Stated) | A readout over the declared labels, so a format error is impossible |
+| The option order changes listwise answers (§5 R4, E13) | Score levels are judged "separately", without their number or neighbours (row 12); probability maps return in a different key order (row 24) | Order-invariant judging for Scores, and option shuffling or averaging for Choices |
+| Raw probabilities are overconfident (§5 R6, §6.7) | Probabilities "optimized against outcomes" (row 6) | Calibration is trained in, not added afterwards |
+
+docs/WEAKNESSES.md lists every open weakness, with a candidate fix and this Jev evidence for each. The web app shows
+the same register on its Weaknesses page.
+
 ## 7. Next steps
 
 1. **Package the POC** (Phase 2). Move `poc/` into `src/minijev` with a pydantic API and a CLI.

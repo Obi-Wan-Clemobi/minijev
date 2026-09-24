@@ -71,7 +71,7 @@ export function QuestionCard({ item, index, count, issues, onChange, onRemove, o
   const rows = rowsOf(item);
   const setRows = (next: [string, string][]) => onChange({ ...q, criteria: toOptions(next) }, id, next);
   const nBranches = q.type === "score" && (q.score_mode ?? "pointwise") === "pointwise" ? levelsOf(q).length
-    : q.type === "choice" && q.choice_mode === "pointwise" ? rows.length : 1;
+    : q.type === "choice" && (q.choice_mode === "pointwise" || q.choice_mode === "averaged") ? rows.length : 1;
   const modeKey = q.type === "choice" ? "choice_mode" : "score_mode";
   const mode = q.type === "choice" ? q.choice_mode ?? "default" : q.score_mode ?? "default";
 
@@ -102,6 +102,7 @@ export function QuestionCard({ item, index, count, issues, onChange, onRemove, o
             <option value="default">asked: default</option>
             <option value="listwise">asked: listwise (all at once)</option>
             <option value="pointwise">asked: pointwise (one by one)</option>
+            {q.type === "choice" && <option value="averaged">asked: all orders averaged</option>}
           </select>
           <Tip k="readoutMode" />
         </>)}

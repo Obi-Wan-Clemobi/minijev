@@ -87,9 +87,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
     } catch { /* storage unavailable: start from the default request */ }
     setLoaded(true);
-    api.presets().then(setPresets).catch(() => {});
-    api.model().then((m) => { setModel(m.model); setModels(m.available); }).catch((e) => setError(String(e.message)));
   }, []);
+
+  // Ask the API for its model and presets; if it is offline or busy (starting, or loading a model), ask again every 3 s.
+  useEffect(() => {
+    if (model) return;
+    let stop = false;
+    const connect = () => api.model()
+      .then((m) => { if (stop) return; setModel(m.model); setModels(m.available); setError(null); api.presets().then(setPresets).catch(() => {}); })
+      .catch(() => { if (!stop) timer = setTimeout(connect, 3000); });
+    let timer = setTimeout(connect, 0);
+    return () => { stop = true; clearTimeout(timer); };
+  }, [model]);
 
   useEffect(() => {
     if (!loaded) return;

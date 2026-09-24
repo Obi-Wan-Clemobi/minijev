@@ -1,0 +1,462 @@
+{
+  "support_ticket": {
+    "questions": 3,
+    "readout_seconds": 0.7458253629956744,
+    "readout_all": [
+      0.7477863040039665,
+      0.7391170560003957,
+      0.7458253629956744
+    ],
+    "written_seconds": 11.723481406996143,
+    "written_all": [
+      11.723481406996143,
+      11.733726206002757,
+      11.69204768799682
+    ],
+    "written_tokens": [
+      75,
+      75,
+      75
+    ],
+    "usable": [
+      1,
+      1,
+      1
+    ],
+    "valid_json": [
+      true,
+      true,
+      true
+    ],
+    "agree": [
+      0,
+      0,
+      0
+    ],
+    "structured_seconds": 9.076428681000834,
+    "structured_all": [
+      8.256038343002729,
+      9.076428681000834,
+      9.141188915004022
+    ],
+    "structured_decided_tokens": [
+      29,
+      29,
+      29
+    ],
+    "structured_forced_tokens": [
+      85,
+      85,
+      85
+    ],
+    "structured_usable": [
+      3,
+      3,
+      3
+    ],
+    "structured_agree": [
+      1,
+      1,
+      1
+    ],
+    "example": {
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "readout": {
+        "seconds": 0.7458253629956744,
+        "output_tokens": 0,
+        "response": {
+          "urgency": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "team": {
+            "type": "choice",
+            "choice": "technical",
+            "probabilities": {
+              "billing": 0.02,
+              "technical": 0.97,
+              "sales": 0.01
+            },
+            "confidence": 0.96
+          },
+          "tone": {
+            "type": "score",
+            "score": 1.92,
+            "legend": {
+              "0": "calm",
+              "1": "mildly annoyed",
+              "2": "frustrated",
+              "3": "angry"
+            },
+            "probabilities": {
+              "0": 0.09,
+              "1": 0.08,
+              "2": 0.65,
+              "3": 0.18
+            },
+            "confidence": 0.55
+          }
+        },
+        "input_tokens": 264
+      },
+      "written": {
+        "seconds": 11.69204768799682,
+        "output_tokens": 75,
+        "prompt_tokens": 302,
+        "token_budget": 171,
+        "text": "```json\n{\n  \"urgency\": {\n    \"noul\": 0.0,\n    \"team\": {\n      \"billing\": 0.0,\n      \"technical\": 0.0,\n      \"sales\": 0.0\n    },\n    \"tone\": {\n      \"score\": 0.0\n    }\n  }\n}\n```",
+        "valid_json": true,
+        "answers": {
+          "urgency": {
+            "ok": true,
+            "noul": 0.0
+          },
+          "team": {
+            "ok": false,
+            "problem": "The reply has no \"team\" at the top level of the JSON. It left it out, or put it inside another question."
+          },
+          "tone": {
+            "ok": false,
+            "problem": "The reply has no \"tone\" at the top level of the JSON. It left it out, or put it inside another question."
+          }
+        },
+        "usable": 1
+      },
+      "structured": {
+        "seconds": 9.141188915004022,
+        "output_tokens": 29,
+        "forced_tokens": 85,
+        "prompt_tokens": 302,
+        "text": "{\"urgency\": {\"noul\": 0.05}, \"team\": {\"choice\": \"technical\", \"probabilities\": {\"billing\": 0.05, \"technical\": 0.95, \"sales\": 0.05}}, \"tone\": {\"score\": 0.05, \"probabilities\": {\"0\": 0.05, \"1\": 0.05, \"2\": 0.05, \"3\": 0.05}}}",
+        "valid_json": true,
+        "answers": {
+          "urgency": {
+            "ok": true,
+            "noul": 0.05
+          },
+          "team": {
+            "ok": true,
+            "choice": "technical",
+            "probabilities": {
+              "billing": 0.05,
+              "technical": 0.9500000000000001,
+              "sales": 0.05
+            },
+            "sums_to_1": false
+          },
+          "tone": {
+            "ok": true,
+            "score": 0.05,
+            "probabilities": {
+              "0": 0.05,
+              "1": 0.05,
+              "2": 0.05,
+              "3": 0.05
+            },
+            "sums_to_1": false
+          }
+        },
+        "usable": 3
+      },
+      "compare": {
+        "urgency": {
+          "agree": false,
+          "note": "same side of 0.5"
+        },
+        "team": {
+          "agree": false,
+          "note": "The reply has no \"team\" at the top level of the JSON. It left it out, or put it inside another question."
+        },
+        "tone": {
+          "agree": false,
+          "note": "The reply has no \"tone\" at the top level of the JSON. It left it out, or put it inside another question."
+        }
+      },
+      "compare_structured": {
+        "urgency": {
+          "agree": false,
+          "note": "same side of 0.5"
+        },
+        "team": {
+          "agree": true,
+          "note": "same option"
+        },
+        "tone": {
+          "agree": false,
+          "note": "same rounded level"
+        }
+      },
+      "prompt": "STATE:\nHi, my Stripe integration has failed for 3 days. Losing sales. Help ASAP.\n\nAnswer every question below about the STATE.\n\nurgency (yes/no): Does this message express urgency?\n\nteam (pick one option): Which team should handle this?\n  - billing: Payments, invoices, refunds\n  - technical: Integrations, bugs, outages\n  - sales: Pricing, new plans\n\ntone (scale, lowest first): How upset is the customer?\n  0: calm\n  1: mildly annoyed\n  2: frustrated\n  3: angry\n\nReply with only a JSON object in exactly this shape. Replace every 0.0 with your number.\nnoul = the probability of yes. The probabilities of one question add up to 1.\nscore = the expected level: the sum of level × probability.\n{\"urgency\": {\"noul\": 0.0}, \"team\": {\"choice\": \"<option name>\", \"probabilities\": {\"billing\": 0.0, \"technical\": 0.0, \"sales\": 0.0}}, \"tone\": {\"score\": 0.0, \"probabilities\": {\"0\": 0.0, \"1\": 0.0, \"2\": 0.0, \"3\": 0.0}}}"
+    }
+  },
+  "jev_shoes_5_choices": {
+    "questions": 5,
+    "readout_seconds": 1.2396120549965417,
+    "readout_all": [
+      1.248138631999609,
+      1.2396120549965417,
+      1.2391709100047592
+    ],
+    "written_seconds": 9.257515638004406,
+    "written_all": [
+      9.051463297000737,
+      9.257515638004406,
+      9.4139875510009
+    ],
+    "written_tokens": [
+      43,
+      43,
+      43
+    ],
+    "usable": [
+      0,
+      0,
+      0
+    ],
+    "valid_json": [
+      true,
+      true,
+      true
+    ],
+    "agree": [
+      0,
+      0,
+      0
+    ],
+    "structured_seconds": 23.063316086998384,
+    "structured_all": [
+      22.33036153199646,
+      23.646266350995575,
+      23.063316086998384
+    ],
+    "structured_decided_tokens": [
+      63,
+      63,
+      63
+    ],
+    "structured_forced_tokens": [
+      220,
+      220,
+      220
+    ],
+    "structured_usable": [
+      5,
+      5,
+      5
+    ],
+    "structured_agree": [
+      1,
+      1,
+      1
+    ],
+    "example": {
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "readout": {
+        "seconds": 1.2391709100047592,
+        "output_tokens": 0,
+        "response": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "returns": 0.01,
+              "shipping": 0.03,
+              "billing": 0.96
+            },
+            "confidence": 0.94
+          },
+          "return_reason": {
+            "type": "choice",
+            "choice": "wrong_item",
+            "probabilities": {
+              "wrong_size": 0.26,
+              "wrong_item": 0.26,
+              "damaged": 0.12,
+              "changed_mind": 0.19,
+              "other": 0.18
+            },
+            "confidence": 0.08
+          },
+          "shipping_issue": {
+            "type": "choice",
+            "choice": "delayed",
+            "probabilities": {
+              "not_delivered": 0.13,
+              "delayed": 0.64,
+              "wrong_address": 0.11,
+              "damaged_in_transit": 0.06,
+              "other": 0.05
+            },
+            "confidence": 0.55
+          },
+          "resolution": {
+            "type": "choice",
+            "choice": "refund",
+            "probabilities": {
+              "exchange": 0.07,
+              "refund": 0.61,
+              "replacement": 0.25,
+              "information": 0.08
+            },
+            "confidence": 0.47
+          },
+          "tone": {
+            "type": "choice",
+            "choice": "frustrated",
+            "probabilities": {
+              "calm": 0.05,
+              "frustrated": 0.92,
+              "angry": 0.03
+            },
+            "confidence": 0.88
+          }
+        },
+        "input_tokens": 412
+      },
+      "written": {
+        "seconds": 9.4139875510009,
+        "output_tokens": 43,
+        "prompt_tokens": 669,
+        "token_budget": 397,
+        "text": "{\n  \"department\": \"returns\",\n  \"return_reason\": \"wrong_item\",\n  \"shipping_issue\": \"wrong_address\",\n  \"resolution\": \"exchange\",\n  \"tone\": \"calm\"\n}",
+        "valid_json": true,
+        "answers": {
+          "department": {
+            "ok": false,
+            "problem": "The reply has no \"department\" at the top level of the JSON. It left it out, or put it inside another question."
+          },
+          "return_reason": {
+            "ok": false,
+            "problem": "The reply has no \"return_reason\" at the top level of the JSON. It left it out, or put it inside another question."
+          },
+          "shipping_issue": {
+            "ok": false,
+            "problem": "The reply has no \"shipping_issue\" at the top level of the JSON. It left it out, or put it inside another question."
+          },
+          "resolution": {
+            "ok": false,
+            "problem": "The reply has no \"resolution\" at the top level of the JSON. It left it out, or put it inside another question."
+          },
+          "tone": {
+            "ok": false,
+            "problem": "The reply has no \"tone\" at the top level of the JSON. It left it out, or put it inside another question."
+          }
+        },
+        "usable": 0
+      },
+      "structured": {
+        "seconds": 23.063316086998384,
+        "output_tokens": 63,
+        "forced_tokens": 220,
+        "prompt_tokens": 669,
+        "text": "{\"department\": {\"choice\": \"returns\", \"probabilities\": {\"returns\": 1.00, \"shipping\": 0.00, \"billing\": 0.00}}, \"return_reason\": {\"choice\": \"wrong_item\", \"probabilities\": {\"wrong_size\": 0.00, \"wrong_item\": 1.00, \"damaged\": 0.00, \"changed_mind\": 0.00, \"other\": 0.00}}, \"shipping_issue\": {\"choice\": \"wrong_address\", \"probabilities\": {\"not_delivered\": 0.00, \"delayed\": 0.00, \"wrong_address\": 1.00, \"damaged_in_transit\": 0.00, \"other\": 0.00}}, \"resolution\": {\"choice\": \"exchange\", \"probabilities\": {\"exchange\": 1.00, \"refund\": 0.00, \"replacement\": 0.00, \"information\": 0.00}}, \"tone\": {\"choice\": \"calm\", \"probabilities\": {\"calm\": 1.00, \"frustrated\": 0.00, \"angry\": 0.00}}}",
+        "valid_json": true,
+        "answers": {
+          "department": {
+            "ok": true,
+            "choice": "returns",
+            "probabilities": {
+              "returns": 1.0,
+              "shipping": 0.0,
+              "billing": 0.0
+            },
+            "sums_to_1": true
+          },
+          "return_reason": {
+            "ok": true,
+            "choice": "wrong_item",
+            "probabilities": {
+              "wrong_size": 0.0,
+              "wrong_item": 1.0,
+              "damaged": 0.0,
+              "changed_mind": 0.0,
+              "other": 0.0
+            },
+            "sums_to_1": true
+          },
+          "shipping_issue": {
+            "ok": true,
+            "choice": "wrong_address",
+            "probabilities": {
+              "not_delivered": 0.0,
+              "delayed": 0.0,
+              "wrong_address": 1.0,
+              "damaged_in_transit": 0.0,
+              "other": 0.0
+            },
+            "sums_to_1": true
+          },
+          "resolution": {
+            "ok": true,
+            "choice": "exchange",
+            "probabilities": {
+              "exchange": 1.0,
+              "refund": 0.0,
+              "replacement": 0.0,
+              "information": 0.0
+            },
+            "sums_to_1": true
+          },
+          "tone": {
+            "ok": true,
+            "choice": "calm",
+            "probabilities": {
+              "calm": 1.0,
+              "frustrated": 0.0,
+              "angry": 0.0
+            },
+            "sums_to_1": true
+          }
+        },
+        "usable": 5
+      },
+      "compare": {
+        "department": {
+          "agree": false,
+          "note": "The reply has no \"department\" at the top level of the JSON. It left it out, or put it inside another question."
+        },
+        "return_reason": {
+          "agree": false,
+          "note": "The reply has no \"return_reason\" at the top level of the JSON. It left it out, or put it inside another question."
+        },
+        "shipping_issue": {
+          "agree": false,
+          "note": "The reply has no \"shipping_issue\" at the top level of the JSON. It left it out, or put it inside another question."
+        },
+        "resolution": {
+          "agree": false,
+          "note": "The reply has no \"resolution\" at the top level of the JSON. It left it out, or put it inside another question."
+        },
+        "tone": {
+          "agree": false,
+          "note": "The reply has no \"tone\" at the top level of the JSON. It left it out, or put it inside another question."
+        }
+      },
+      "compare_structured": {
+        "department": {
+          "agree": false,
+          "note": "same option"
+        },
+        "return_reason": {
+          "agree": true,
+          "note": "same option"
+        },
+        "shipping_issue": {
+          "agree": false,
+          "note": "same option"
+        },
+        "resolution": {
+          "agree": false,
+          "note": "same option"
+        },
+        "tone": {
+          "agree": false,
+          "note": "same option"
+        }
+      },
+      "prompt": "STATE:\nShoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?\n\nAnswer every question below about the STATE.\n\ndepartment (pick one option): Which team should handle this?\n  - returns: Exchanges, wrong or damaged items\n  - shipping: Delivery status, delays, lost packages\n  - billing: Charges, invoices, payment problems\n\nreturn_reason (pick one option): If the customer wants to return something, why?\n  - wrong_size: The item doesn't fit\n  - wrong_item: A different product was delivered\n  - damaged: The item arrived broken or faulty\n  - changed_mind: The item is fine, the customer no longer wants it\n  - other: A return reason that fits none of the above\n\nshipping_issue (pick one option): If this is a shipping problem, which kind is it?\n  - not_delivered: The package never arrived\n  - delayed: The package is late but still on its way\n  - wrong_address: The package went to the wrong place\n  - damaged_in_transit: The package arrived damaged\n  - other: A shipping problem that fits none of the above\n\nresolution (pick one option): What does the customer want to happen?\n  - exchange: Swap the item for a different one\n  - refund: Money back\n  - replacement: The same item sent again\n  - information: Just an answer, no action needed\n\ntone (pick one option): What is the customer's tone?\n  - calm\n  - frustrated\n  - angry\n\nReply with only a JSON object in exactly this shape. Replace every 0.0 with your number.\nnoul = the probability of yes. The probabilities of one question add up to 1.\nscore = the expected level: the sum of level × probability.\n{\"department\": {\"choice\": \"<option name>\", \"probabilities\": {\"returns\": 0.0, \"shipping\": 0.0, \"billing\": 0.0}}, \"return_reason\": {\"choice\": \"<option name>\", \"probabilities\": {\"wrong_size\": 0.0, \"wrong_item\": 0.0, \"damaged\": 0.0, \"changed_mind\": 0.0, \"other\": 0.0}}, \"shipping_issue\": {\"choice\": \"<option name>\", \"probabilities\": {\"not_delivered\": 0.0, \"delayed\": 0.0, \"wrong_address\": 0.0, \"damaged_in_transit\": 0.0, \"other\": 0.0}}, \"resolution\": {\"choice\": \"<option name>\", \"probabilities\": {\"exchange\": 0.0, \"refund\": 0.0, \"replacement\": 0.0, \"information\": 0.0}}, \"tone\": {\"choice\": \"<option name>\", \"probabilities\": {\"calm\": 0.0, \"frustrated\": 0.0, \"angry\": 0.0}}}"
+    }
+  },
+  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "seconds_total": 165.49963095199928
+}

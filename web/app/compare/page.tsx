@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { RaceBars, Waterfall, type RaceRow } from "@/components/Charts";
+import { Quality, type QualityData } from "@/components/Quality";
+import { SameFormat } from "@/components/SameFormat";
 import { Icon } from "@/components/Icon";
 import { Tip } from "@/components/Tip";
 import type { HelpKey } from "@/lib/help";
@@ -9,11 +11,11 @@ import { api, type CompareResponse } from "@/lib/api";
 import { useStore } from "@/lib/store";
 
 const METHODS: { id: string; name: string; sub: string; tone: RaceRow["tone"]; slow?: boolean; help?: HelpKey }[] = [
-  { id: "readout", name: "minijev readout", sub: "one pass, writes nothing", tone: "accent" },
-  { id: "logprobs_cached", name: "1 token + logprobs, cached", sub: "the same maths, one call per question", tone: "accent2", help: "cmpLogprobs" },
-  { id: "generate_cached", name: "Generate the name, cached", sub: "writes the answer as words", tone: "gen", help: "cmpGenCached" },
-  { id: "generate_json", name: "One JSON call", sub: "writes all answers as JSON", tone: "gen", help: "cmpJson" },
-  { id: "generate_uncached", name: "Generate, one call per question", sub: "reads the text again every time", tone: "gen", slow: true, help: "cmpUncached" },
+  { id: "readout", name: "Reads out (minijev)", sub: "all questions in one pass; writes nothing", tone: "accent" },
+  { id: "logprobs_cached", name: "Reads out, one question per request", sub: "like an AI API that returns probabilities", tone: "accent2", help: "cmpLogprobs" },
+  { id: "generate_cached", name: "Writes each answer", sub: "one request per question; text remembered", tone: "gen", help: "cmpGenCached" },
+  { id: "generate_json", name: "Writes all answers as one JSON", sub: "one request with every question", tone: "gen", help: "cmpJson" },
+  { id: "generate_uncached", name: "Writes each answer, resends the text", sub: "one request per question; whole text every time", tone: "gen", slow: true, help: "cmpUncached" },
 ];
 
 type Rec = { questions: number; [k: string]: unknown };
@@ -26,10 +28,14 @@ export default function Compare() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [recorded, setRecorded] = useState<Record<string, Rec[]> | null>(null);
+  const [quality, setQuality] = useState<QualityData | null>(null);
   const [recModel, setRecModel] = useState("0.5B");
 
   useEffect(() => {
-    api.results().then((r) => setRecorded({ "0.5B": r["0.5B"].fanout, "1.5B": r["1.5B"].fanout })).catch(() => {});
+    api.results().then((r) => {
+      setRecorded({ "0.5B": r["0.5B"].fanout, "1.5B": r["1.5B"].fanout });
+      setQuality({ "0.5B": r["0.5B"].quality, "1.5B": r["1.5B"].quality });
+    }).catch(() => {});
   }, []);
 
   const run = async () => {
@@ -45,12 +51,12 @@ export default function Compare() {
 
   const rec = recorded?.[recModel]?.find((r) => r.questions === 13) as Record<string, { seconds: number; seconds_all: number[]; output_tokens: number; agrees_with_readout: number }> | undefined;
   const recRows: RaceRow[] = rec ? ([
-    ["generate_per_question", "One call per question", "state prefilled 13 times", "gen"],
-    ["generate_one_json", "One JSON call", "all answers in one stream", "gen"],
-    ["generate_batched_cached", "Batch, state cached", "decode 13 rows per step", "gen"],
-    ["generate_per_question_cached", "Per question, state cached", "prompt caching", "gen"],
-    ["generate_1_token_logprobs_cached", "1 token + logprobs, cached", "same maths as a readout", "accent2"],
-    ["readout_packed", "minijev readout", "one packed pass", "accent"],
+    ["generate_per_question", "Writes each answer, resends the text", "the text is read 13 times", "gen"],
+    ["generate_one_json", "Writes all answers as one JSON", "one request, 124 tokens written", "gen"],
+    ["generate_batched_cached", "Writes all answers in parallel", "13 requests side by side", "gen"],
+    ["generate_per_question_cached", "Writes each answer", "text remembered between requests", "gen"],
+    ["generate_1_token_logprobs_cached", "Reads out, one question per request", "like an AI API with probabilities", "accent2"],
+    ["readout_packed", "Reads out (minijev)", "all questions in one pass", "accent"],
   ] as const).map(([k, name, sub, tone]) => ({
     name, sub, tone, sec: rec[k].seconds, lo: Math.min(...rec[k].seconds_all), hi: Math.max(...rec[k].seconds_all),
     note: `${rec[k].output_tokens} out · ${k === "readout_packed" ? "reference" : `agree ${Math.round(rec[k].agrees_with_readout * 100)}%`}`,
@@ -61,12 +67,18 @@ export default function Compare() {
 
   return (
     <div className="px-4 md:px-8 py-8 flex flex-col gap-6">
-      <div className="flex items-end gap-6 flex-wrap">
-        <div className="flex flex-col gap-1.5">
-          <h1 className="m-0 text-[32px] font-semibold tracking-tight">Read it out, or generate it?</h1>
-          <p className="m-0 text-[15px] text-muted max-w-[760px] leading-normal">
-            Run your Playground request through the readout and through generation, on the same model and CPU. Every question is asked as a Choice, so every method answers the same thing.
+      <div className="flex flex-col gap-3">
+        <h1 className="m-0 text-[32px] font-semibold tracking-tight">Read the answer out, or let the model write it?</h1>
+        <div className="rounded-xl border border-line bg-surface p-4 flex flex-col gap-3 max-w-[980px]">
+          <p className="m-0 text-[15px] leading-relaxed">
+            <span className="font-semibold">Everything on this page is the same model</span> ({model.split("/")[1] ?? "Qwen"}) on this laptop. There is no second or bigger AI here.
+            What changes is only <span className="font-semibold">how we get the answer out of it</span>:
           </p>
+          <div className="grid md:grid-cols-3 gap-3 text-sm">
+            <div className="flex gap-2"><span className="mt-1 w-3 h-3 rounded-sm bg-accent shrink-0" /><span><span className="font-medium">Reads the answer out</span> (minijev): the model reads the text and questions once, and we look at how likely it finds each allowed answer. It writes nothing.</span></div>
+            <div className="flex gap-2"><span className="mt-1 w-3 h-3 rounded-sm bg-accent2 shrink-0" /><span><span className="font-medium">Reads out, one question per request</span>: the same trick done through an AI API that returns probabilities, one question at a time.</span></div>
+            <div className="flex gap-2"><span className="mt-1 w-3 h-3 rounded-sm bg-gen shrink-0" /><span><span className="font-medium">Writes the answer</span> (the usual chatbot way): the model types its answer as text, word piece by word piece, and code reads the text back.</span></div>
+          </div>
         </div>
       </div>
 
@@ -79,9 +91,14 @@ export default function Compare() {
         <div className="px-6 pb-6 max-w-[720px]"><RequestEditor presets /></div>
       </details>
 
+      <SameFormat />
+
+      <Quality data={quality} />
+
+
       <section className="rounded-xl border border-line bg-card p-6 flex flex-col gap-4">
         <div className="flex items-center gap-3 flex-wrap">
-          <h2 className="text-[15px] font-semibold">Your request · {Object.keys(req.questions).length} questions · {model.split("/")[1] ?? "no model"}</h2>
+          <h2 className="text-[15px] font-semibold">3 · Other ways to ask several questions · your request, {Object.keys(req.questions).length} questions</h2>
           <div className="flex-1" />
           <fieldset className="flex gap-3 flex-wrap text-[13px]">
             <legend className="sr-only">Methods</legend>
@@ -128,7 +145,7 @@ export default function Compare() {
       <div className="grid xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] gap-6">
         <section className="rounded-xl border border-line bg-card p-6 flex flex-col gap-3.5">
           <div className="flex items-center gap-3 flex-wrap">
-            <h2 className="text-[15px] font-semibold">Measured: 13 GDPR questions, 500-token state</h2>
+            <h2 className="text-[15px] font-semibold">Measured earlier: 13 questions about one 500-token article</h2>
             <Tip k="cmpRecorded" />
             <div className="flex-1" />
             <div className="flex border border-line rounded-lg p-[3px] gap-0.5 font-mono">
@@ -145,14 +162,14 @@ export default function Compare() {
           <h2 className="text-[15px] font-semibold flex items-center gap-1">Where the time goes · {recModel} <Tip k="cmpWaterfall" /></h2>
           {fall.length > 0 && (
             <>
-              <Waterfall steps={fall} labels={["one call per question", "cache the state", "stop at the first token", "one pass for all branches"]} />
+              <Waterfall steps={fall} labels={["writes each answer, resends the text", "remember the text", "read out instead of writing", "all questions in one pass"]} />
               <div className="flex h-2.5 rounded-full overflow-hidden">
                 <div className="anim bg-gen" style={{ width: `${shares[0]}%` }} />
                 <div className="anim bg-accent2" style={{ width: `${shares[1]}%` }} />
                 <div className="anim bg-accent" style={{ width: `${shares[2]}%` }} />
               </div>
-              <div className="flex justify-between text-xs font-mono"><span>caching {shares[0]}%</span><span>first token {shares[1]}%</span><span>one pass {shares[2]}%</span></div>
-              <p className="text-xs text-muted leading-normal">An LLM API with prompt caching and logprobs copies the first two savings. The large speed-ups come against uncached calls, JSON output, and written answers.</p>
+              <div className="flex justify-between text-xs font-mono"><span>remember the text {shares[0]}%</span><span>read out {shares[1]}%</span><span>one pass {shares[2]}%</span></div>
+              <p className="text-xs text-muted leading-normal">Most of the time is saved by reading the text only once. The next saving is reading the answer out instead of writing it. An AI API that remembers the text and returns probabilities can copy both.</p>
             </>
           )}
         </section>

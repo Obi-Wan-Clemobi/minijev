@@ -20,8 +20,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from transformers import DynamicCache
 
-from experiments import (GDPR_QUESTIONS, JEV_DOC_CASES, RESULTS, SHOES, as_choice, gdpr_state, generate,
-                         generate_logprobs, match_option, options_text, parse_json)
+from experiments import (GDPR_QUESTIONS, JEV_DOC_CASES, RESULTS, SHOES, as_choice, check_written, gdpr_state,
+                         generate, generate_logprobs, match_option, options_text, parse_json, same_format_prompt,
+                         same_format_run)
 from minijev_poc import (MODEL, Engine, Settings, answer, ask, branches_for, choice_block, class_logits,
                          render_inline, validate, with_modes)
 
@@ -110,6 +111,9 @@ def branch_labels(qid: str, q: dict) -> list[str]:
         return [f"{qid} · {render_inline(level)}" for level in q["criteria"]]
     if q["type"] == "choice" and q.get("choice_mode") == "pointwise":
         return [f"{qid} · {key}" for key in q["criteria"]]
+    if q["type"] == "choice" and q.get("choice_mode") == "averaged":
+        keys = list(q["criteria"])
+        return [f"{qid} · {keys[r]} first" for r in range(len(keys))]
     return [qid]
 
 
@@ -229,6 +233,15 @@ def v1_compare(req: CompareReq):
     return {"model": e.name, "questions": qs, "methods": out}
 
 
+@app.post("/v1/same_format")
+def v1_same_format(req: Req):
+    """minijev's readout vs the same model writing minijev's exact response as JSON. Same state, same questions."""
+    s = settings_for(req.settings)
+    body = checked(req, s)
+    with _lock:
+        return same_format_run(engine(), body, s, req.mode)
+
+
 @app.get("/v1/presets")
 def v1_presets():
     shoes = {}
@@ -273,6 +286,9 @@ def v1_results():
             "fanout": (load(f"fanout{suffix}.json") or {}).get("rows"),
             "permutation": (load(f"permutation{suffix}.json") or {}).get("summary"),
             "jevdocs": (load(f"jevdocs{suffix}.json") or {}).get("summary"),
+            "order_bias": load(f"order_bias{suffix}.json"),
+            "quality": {task: {k: v for k, v in r.items() if k != "rows"}
+                        for task, r in ((load(f"quality{suffix}.json") or {}).get("tasks") or {}).items()} or None,
         }
     e10 = load("llm_vs_minijev.json") or {}
     out["single_decision"] = {k: e10.get(k) for k in ("n", "single_decision", "generation_costs",

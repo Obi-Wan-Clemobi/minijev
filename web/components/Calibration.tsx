@@ -73,7 +73,7 @@ export function Calibration() {
         <label className="flex flex-col gap-1">
           <span className="flex items-center gap-1">Multiple choice asked as <Tip k="defaultChoiceMode" /></span>
           <select value={settings.choice_mode} onChange={(e) => setSettings((s) => ({ ...s, choice_mode: e.target.value as Settings["choice_mode"] }))}
-            className="h-8 px-2 rounded-md border border-line bg-card font-mono text-xs"><option>listwise</option><option>pointwise</option></select>
+            className="h-8 px-2 rounded-md border border-line bg-card font-mono text-xs"><option>listwise</option><option>pointwise</option><option>averaged</option></select>
         </label>
         <label className="flex flex-col gap-1">
           <span className="flex items-center gap-1">Scale questions asked as <Tip k="defaultScoreMode" /></span>

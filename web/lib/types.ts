@@ -5,7 +5,7 @@ export type Question = {
   instructions: string;
   // Noul: {true?, false?}; Choice: {option: description | null}; Score: ordered levels.
   criteria?: Record<string, string | null> | string[] | { true?: string; false?: string };
-  choice_mode?: "listwise" | "pointwise";
+  choice_mode?: "listwise" | "pointwise" | "averaged";
   score_mode?: "pointwise" | "listwise";
 };
 
@@ -16,7 +16,7 @@ export type Settings = {
   temp_choice: number;
   temp_score: number;
   bias_noul: number;
-  choice_mode: "listwise" | "pointwise";
+  choice_mode: "listwise" | "pointwise" | "averaged";
   score_mode: "pointwise" | "listwise";
   min_label_mass: number;
 };

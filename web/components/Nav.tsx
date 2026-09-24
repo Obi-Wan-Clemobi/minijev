@@ -6,7 +6,7 @@ import { useStore } from "@/lib/store";
 import { Icon } from "./Icon";
 import { Tip } from "./Tip";
 
-const LINKS = [["/", "Playground"], ["/compare", "Compare"], ["/hood", "Under the hood"], ["/findings", "Findings"]];
+const LINKS = [["/", "Playground"], ["/compare", "Compare"], ["/hood", "Under the hood"], ["/findings", "Findings"], ["/weaknesses", "Weaknesses"]];
 
 function subscribeTheme(cb: () => void) {
   window.addEventListener("mj-theme", cb);

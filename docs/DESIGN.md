@@ -476,6 +476,10 @@ diagram (PNG) · latency p50/p95.
   with the minijev *readout*. Measure latency, output tokens, parse failures, accuracy, and calibration. Include the
   two strongest generation baselines: one generated token with logprobs (the same computation as a readout), and
   batched decode of all questions with the state cached. Without them, the comparison favours the readout.
+- **E11 Quality on labelled data.** The same model answers BoolQ and AG News questions four ways: readout,
+  calibrated readout, written answer, written probability. Measure accuracy, ECE, parse failures, and time.
+- **E12 Same answer format.** One request answered in minijev's response JSON: read out, written freely by the same
+  model, and written with the format enforced (structured output). Measure time, written tokens, and usable answers.
 
 **Status in the POC** (RESEARCH.md §7.3, WALKTHROUGH.md):
 
@@ -488,6 +492,8 @@ diagram (PNG) · latency p50/p95.
 | E8 | Order sensitivity done (R4) |
 | E9 | Doc examples done at 0.5B and 1.5B (R5) |
 | E10 | Done; see WALKTHROUGH.md |
+| E11 | Done at 0.5B and 1.5B (RESEARCH.md §7.3 R8) |
+| E12 | Done at 0.5B and 1.5B (RESEARCH.md §7.3 R9) |
 | E2, E5, E6 | Open |
 
 ---

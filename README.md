@@ -7,6 +7,7 @@ small transformer. We built minijev to understand the mechanism. It is not a cop
 - **[docs/WALKTHROUGH.md](docs/WALKTHROUGH.md)** explains what we built and measured. Start here.
 - **[docs/DESIGN.md](docs/DESIGN.md)** is the design. §12 gives the implementation phases.
 - **[docs/RESEARCH.md](docs/RESEARCH.md)** gives what is known about Jev, with sources and evidence levels.
+- **[docs/WEAKNESSES.md](docs/WEAKNESSES.md)** lists every known weakness, with evidence, a candidate fix, and what Jev may do.
 - **[poc/](poc/)** is a working proof of concept: `cd poc && uv sync && uv run python experiments.py demo`
   - Calibration temperatures and other dials: `poc/minijev.env` (DESIGN.md §6).
   - Tests: `cd poc && uv run pytest`.

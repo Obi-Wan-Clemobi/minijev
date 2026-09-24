@@ -1,0 +1,504 @@
+{
+  "support_ticket": {
+    "questions": 3,
+    "readout_seconds": 2.098367476995918,
+    "readout_all": [
+      2.682543233000615,
+      2.0136112950058305,
+      2.098367476995918
+    ],
+    "written_seconds": 45.34471426399978,
+    "written_all": [
+      45.60793999200541,
+      45.231850515003316,
+      45.34471426399978
+    ],
+    "written_tokens": [
+      98,
+      98,
+      98
+    ],
+    "usable": [
+      3,
+      3,
+      3
+    ],
+    "valid_json": [
+      true,
+      true,
+      true
+    ],
+    "agree": [
+      2,
+      2,
+      2
+    ],
+    "structured_seconds": 23.72506287300348,
+    "structured_all": [
+      23.374044705000415,
+      24.553624446998583,
+      23.72506287300348
+    ],
+    "structured_decided_tokens": [
+      23,
+      23,
+      23
+    ],
+    "structured_forced_tokens": [
+      91,
+      91,
+      91
+    ],
+    "structured_usable": [
+      3,
+      3,
+      3
+    ],
+    "structured_agree": [
+      2,
+      2,
+      2
+    ],
+    "example": {
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "readout": {
+        "seconds": 2.098367476995918,
+        "output_tokens": 0,
+        "response": {
+          "urgency": {
+            "type": "noul",
+            "noul": 1.0
+          },
+          "team": {
+            "type": "choice",
+            "choice": "technical",
+            "probabilities": {
+              "billing": 0.0,
+              "technical": 1.0,
+              "sales": 0.0
+            },
+            "confidence": 1.0
+          },
+          "tone": {
+            "type": "score",
+            "score": 2.18,
+            "legend": {
+              "0": "calm",
+              "1": "mildly annoyed",
+              "2": "frustrated",
+              "3": "angry"
+            },
+            "probabilities": {
+              "0": 0.0,
+              "1": 0.02,
+              "2": 0.77,
+              "3": 0.2
+            },
+            "confidence": 0.77
+          }
+        },
+        "input_tokens": 264
+      },
+      "written": {
+        "seconds": 45.34471426399978,
+        "output_tokens": 98,
+        "prompt_tokens": 302,
+        "token_budget": 171,
+        "text": "{\"urgency\": {\"noul\": 1.0}, \"team\": {\"choice\": \"technical\", \"probabilities\": {\"billing\": 0.0, \"technical\": 1.0, \"sales\": 0.0}}, \"tone\": {\"score\": 3.0, \"probabilities\": {\"0\": 0.0, \"1\": 0.0, \"2\": 0.0, \"3\": 1.0}}}",
+        "valid_json": true,
+        "answers": {
+          "urgency": {
+            "ok": true,
+            "noul": 1.0
+          },
+          "team": {
+            "ok": true,
+            "choice": "technical",
+            "probabilities": {
+              "billing": 0.0,
+              "technical": 1.0,
+              "sales": 0.0
+            },
+            "sums_to_1": true
+          },
+          "tone": {
+            "ok": true,
+            "score": 3.0,
+            "probabilities": {
+              "0": 0.0,
+              "1": 0.0,
+              "2": 0.0,
+              "3": 1.0
+            },
+            "sums_to_1": true
+          }
+        },
+        "usable": 3
+      },
+      "structured": {
+        "seconds": 23.72506287300348,
+        "output_tokens": 23,
+        "forced_tokens": 91,
+        "prompt_tokens": 302,
+        "text": "{\"urgency\": {\"noul\": 1.00}, \"team\": {\"choice\": \"technical\", \"probabilities\": {\"billing\": 0.00, \"technical\": 1.00, \"sales\": 0.00}}, \"tone\": {\"score\": 3.00, \"probabilities\": {\"0\": 0.00, \"1\": 0.00, \"2\": 0.00, \"3\": 1.00}}}",
+        "valid_json": true,
+        "answers": {
+          "urgency": {
+            "ok": true,
+            "noul": 1.0
+          },
+          "team": {
+            "ok": true,
+            "choice": "technical",
+            "probabilities": {
+              "billing": 0.0,
+              "technical": 1.0,
+              "sales": 0.0
+            },
+            "sums_to_1": true
+          },
+          "tone": {
+            "ok": true,
+            "score": 3.0,
+            "probabilities": {
+              "0": 0.0,
+              "1": 0.0,
+              "2": 0.0,
+              "3": 1.0
+            },
+            "sums_to_1": true
+          }
+        },
+        "usable": 3
+      },
+      "compare": {
+        "urgency": {
+          "agree": true,
+          "note": "same side of 0.5"
+        },
+        "team": {
+          "agree": true,
+          "note": "same option"
+        },
+        "tone": {
+          "agree": false,
+          "note": "same rounded level"
+        }
+      },
+      "compare_structured": {
+        "urgency": {
+          "agree": true,
+          "note": "same side of 0.5"
+        },
+        "team": {
+          "agree": true,
+          "note": "same option"
+        },
+        "tone": {
+          "agree": false,
+          "note": "same rounded level"
+        }
+      },
+      "prompt": "STATE:\nHi, my Stripe integration has failed for 3 days. Losing sales. Help ASAP.\n\nAnswer every question below about the STATE.\n\nurgency (yes/no): Does this message express urgency?\n\nteam (pick one option): Which team should handle this?\n  - billing: Payments, invoices, refunds\n  - technical: Integrations, bugs, outages\n  - sales: Pricing, new plans\n\ntone (scale, lowest first): How upset is the customer?\n  0: calm\n  1: mildly annoyed\n  2: frustrated\n  3: angry\n\nReply with only a JSON object in exactly this shape. Replace every 0.0 with your number.\nnoul = the probability of yes. The probabilities of one question add up to 1.\nscore = the expected level: the sum of level × probability.\n{\"urgency\": {\"noul\": 0.0}, \"team\": {\"choice\": \"<option name>\", \"probabilities\": {\"billing\": 0.0, \"technical\": 0.0, \"sales\": 0.0}}, \"tone\": {\"score\": 0.0, \"probabilities\": {\"0\": 0.0, \"1\": 0.0, \"2\": 0.0, \"3\": 0.0}}}"
+    }
+  },
+  "jev_shoes_5_choices": {
+    "questions": 5,
+    "readout_seconds": 3.8310362939955667,
+    "readout_all": [
+      3.8310362939955667,
+      3.6015880779959843,
+      5.139396170001419
+    ],
+    "written_seconds": 152.35216578700056,
+    "written_all": [
+      151.31184148600005,
+      152.35216578700056,
+      156.6668404669981
+    ],
+    "written_tokens": [
+      301,
+      301,
+      301
+    ],
+    "usable": [
+      4,
+      4,
+      4
+    ],
+    "valid_json": [
+      true,
+      true,
+      true
+    ],
+    "agree": [
+      2,
+      2,
+      2
+    ],
+    "structured_seconds": 66.8831847209949,
+    "structured_all": [
+      72.96099428000161,
+      66.8831847209949,
+      64.62859054499859
+    ],
+    "structured_decided_tokens": [
+      63,
+      63,
+      63
+    ],
+    "structured_forced_tokens": [
+      220,
+      220,
+      220
+    ],
+    "structured_usable": [
+      5,
+      5,
+      5
+    ],
+    "structured_agree": [
+      2,
+      2,
+      2
+    ],
+    "example": {
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "readout": {
+        "seconds": 5.139396170001419,
+        "output_tokens": 0,
+        "response": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "returns": 0.0,
+              "shipping": 0.0,
+              "billing": 1.0
+            },
+            "confidence": 1.0
+          },
+          "return_reason": {
+            "type": "choice",
+            "choice": "other",
+            "probabilities": {
+              "wrong_size": 0.06,
+              "wrong_item": 0.1,
+              "damaged": 0.01,
+              "changed_mind": 0.05,
+              "other": 0.78
+            },
+            "confidence": 0.72
+          },
+          "shipping_issue": {
+            "type": "choice",
+            "choice": "delayed",
+            "probabilities": {
+              "not_delivered": 0.0,
+              "delayed": 0.99,
+              "wrong_address": 0.0,
+              "damaged_in_transit": 0.0,
+              "other": 0.01
+            },
+            "confidence": 0.98
+          },
+          "resolution": {
+            "type": "choice",
+            "choice": "refund",
+            "probabilities": {
+              "exchange": 0.0,
+              "refund": 1.0,
+              "replacement": 0.0,
+              "information": 0.0
+            },
+            "confidence": 1.0
+          },
+          "tone": {
+            "type": "choice",
+            "choice": "frustrated",
+            "probabilities": {
+              "calm": 0.0,
+              "frustrated": 1.0,
+              "angry": 0.0
+            },
+            "confidence": 1.0
+          }
+        },
+        "input_tokens": 412
+      },
+      "written": {
+        "seconds": 156.6668404669981,
+        "output_tokens": 301,
+        "prompt_tokens": 669,
+        "token_budget": 397,
+        "text": "```json\n{\n  \"department\": {\n    \"choice\": \"returns\",\n    \"probabilities\": {\n      \"returns\": 1.0\n    }\n  },\n  \"return_reason\": {\n    \"choice\": \"wrong_item\",\n    \"probabilities\": {\n      \"wrong_size\": 0.0,\n      \"wrong_item\": 1.0,\n      \"damaged\": 0.0,\n      \"changed_mind\": 0.0,\n      \"other\": 0.0\n    }\n  },\n  \"shipping_issue\": {\n    \"choice\": \"other\",\n    \"probabilities\": {\n      \"not_delivered\": 0.0,\n      \"delayed\": 0.0,\n      \"wrong_address\": 0.0,\n      \"damaged_in_transit\": 0.0,\n      \"other\": 1.0\n    }\n  },\n  \"resolution\": {\n    \"choice\": \"refund\",\n    \"probabilities\": {\n      \"exchange\": 0.0,\n      \"refund\": 1.0,\n      \"replacement\": 0.0,\n      \"information\": 0.0\n    }\n  },\n  \"tone\": {\n    \"choice\": \"frustrated\",\n    \"probabilities\": {\n      \"calm\": 0.0,\n      \"frustrated\": 1.0,\n      \"angry\": 0.0\n    }\n  }\n}\n```",
+        "valid_json": true,
+        "answers": {
+          "department": {
+            "ok": false,
+            "problem": "\"probabilities\" must name exactly the options ['billing', 'returns', 'shipping']; it has ['returns']."
+          },
+          "return_reason": {
+            "ok": true,
+            "choice": "wrong_item",
+            "probabilities": {
+              "wrong_size": 0.0,
+              "wrong_item": 1.0,
+              "damaged": 0.0,
+              "changed_mind": 0.0,
+              "other": 0.0
+            },
+            "sums_to_1": true
+          },
+          "shipping_issue": {
+            "ok": true,
+            "choice": "other",
+            "probabilities": {
+              "not_delivered": 0.0,
+              "delayed": 0.0,
+              "wrong_address": 0.0,
+              "damaged_in_transit": 0.0,
+              "other": 1.0
+            },
+            "sums_to_1": true
+          },
+          "resolution": {
+            "ok": true,
+            "choice": "refund",
+            "probabilities": {
+              "exchange": 0.0,
+              "refund": 1.0,
+              "replacement": 0.0,
+              "information": 0.0
+            },
+            "sums_to_1": true
+          },
+          "tone": {
+            "ok": true,
+            "choice": "frustrated",
+            "probabilities": {
+              "calm": 0.0,
+              "frustrated": 1.0,
+              "angry": 0.0
+            },
+            "sums_to_1": true
+          }
+        },
+        "usable": 4
+      },
+      "structured": {
+        "seconds": 64.62859054499859,
+        "output_tokens": 63,
+        "forced_tokens": 220,
+        "prompt_tokens": 669,
+        "text": "{\"department\": {\"choice\": \"returns\", \"probabilities\": {\"returns\": 1.00, \"shipping\": 0.00, \"billing\": 0.00}}, \"return_reason\": {\"choice\": \"wrong_item\", \"probabilities\": {\"wrong_size\": 0.00, \"wrong_item\": 1.00, \"damaged\": 0.00, \"changed_mind\": 0.00, \"other\": 0.00}}, \"shipping_issue\": {\"choice\": \"other\", \"probabilities\": {\"not_delivered\": 0.00, \"delayed\": 0.00, \"wrong_address\": 0.00, \"damaged_in_transit\": 0.00, \"other\": 1.00}}, \"resolution\": {\"choice\": \"refund\", \"probabilities\": {\"exchange\": 0.00, \"refund\": 1.00, \"replacement\": 0.00, \"information\": 0.00}}, \"tone\": {\"choice\": \"frustrated\", \"probabilities\": {\"calm\": 0.00, \"frustrated\": 1.00, \"angry\": 0.00}}}",
+        "valid_json": true,
+        "answers": {
+          "department": {
+            "ok": true,
+            "choice": "returns",
+            "probabilities": {
+              "returns": 1.0,
+              "shipping": 0.0,
+              "billing": 0.0
+            },
+            "sums_to_1": true
+          },
+          "return_reason": {
+            "ok": true,
+            "choice": "wrong_item",
+            "probabilities": {
+              "wrong_size": 0.0,
+              "wrong_item": 1.0,
+              "damaged": 0.0,
+              "changed_mind": 0.0,
+              "other": 0.0
+            },
+            "sums_to_1": true
+          },
+          "shipping_issue": {
+            "ok": true,
+            "choice": "other",
+            "probabilities": {
+              "not_delivered": 0.0,
+              "delayed": 0.0,
+              "wrong_address": 0.0,
+              "damaged_in_transit": 0.0,
+              "other": 1.0
+            },
+            "sums_to_1": true
+          },
+          "resolution": {
+            "ok": true,
+            "choice": "refund",
+            "probabilities": {
+              "exchange": 0.0,
+              "refund": 1.0,
+              "replacement": 0.0,
+              "information": 0.0
+            },
+            "sums_to_1": true
+          },
+          "tone": {
+            "ok": true,
+            "choice": "frustrated",
+            "probabilities": {
+              "calm": 0.0,
+              "frustrated": 1.0,
+              "angry": 0.0
+            },
+            "sums_to_1": true
+          }
+        },
+        "usable": 5
+      },
+      "compare": {
+        "department": {
+          "agree": false,
+          "note": "\"probabilities\" must name exactly the options ['billing', 'returns', 'shipping']; it has ['returns']."
+        },
+        "return_reason": {
+          "agree": false,
+          "note": "same option"
+        },
+        "shipping_issue": {
+          "agree": false,
+          "note": "same option"
+        },
+        "resolution": {
+          "agree": true,
+          "note": "same option"
+        },
+        "tone": {
+          "agree": true,
+          "note": "same option"
+        }
+      },
+      "compare_structured": {
+        "department": {
+          "agree": false,
+          "note": "same option"
+        },
+        "return_reason": {
+          "agree": false,
+          "note": "same option"
+        },
+        "shipping_issue": {
+          "agree": false,
+          "note": "same option"
+        },
+        "resolution": {
+          "agree": true,
+          "note": "same option"
+        },
+        "tone": {
+          "agree": true,
+          "note": "same option"
+        }
+      },
+      "prompt": "STATE:\nShoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?\n\nAnswer every question below about the STATE.\n\ndepartment (pick one option): Which team should handle this?\n  - returns: Exchanges, wrong or damaged items\n  - shipping: Delivery status, delays, lost packages\n  - billing: Charges, invoices, payment problems\n\nreturn_reason (pick one option): If the customer wants to return something, why?\n  - wrong_size: The item doesn't fit\n  - wrong_item: A different product was delivered\n  - damaged: The item arrived broken or faulty\n  - changed_mind: The item is fine, the customer no longer wants it\n  - other: A return reason that fits none of the above\n\nshipping_issue (pick one option): If this is a shipping problem, which kind is it?\n  - not_delivered: The package never arrived\n  - delayed: The package is late but still on its way\n  - wrong_address: The package went to the wrong place\n  - damaged_in_transit: The package arrived damaged\n  - other: A shipping problem that fits none of the above\n\nresolution (pick one option): What does the customer want to happen?\n  - exchange: Swap the item for a different one\n  - refund: Money back\n  - replacement: The same item sent again\n  - information: Just an answer, no action needed\n\ntone (pick one option): What is the customer's tone?\n  - calm\n  - frustrated\n  - angry\n\nReply with only a JSON object in exactly this shape. Replace every 0.0 with your number.\nnoul = the probability of yes. The probabilities of one question add up to 1.\nscore = the expected level: the sum of level × probability.\n{\"department\": {\"choice\": \"<option name>\", \"probabilities\": {\"returns\": 0.0, \"shipping\": 0.0, \"billing\": 0.0}}, \"return_reason\": {\"choice\": \"<option name>\", \"probabilities\": {\"wrong_size\": 0.0, \"wrong_item\": 0.0, \"damaged\": 0.0, \"changed_mind\": 0.0, \"other\": 0.0}}, \"shipping_issue\": {\"choice\": \"<option name>\", \"probabilities\": {\"not_delivered\": 0.0, \"delayed\": 0.0, \"wrong_address\": 0.0, \"damaged_in_transit\": 0.0, \"other\": 0.0}}, \"resolution\": {\"choice\": \"<option name>\", \"probabilities\": {\"exchange\": 0.0, \"refund\": 0.0, \"replacement\": 0.0, \"information\": 0.0}}, \"tone\": {\"choice\": \"<option name>\", \"probabilities\": {\"calm\": 0.0, \"frustrated\": 0.0, \"angry\": 0.0}}}"
+    }
+  },
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "seconds_total": 893.985864274
+}

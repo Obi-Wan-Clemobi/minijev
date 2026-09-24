@@ -72,3 +72,12 @@ def test_presets_and_results(client):
     assert ids[:2] == ["support", "shoes"]
     res = client.get("/v1/results").json()
     assert res["0.5B"]["calibration"]["metrics"]["raw"]["ece"] == pytest.approx(0.161, abs=1e-3)
+
+
+def test_same_format_returns_both_sides(client):
+    r = client.post("/v1/same_format", json={**REQ, "settings": DEFAULTS}).json()
+    assert r["readout"]["output_tokens"] == 0 and r["written"]["output_tokens"] > 0
+    assert set(r["compare"]) == set(REQ["questions"])
+    assert "Reply with only a JSON object" in r["prompt"]
+    assert r["structured"]["usable"] == len(REQ["questions"])  # an enforced format is always readable
+    assert r["structured"]["answers"]["team"]["choice"] in REQ["questions"]["team"]["criteria"]

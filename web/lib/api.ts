@@ -23,6 +23,7 @@ export const api = {
   ask: (req: Req, settings: Settings, mode = "packed") => call<AskResponse>("/v1/ask", post({ ...req, settings, mode })),
   tree: (req: Req, settings: Settings) => call<TreeResponse>("/v1/tree", post({ ...req, settings })),
   compare: (req: Req, methods: string[]) => call<CompareResponse>("/v1/compare", post({ ...req, methods })),
+  sameFormat: (req: Req, settings: Settings) => call<SameFormatResponse>("/v1/same_format", post({ ...req, settings })),
   presets: () => call<Preset[]>("/v1/presets"),
   results: () => call<Record<string, any>>("/v1/results"), // eslint-disable-line @typescript-eslint/no-explicit-any
   model: () => call<{ model: string; available: string[] }>("/v1/model"),
@@ -40,3 +41,17 @@ export type MethodResult = {
   agrees_with_readout: number; parse_failures: number;
 };
 export type CompareResponse = { model: string; questions: Record<string, unknown>; methods: Record<string, MethodResult> };
+
+export type Written = { ok: true; noul?: number; choice?: string; score?: number; probabilities?: Record<string, number>; sums_to_1?: boolean }
+  | { ok: false; problem: string };
+export type SameFormatResponse = {
+  model: string;
+  readout: { seconds: number; output_tokens: number; input_tokens: number; response: Record<string, any> }; // eslint-disable-line @typescript-eslint/no-explicit-any
+  written: { seconds: number; output_tokens: number; prompt_tokens: number; token_budget: number; text: string;
+    valid_json: boolean; answers: Record<string, Written>; usable: number };
+  structured: { seconds: number; output_tokens: number; forced_tokens: number; prompt_tokens: number; text: string;
+    valid_json: boolean; answers: Record<string, Written>; usable: number };
+  compare: Record<string, { agree: boolean; note: string }>;
+  compare_structured: Record<string, { agree: boolean; note: string }>;
+  prompt: string;
+};

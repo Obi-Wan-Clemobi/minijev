@@ -44,8 +44,9 @@ export const HELP = {
     "Noul = yes/no. Choice = pick one option. Score = a position on an ordered scale.",
     "If you switch, the options carry over: Choice options become Score levels, and the other way round." ] },
   readoutMode: { t: "How the question is asked", e: "run", d: [
-    "listwise: the model sees all options at once, labelled A, B, C, and picks a letter. One step, but small models are swayed by the order of the options (try moving them).",
+    "listwise: the model sees all options at once, labelled A, B, C, and picks a letter. One step, but small models like some letters more than others, so moving an option can change the answer. Try it.",
     "pointwise: the model judges each option on its own (\"Is 'billing' right? yes/no\") and the results are compared. The order cannot matter, but it costs one step per option.",
+    "all orders averaged (multiple choice only): the list is asked once per rotation (ABCD, BCDA, …), all in the same pass, and each option's probability is averaged. Every option sits in every position once, so a favourite letter no longer helps one option. Costs one branch per option.",
     "asked: default: use the setting in the Calibration panel (multiple choice: listwise, scale: pointwise)." ] },
   branches: { t: "Branches", e: "display", d: [
     "How many separate mini-questions this adds to the model's pass. A yes/no or listwise question is 1. A pointwise question is one per option or level.",
@@ -82,7 +83,9 @@ export const HELP = {
     "Makes scale answers more or less sure of themselves.",
     "Above 1: the bars even out, so the score moves toward the middle of the scale and the confidence drops. The tallest bar stays the tallest." ] },
   reset: { t: "Reset", e: "instant", d: ["Put this dial back to its default (no calibration)."] },
-  defaultChoiceMode: { t: "Default for multiple choice", e: "run", d: ["How multiple-choice questions are asked when the question itself says \"asked: default\". Listwise (all options at once) is the default."] },
+  defaultChoiceMode: { t: "Default for multiple choice", e: "run", d: [
+    "How multiple-choice questions are asked when the question itself says \"asked: default\".",
+    "listwise: one step, but the option order can change the answer. averaged: every order, averaged; fixes that for one branch per option. pointwise: each option judged alone."] },
   defaultScoreMode: { t: "Default for scales", e: "run", d: ["How scale questions are asked when the question itself says \"asked: default\". Pointwise (each level judged alone) is how Jev does it."] },
   labelMass: { t: "Warn below label mass", e: "display", d: [
     "Label mass = how much of the model's attention went to the allowed answers (Yes/No, A/B/C) rather than to other words.",
@@ -111,24 +114,79 @@ export const HELP = {
 
   // ---- compare
   cmpMethods: { t: "Methods to compare", e: "run", d: [
-    "Different ways to get the same answers out of the same model. Tick the ones to run.",
+    "Different ways to get answers out of the same model. Tick the ones to run.",
     "To make them comparable, every question is asked as multiple choice (yes/no becomes the options yes and no; scale levels become options).",
     "The readout (minijev) always runs, as the reference." ] },
-  cmpLogprobs: { t: "1 token + logprobs", d: [
+  cmpLogprobs: { t: "Reads out, one question per request", d: [
     "What you can do with an AI API that shows its probabilities: let it write just one token and read how likely each option was.",
     "It is really the same calculation as minijev, just one question at a time." ] },
-  cmpGenCached: { t: "Generate the name", d: [
+  cmpGenCached: { t: "Writes each answer", d: [
     "The normal chatbot way: the model writes the answer as words (\"technical\"), and code turns the words back into an option.",
-    "\"Cached\" means the text is read once and remembered, as many AI APIs do." ] },
-  cmpJson: { t: "One JSON call", d: ["One message with all questions; the model writes all the answers as JSON in one go. Answers can influence each other, and the JSON can come out broken."] },
-  cmpUncached: { t: "One call per question (slow)", d: ["The simplest way: a separate request per question, each sending the whole text again. Slow, because the text is read again every time."] },
+    "One request per question. The text is read once and remembered between requests, as many AI APIs do (prompt caching)." ] },
+  cmpJson: { t: "Writes all answers as one JSON", d: ["One message with all questions; the model writes all the answers as JSON in one go. Answers can influence each other, and the JSON can come out broken."] },
+  cmpUncached: { t: "Writes each answer, resends the text (slow)", d: ["The simplest way: a separate request per question, each sending the whole text again. Slow, because the text is read again every time."] },
   cmpRun: { t: "Run comparison", d: ["Runs your request once with every ticked method on this computer and times them. Times vary a bit between runs (about ±10–20%)."] },
   cmpRecorded: { t: "Measured earlier", e: "display", d: ["Results we recorded: 13 questions on a 500-token article, each method run 3 times. The thin line shows the fastest and slowest of the 3 runs."] },
   cmpWaterfall: { t: "Where the time goes", e: "display", d: [
     "Starting from the slow way, remove one cost at a time:",
-    "1) read the text once instead of once per question, 2) stop after the first token instead of writing words, 3) do all questions in one pass.",
+    "1) remember the text instead of reading it again for every question, 2) read the answer out instead of writing it, 3) put all questions in one pass.",
     "Most of the saving comes from step 1." ] },
-  agreement: { t: "Agreement", d: ["How often this method picked the same answer as minijev. Lower agreement usually means the way of asking changed the answer."] },
+  agreement: { t: "Agreement", d: ["How often this way picked the same answer as minijev. It is the same model, so a lower number means the way of asking changed its answer."] },
+
+  // ---- same format
+  sameFormat: { t: "Same answer format", e: "display", d: [
+    "The fairest speed test: same model, same text, same questions, and both sides return the same JSON.",
+    "minijev reads the probabilities out and builds the JSON in code. The model writing it has to type every brace, name and digit, and each typed token costs a full pass of the model.",
+    "Tokens are word pieces: \"0.97\" is about 3 tokens." ] },
+  sameFormatRun: { t: "Run both", d: ["Runs your Playground request both ways, once each, on this laptop. The writing side takes seconds to minutes, depending on how many questions and options you have."] },
+  sameFormatDiffer: { t: "When the answers differ", d: [
+    "Both sides are the same model, so a difference means the way of asking changed its answer.",
+    "Without an answer key, neither side is known to be right. The last column shows how likely minijev found the written answer: a low number means the two really disagree.",
+    "Section 2 uses questions with known answers to show which way is right more often." ] },
+
+  structured: { t: "Format enforced (structured output)", d: [
+    "What AI APIs call structured output or JSON mode. The program types every fixed part of the JSON itself (braces, names, quotes), and the model may choose only valid content: the digits of a number, or one of your option names.",
+    "So the reply is always complete and readable. It is also faster than free writing, because the model does not spend a pass on every brace.",
+    "It cannot make the numbers good: those still come from what the model writes." ] },
+  unusable: { t: "Unusable answer", d: [
+    "The model was asked to write its answers in an exact JSON shape. For this question, the reply cannot be read: a field is missing, a question is nested in the wrong place, a name is not one of the options, or a number is not a probability.",
+    "Code cannot guess what a broken reply meant, so this answer is not counted. The raw reply is shown below the table.",
+    "minijev cannot fail this way: it writes nothing, and its answer is always one of the allowed options." ] },
+
+  // ---- quality (E11)
+  quality: { t: "Quality on questions with known answers", e: "display", d: [
+    "The same small model answers the same questions in four ways. Because the right answers are known, we can see which way is more often right, and which way is honest about how sure it is.",
+    "Measured once on this laptop and saved; run it again with: uv run python experiments.py quality." ] },
+  qTask: { t: "Question set", e: "display", d: [
+    "Yes/no · BoolQ: 200 real questions about Wikipedia paragraphs, e.g. \"Is Canada in North America?\".",
+    "Multiple choice · AG News: 120 news articles; pick the topic out of World, Sports, Business, Technology." ] },
+  qReadout: { t: "Reads out (minijev)", d: ["minijev: one pass, and the probability of every allowed answer is read directly. Nothing is written."] },
+  qReadoutCal: { t: "Reads out, calibrated", d: [
+    "The same readout, then the temperature dial set on half of the questions and tested on the other half, so it is never tested on what it learned from.",
+    "It can only change how sure the answers are, not which answer wins." ] },
+  qWritesAnswer: { t: "Writes the answer", d: ["The chatbot way: the model writes \"Yes\" or \"Sports\" as text, and code reads the word back. You get an answer but no probability."] },
+  qWritesProb: { t: "Writes a probability", d: ["The model is asked to write how sure it is, e.g. \"0.8\" or a JSON list of probabilities. Small models often write the wrong format, or always the same number."] },
+  qAccuracy: { t: "Accuracy", e: "display", d: [
+    "How often the answer was right. The orange line is what you get by always guessing the most common answer.",
+    "The thin line is the 95% uncertainty of the measurement: if two lines overlap, the difference is not clear." ] },
+  qHonesty: { t: "Calibration error (lower = more honest)", e: "display", d: [
+    "How far \"how sure it says it is\" is from \"how often it is right\". 0 is perfectly honest: \"80% sure\" is right 80% of the time.",
+    "Writing the answer gives no probability, so it has no score here." ] },
+  qTime: { t: "Time per question", e: "display", d: ["Average seconds per question on this laptop's CPU, for this way of asking. Writing costs time for every word the model writes."] },
+  qWords: { t: "Tokens written", e: "display", d: ["How many tokens (word pieces) the model wrote per question, and how many replies could not be read back into an answer."] },
+  qScatter: { t: "Speed vs accuracy", e: "display", d: ["Each dot is one way of asking, for one model. Up = more often right. Left = faster. The best place is the top left."] },
+
+  // ---- order flaw (E13)
+  orderFlaw: { t: "The order flaw", e: "display", d: [
+    "When a multiple-choice question lists its options as A, B, C, D, a small model partly answers by letter, not by content: it likes some letters more than others.",
+    "So the same question, with the same options in another order, can get a different answer. This section measures how often that happens, and tests three fixes." ] },
+  orderLetters: { t: "Favourite letters", e: "display", d: [
+    "Orange: how often the model picked each letter. Grey: how often the right answer was actually at that letter (the orders are shuffled, so about a quarter each).",
+    "If orange is taller than grey for a letter, the model picks that letter more often than the content justifies." ] },
+  orderFlips: { t: "Answer flips", e: "display", d: ["The share of articles where the answer changed when only the option order changed. 0 means the order never matters."] },
+  orderCost: { t: "Cost", e: "display", d: [
+    "How many branches (mini-questions) one multiple-choice question needs. The text is still read only once, so extra branches cost only the question's own tokens.",
+    "Debiased needs 1 branch at run time, but it needs a one-time measurement of the model's letter liking first." ] },
 
   // ---- hood
   hoodBranch: { t: "Branches", e: "display", d: ["Each box is one mini-question the model answers. Click one to follow it through the picture, the grid, and the token list."] },

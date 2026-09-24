@@ -1,0 +1,3311 @@
+{
+  "tasks": {
+    "boolq": {
+      "n": 200,
+      "base_rate": 0.62,
+      "chance": 0.62,
+      "methods": {
+        "readout": {
+          "accuracy": 0.82,
+          "ece": 0.10602130690840653,
+          "brier": 0.1442801835124291,
+          "nll": 0.49709222233987577,
+          "mean_p_yes": 0.6228529794994756,
+          "accuracy_ci95": [
+            0.765,
+            0.87
+          ],
+          "ece_ci95": [
+            0.08222630691007479,
+            0.1685178227960266
+          ],
+          "n": 200,
+          "parse_failures": 0,
+          "mean_s": 1.5862751238394412,
+          "mean_s_ci95": [
+            1.5074478556495887,
+            1.6659698000894059
+          ],
+          "output_tokens": 0,
+          "has_probs": true
+        },
+        "readout, calibrated": {
+          "accuracy": 0.82,
+          "ece": 0.06556946894776917,
+          "brier": 0.14178720949324647,
+          "nll": 0.4436416450026451,
+          "mean_p_yes": 0.6071422344500048,
+          "accuracy_ci95": [
+            0.765,
+            0.87
+          ],
+          "ece_ci95": [
+            0.05650361376027353,
+            0.13725056219621892
+          ],
+          "n": 200,
+          "parse_failures": 0,
+          "mean_s": 1.5862751238394412,
+          "mean_s_ci95": [
+            1.5074478556495887,
+            1.6659698000894059
+          ],
+          "output_tokens": 0,
+          "has_probs": true
+        },
+        "writes the answer": {
+          "accuracy": 0.82,
+          "ece": null,
+          "brier": null,
+          "nll": null,
+          "mean_p_yes": 0.6274000000000001,
+          "accuracy_ci95": [
+            0.765,
+            0.87
+          ],
+          "ece_ci95": null,
+          "n": 200,
+          "parse_failures": 0,
+          "mean_s": 2.108326405070293,
+          "mean_s_ci95": [
+            2.02971873617018,
+            2.188925269155188
+          ],
+          "output_tokens": 2.295,
+          "has_probs": false
+        },
+        "writes a probability": {
+          "accuracy": 0.74,
+          "ece": 0.1702866749999996,
+          "brier": 0.212947121800355,
+          "nll": 1.548991122916828,
+          "mean_p_yes": 0.570817115,
+          "accuracy_ci95": [
+            0.675,
+            0.8
+          ],
+          "ece_ci95": [
+            0.12400970999999948,
+            0.23406964499999958
+          ],
+          "n": 200,
+          "parse_failures": 0,
+          "mean_s": 3.3377221184852535,
+          "mean_s_ci95": [
+            3.221298660395223,
+            3.4592815680001876
+          ],
+          "output_tokens": 4.99,
+          "has_probs": true
+        }
+      },
+      "rows": [
+        {
+          "y": 0,
+          "p_readout": 0.012014553237615697,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9926083723055767,
+          "generated": 1,
+          "verbal": 0.999999
+        },
+        {
+          "y": 0,
+          "p_readout": 0.0009000803835078347,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9962769374813853,
+          "generated": 1,
+          "verbal": 0.999
+        },
+        {
+          "y": 0,
+          "p_readout": 0.08723496711591545,
+          "generated": 0,
+          "verbal": 0.001
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9956644245970739,
+          "generated": 1,
+          "verbal": 0.5
+        },
+        {
+          "y": 1,
+          "p_readout": 0.7655823632215059,
+          "generated": 1,
+          "verbal": 0.5
+        },
+        {
+          "y": 1,
+          "p_readout": 0.8402369784181613,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 0,
+          "p_readout": 0.6918035647179943,
+          "generated": 1,
+          "verbal": 0.999999
+        },
+        {
+          "y": 0,
+          "p_readout": 0.014719238840767113,
+          "generated": 0,
+          "verbal": 0.001
+        },
+        {
+          "y": 1,
+          "p_readout": 0.5824296824714348,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 0,
+          "p_readout": 0.06691101451830812,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9993081933550509,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 0,
+          "p_readout": 0.7367462362014202,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 0,
+          "p_readout": 0.10972960181519525,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 0,
+          "p_readout": 0.8698342937649658,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 0,
+          "p_readout": 0.2868663364835292,
+          "generated": 0,
+          "verbal": 0.5
+        },
+        {
+          "y": 0,
+          "p_readout": 0.42130930535594435,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9372077673987483,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 1,
+          "p_readout": 0.0019410825155427413,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.6656104798700906,
+          "generated": 1,
+          "verbal": 0.5
+        },
+        {
+          "y": 0,
+          "p_readout": 0.7909397821119231,
+          "generated": 1,
+          "verbal": 0.5
+        },
+        {
+          "y": 1,
+          "p_readout": 0.6731812544247745,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.795039210580559,
+          "generated": 1,
+          "verbal": 0.999999
+        },
+        {
+          "y": 0,
+          "p_readout": 0.971371767650748,
+          "generated": 1,
+          "verbal": 0.5
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9917367441648205,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 0,
+          "p_readout": 0.3704425785506978,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 0,
+          "p_readout": 0.18880777371515897,
+          "generated": 0,
+          "verbal": 0.5
+        },
+        {
+          "y": 0,
+          "p_readout": 0.00036146618052795143,
+          "generated": 0,
+          "verbal": 0.001
+        },
+        {
+          "y": 0,
+          "p_readout": 0.21079072271701513,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 0,
+          "p_readout": 0.045460596604880055,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9175169796390588,
+          "generated": 1,
+          "verbal": 0.001
+        },
+        {
+          "y": 1,
+          "p_readout": 0.6559179142305385,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.775062545012815,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 0,
+          "p_readout": 0.03758913244898478,
+          "generated": 0,
+          "verbal": 0.001
+        },
+        {
+          "y": 0,
+          "p_readout": 0.8707796837981318,
+          "generated": 1,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9994414237159864,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.7288885548188861,
+          "generated": 1,
+          "verbal": 0.5
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9731386222524069,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9951748992049934,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9908657246706177,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 0,
+          "p_readout": 0.035736785505270936,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9997527390669579,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.6325853725149987,
+          "generated": 1,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9916250115975316,
+          "generated": 1,
+          "verbal": 0.999999
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9930317960458113,
+          "generated": 1,
+          "verbal": 0.999999
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9168319427388352,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 0,
+          "p_readout": 0.7797400089071109,
+          "generated": 1,
+          "verbal": 0.5
+        },
+        {
+          "y": 0,
+          "p_readout": 0.0010853494226113927,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 0,
+          "p_readout": 0.2850684402094055,
+          "generated": 0,
+          "verbal": 0.01
+        },
+        {
+          "y": 1,
+          "p_readout": 0.956547878737967,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 1,
+          "p_readout": 0.5307005194700798,
+          "generated": 1,
+          "verbal": 0.001
+        },
+        {
+          "y": 1,
+          "p_readout": 0.46669264297597246,
+          "generated": 0,
+          "verbal": 0.99
+        },
+        {
+          "y": 1,
+          "p_readout": 0.995488446852368,
+          "generated": 1,
+          "verbal": 0.999999
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9943058795182684,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9502142373351867,
+          "generated": 1,
+          "verbal": 0.999999
+        },
+        {
+          "y": 0,
+          "p_readout": 0.4064057637074515,
+          "generated": 0,
+          "verbal": 0.5
+        },
+        {
+          "y": 0,
+          "p_readout": 0.7402645996196825,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9079017562620211,
+          "generated": 1,
+          "verbal": 0.5
+        },
+        {
+          "y": 0,
+          "p_readout": 0.21821649215930755,
+          "generated": 0,
+          "verbal": 0.001
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9378289431998149,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 0,
+          "p_readout": 0.14889894242350415,
+          "generated": 0,
+          "verbal": 0.01
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9864401518010294,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 0,
+          "p_readout": 0.07315217485738826,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9796958379562479,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9994407326606939,
+          "generated": 1,
+          "verbal": 1.0
+        },
+        {
+          "y": 0,
+          "p_readout": 0.37482164767660126,
+          "generated": 0,
+          "verbal": 0.5
+        },
+        {
+          "y": 1,
+          "p_readout": 0.13174160496010373,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9840763818008704,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 0,
+          "p_readout": 0.6373718904533745,
+          "generated": 1,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.2983484260635307,
+          "generated": 0,
+          "verbal": 0.99
+        },
+        {
+          "y": 1,
+          "p_readout": 0.020934245958452374,
+          "generated": 0,
+          "verbal": 0.001
+        },
+        {
+          "y": 0,
+          "p_readout": 0.05046785873776741,
+          "generated": 0,
+          "verbal": 0.001
+        },
+        {
+          "y": 0,
+          "p_readout": 0.1265382825426399,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 0,
+          "p_readout": 0.31715673334916006,
+          "generated": 0,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.05274531701831402,
+          "generated": 0,
+          "verbal": 0.001
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9936660307651326,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9990258707037997,
+          "generated": 1,
+          "verbal": 0.999
+        },
+        {
+          "y": 0,
+          "p_readout": 0.05666241310822674,
+          "generated": 0,
+          "verbal": 0.001
+        },
+        {
+          "y": 1,
+          "p_readout": 0.29472629184128235,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.999546169814238,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9953063993404914,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 0,
+          "p_readout": 0.006092877576429081,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9775229493478391,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 1,
+          "p_readout": 0.8201231705516163,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 0,
+          "p_readout": 0.001157361629185295,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9715490773122859,
+          "generated": 1,
+          "verbal": 0.8
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9964882393030848,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9890271880414326,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 0,
+          "p_readout": 0.01823188649644773,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.3794986272960374,
+          "generated": 0,
+          "verbal": 0.5
+        },
+        {
+          "y": 0,
+          "p_readout": 0.4733286585508759,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9995393860095433,
+          "generated": 1,
+          "verbal": 0.999999
+        },
+        {
+          "y": 0,
+          "p_readout": 0.4250533190044235,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9914087006916574,
+          "generated": 1,
+          "verbal": 1.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.5205409187103522,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 0,
+          "p_readout": 0.5165553201397164,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9984347571045065,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9953308758266441,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9805916531394941,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 0,
+          "p_readout": 0.006263789376478159,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9947016948545713,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.6017904749903269,
+          "generated": 1,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9333929182113258,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9913277281582651,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 0,
+          "p_readout": 0.0009482647411727359,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9737341960311782,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9996517446636866,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 1,
+          "p_readout": 0.6751486263715446,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.8773291709015553,
+          "generated": 1,
+          "verbal": 0.01
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9630114198397869,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.8620315538141102,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 0,
+          "p_readout": 0.02519881343995051,
+          "generated": 0,
+          "verbal": 0.001
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9996474461734478,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9992518748922916,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.4852445961037845,
+          "generated": 0,
+          "verbal": 0.001
+        },
+        {
+          "y": 1,
+          "p_readout": 0.7990296969998313,
+          "generated": 1,
+          "verbal": 0.5
+        },
+        {
+          "y": 0,
+          "p_readout": 0.09167279885049762,
+          "generated": 0,
+          "verbal": 0.001
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9030405936877735,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 0,
+          "p_readout": 0.10834157877042619,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 0,
+          "p_readout": 0.4350587946508868,
+          "generated": 0,
+          "verbal": 0.5
+        },
+        {
+          "y": 0,
+          "p_readout": 0.4201269498057684,
+          "generated": 0,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.01862929712918692,
+          "generated": 0,
+          "verbal": 0.001
+        },
+        {
+          "y": 1,
+          "p_readout": 0.971528468982048,
+          "generated": 1,
+          "verbal": 0.999999
+        },
+        {
+          "y": 0,
+          "p_readout": 0.617113660070885,
+          "generated": 1,
+          "verbal": 0.999
+        },
+        {
+          "y": 0,
+          "p_readout": 0.9915244550822864,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9917597552345664,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9864391147621996,
+          "generated": 1,
+          "verbal": 0.8
+        },
+        {
+          "y": 0,
+          "p_readout": 0.9764887333759199,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9966935743153441,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9981465849472774,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.994942226194018,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9028787551680338,
+          "generated": 1,
+          "verbal": 0.5
+        },
+        {
+          "y": 1,
+          "p_readout": 0.8694216257837273,
+          "generated": 1,
+          "verbal": 0.5
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9889998508354363,
+          "generated": 1,
+          "verbal": 3e-06
+        },
+        {
+          "y": 1,
+          "p_readout": 0.49602949024896087,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9793690027490759,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.684883035193697,
+          "generated": 1,
+          "verbal": 0.5
+        },
+        {
+          "y": 1,
+          "p_readout": 0.8216507373411357,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 0,
+          "p_readout": 0.3488110745376641,
+          "generated": 0,
+          "verbal": 0.5
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9819013087828729,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 0,
+          "p_readout": 0.11493794766081174,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.17865594980181504,
+          "generated": 0,
+          "verbal": 0.5
+        },
+        {
+          "y": 0,
+          "p_readout": 0.011852242791071657,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 0,
+          "p_readout": 0.15544478853990915,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 0,
+          "p_readout": 0.257032556906805,
+          "generated": 0,
+          "verbal": 0.9144
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9774281563815198,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 0,
+          "p_readout": 0.9393814388436347,
+          "generated": 1,
+          "verbal": 0.999999
+        },
+        {
+          "y": 0,
+          "p_readout": 0.2979075985174909,
+          "generated": 0,
+          "verbal": 0.5
+        },
+        {
+          "y": 1,
+          "p_readout": 0.5478220578320332,
+          "generated": 1,
+          "verbal": 0.5
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9288366249919089,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 0,
+          "p_readout": 0.3057461507529885,
+          "generated": 0,
+          "verbal": 0.001
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9387906878158214,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 0,
+          "p_readout": 0.6320449660238228,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 1,
+          "p_readout": 0.687784107612207,
+          "generated": 1,
+          "verbal": 0.999
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9996095001019116,
+          "generated": 1,
+          "verbal": 1.0
+        },
+        {
+          "y": 0,
+          "p_readout": 0.4945015590698425,
+          "generated": 0,
+          "verbal": 0.9
+        },
+        {
+          "y": 0,
+          "p_readout": 0.05830984181474428,
+          "generated": 0,
+          "verbal": 0.001
+        },
+        {
+          "y": 0,
+          "p_readout": 0.20328697410069607,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 0,
+          "p_readout": 0.12414882248927046,
+          "generated": 0,
+          "verbal": 0.001
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9939738536803275,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9967775350713373,
+          "generated": 1,
+          "verbal": 0.5
+        },
+        {
+          "y": 1,
+          "p_readout": 0.8710288249289692,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 0,
+          "p_readout": 0.8168047444532708,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 0,
+          "p_readout": 0.019040716989895033,
+          "generated": 0,
+          "verbal": 0.001
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9981712546797586,
+          "generated": 1,
+          "verbal": 0.999999
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9873902107470333,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9588155940083397,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.12135788274720105,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 0,
+          "p_readout": 0.9876171422509509,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 0,
+          "p_readout": 0.005759468437922676,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.7480973749760333,
+          "generated": 1,
+          "verbal": 0.0
+        },
+        {
+          "y": 0,
+          "p_readout": 0.13856157925426316,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.07300237229394639,
+          "generated": 0,
+          "verbal": 0.001
+        },
+        {
+          "y": 1,
+          "p_readout": 0.5948113900977773,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 0,
+          "p_readout": 0.03939843911269534,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.2213279954809971,
+          "generated": 0,
+          "verbal": 0.001
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9990617947625001,
+          "generated": 1,
+          "verbal": 0.999999
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9977014944242841,
+          "generated": 1,
+          "verbal": 0.999999
+        },
+        {
+          "y": 0,
+          "p_readout": 0.26145795931721855,
+          "generated": 0,
+          "verbal": 0.001
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9368303027378815,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9777308666349903,
+          "generated": 1,
+          "verbal": 0.999999
+        },
+        {
+          "y": 1,
+          "p_readout": 0.2905147009456541,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.6826075238456917,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 0,
+          "p_readout": 0.019395351360999256,
+          "generated": 0,
+          "verbal": 0.5
+        },
+        {
+          "y": 1,
+          "p_readout": 0.6466902379754363,
+          "generated": 1,
+          "verbal": 0.999999
+        },
+        {
+          "y": 1,
+          "p_readout": 0.8355131188282845,
+          "generated": 1,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.8250076718833924,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9983022432550033,
+          "generated": 1,
+          "verbal": 1.0
+        },
+        {
+          "y": 0,
+          "p_readout": 0.9883835977184837,
+          "generated": 1,
+          "verbal": 0.8
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9995298451341812,
+          "generated": 1,
+          "verbal": 0.999999
+        },
+        {
+          "y": 1,
+          "p_readout": 0.789911320666876,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 0,
+          "p_readout": 0.010878313787980707,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9232052276609262,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 1,
+          "p_readout": 0.6587649482772456,
+          "generated": 1,
+          "verbal": 0.99
+        },
+        {
+          "y": 0,
+          "p_readout": 0.08283268816983606,
+          "generated": 0,
+          "verbal": 0.0
+        },
+        {
+          "y": 0,
+          "p_readout": 0.7160342614310332,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9944799516086263,
+          "generated": 1,
+          "verbal": 0.9
+        },
+        {
+          "y": 1,
+          "p_readout": 0.37055301240264116,
+          "generated": 0,
+          "verbal": 0.001
+        },
+        {
+          "y": 1,
+          "p_readout": 0.9978898127696016,
+          "generated": 1,
+          "verbal": 0.999999
+        }
+      ]
+    },
+    "ag_news": {
+      "n": 120,
+      "chance": 0.25,
+      "methods": {
+        "readout": {
+          "accuracy": 0.8333333333333334,
+          "ece": 0.14863078568129298,
+          "brier": 0.3037175915463752,
+          "accuracy_ci95": [
+            0.7666666666666667,
+            0.9
+          ],
+          "ece_ci95": [
+            0.09573633914631124,
+            0.22021716988606233
+          ],
+          "n": 120,
+          "parse_failures": 0,
+          "mean_s": 1.409122836616795,
+          "mean_s_ci95": [
+            1.3735857630502626,
+            1.4480329440164497
+          ],
+          "output_tokens": 0,
+          "has_probs": true
+        },
+        "readout, calibrated": {
+          "accuracy": 0.8333333333333334,
+          "ece": 0.05242122385212837,
+          "brier": 0.24919039271779686,
+          "accuracy_ci95": [
+            0.7666666666666667,
+            0.9
+          ],
+          "ece_ci95": [
+            0.038931695954952265,
+            0.12193639699290684
+          ],
+          "n": 120,
+          "parse_failures": 0,
+          "mean_s": 1.409122836616795,
+          "mean_s_ci95": [
+            1.3735857630502626,
+            1.4480329440164497
+          ],
+          "output_tokens": 0,
+          "has_probs": true
+        },
+        "writes the answer": {
+          "accuracy": 0.8833333333333333,
+          "ece": null,
+          "brier": null,
+          "accuracy_ci95": [
+            0.825,
+            0.9416666666666667
+          ],
+          "ece_ci95": null,
+          "n": 120,
+          "parse_failures": 2,
+          "mean_s": 1.7786060647418103,
+          "mean_s_ci95": [
+            1.7424941020586024,
+            1.8156836863750263
+          ],
+          "output_tokens": 2,
+          "has_probs": false
+        },
+        "writes a probability": {
+          "accuracy": 0.875,
+          "ece": 0.10306293129312948,
+          "brier": 0.22083284151502458,
+          "accuracy_ci95": [
+            0.8083333333333333,
+            0.9333333333333333
+          ],
+          "ece_ci95": [
+            0.053176567656765886,
+            0.16404252925292576
+          ],
+          "n": 120,
+          "parse_failures": 2,
+          "mean_s": 17.261672453299738,
+          "mean_s_ci95": [
+            17.03335464197468,
+            17.473331236282988
+          ],
+          "output_tokens": 39.141666666666666,
+          "has_probs": true
+        }
+      },
+      "rows": [
+        {
+          "y": 1,
+          "p_readout": [
+            6.562875753617703e-06,
+            0.9999890342332136,
+            3.015215306245149e-06,
+            1.3876757266204744e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            8.066081890942282e-06,
+            0.9999847261999901,
+            5.225644755207924e-06,
+            1.9820733636941898e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            0.00020073401582984359,
+            1.6011200072884858e-05,
+            2.1111618232724446e-05,
+            0.9997621431658645
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            0.9977177579556584,
+            0.0003788716687572655,
+            0.00044983457347106613,
+            0.0014535358021132505
+          ],
+          "generated": null,
+          "verbal": null
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            0.00047314493866472434,
+            3.405802043580459e-05,
+            4.185677851642108e-05,
+            0.9994509402623831
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            1.5791636701951845e-05,
+            0.9999769561222078,
+            5.849747106915007e-06,
+            1.402493983291776e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9999875317090511,
+            6.109011181490249e-06,
+            5.0488848131259605e-06,
+            1.3103949543773556e-06
+          ],
+          "generated": "World",
+          "verbal": [
+            0.95,
+            0.02,
+            0.02,
+            0.01
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            6.183007433811675e-05,
+            0.9999347541874999,
+            2.4310912576474994e-06,
+            9.846469044871265e-07
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            0.0007120202635462342,
+            0.9992812278859481,
+            5.154786376044831e-06,
+            1.597064129617062e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.9405940594059405,
+            0.039603960396039604,
+            0.009900990099009901,
+            0.009900990099009901
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            9.784965559504094e-06,
+            8.226968439607438e-06,
+            0.00023834793700811254,
+            0.9997436401289927
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            4.175542679677417e-06,
+            0.9999905967055873,
+            3.144647181622071e-06,
+            2.0831045514872927e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            1.478384676244724e-05,
+            5.294016354159622e-05,
+            0.9999304782690763,
+            1.797720619629317e-06
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            7.0518503162716875e-06,
+            0.9999846341331958,
+            6.282653665863286e-06,
+            2.0313628220459085e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            4.060325964108177e-05,
+            8.35253245392164e-06,
+            1.2817608145243071e-05,
+            0.9999382265997598
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            7.928641986018617e-06,
+            0.999984946352991,
+            4.1310156846277705e-06,
+            2.99398933844833e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9999867481224969,
+            7.327184366580064e-06,
+            3.7616962029919305e-06,
+            2.1629969336992165e-06
+          ],
+          "generated": "World",
+          "verbal": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            0.13966526208391009,
+            0.0002289054405593064,
+            0.00028759295998582844,
+            0.8598182395155448
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9999884924814828,
+            7.329374833413312e-06,
+            2.7322287997306322e-06,
+            1.445914884135168e-06
+          ],
+          "generated": "World",
+          "verbal": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            2.9069868039061978e-05,
+            0.0001991417084457095,
+            0.9997671020659796,
+            4.686357535515507e-06
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            2.6393307996441125e-06,
+            4.000940989987405e-06,
+            5.775341719119249e-05,
+            0.9999356063110192
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9997936457737864,
+            1.4230996605689956e-05,
+            0.00019006682536550144,
+            2.0564042423791746e-06
+          ],
+          "generated": "World",
+          "verbal": [
+            0.95,
+            0.02,
+            0.02,
+            0.01
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            4.590413645276004e-05,
+            4.213412817291909e-05,
+            0.9746473717547774,
+            0.025264589980596983
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            5.5567880904799373e-05,
+            0.999942196789841,
+            1.5844389953787748e-06,
+            6.508902587967817e-07
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.95,
+            0.05,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9999922988978411,
+            5.354775183346559e-06,
+            1.5159394814996467e-06,
+            8.303874940869724e-07
+          ],
+          "generated": "World",
+          "verbal": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            2.0774647676832835e-05,
+            0.00018206657550862826,
+            0.0007780269651193179,
+            0.9990191318116952
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            3.376198079516132e-06,
+            0.9999948119647051,
+            1.1757770326934745e-06,
+            6.360601825590828e-07
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            1.6586747081125536e-05,
+            0.00016514780401120026,
+            0.9998146191614232,
+            3.6462874844311114e-06
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9992645438643548,
+            0.00023617489305634366,
+            7.899152695273586e-05,
+            0.00042028971563616585
+          ],
+          "generated": "World",
+          "verbal": [
+            0.95,
+            0.02,
+            0.01,
+            0.02
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            1.3466383003318982e-05,
+            0.9999834552365787,
+            2.278306755462674e-06,
+            8.000736623795156e-07
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.95,
+            0.05,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            0.00028838669792275763,
+            8.402878576823413e-05,
+            0.9996247687246728,
+            2.815791636249144e-06
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            1.062034459972647e-05,
+            2.2673269728590715e-05,
+            0.0972698608154007,
+            0.9026968455702711
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            7.574334818174367e-06,
+            1.152351653395589e-05,
+            0.00031667740060785414,
+            0.9996642247480402
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            1.1644841254451224e-05,
+            1.3359282294770234e-05,
+            0.0007396527857214141,
+            0.9992353430907294
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            1.66208114530289e-05,
+            0.9999766097619235,
+            5.361721332716478e-06,
+            1.407705290685193e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            0.0023428862048381935,
+            8.34809954086392e-05,
+            0.9975655923321072,
+            8.040467645897058e-06
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            0.9,
+            0.1
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            2.2805747666752545e-05,
+            0.00011684490226356208,
+            0.9998566285721641,
+            3.720777905679127e-06
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            4.02060057329867e-06,
+            0.9999925242184273,
+            2.368164871362918e-06,
+            1.0870161280984263e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            7.918887100616453e-06,
+            2.2161041007659315e-05,
+            0.5427570219496236,
+            0.45721289812226806
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            6.033421202502746e-06,
+            0.9999902279543857,
+            2.566099778968057e-06,
+            1.1725246328299894e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9999898359510266,
+            5.317500893030084e-06,
+            3.290985286976229e-06,
+            1.55556279337193e-06
+          ],
+          "generated": "World",
+          "verbal": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            2.280887397153982e-05,
+            5.507498883825815e-05,
+            0.9998944603294588,
+            2.765580773144009e-05
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            0.9,
+            0.1
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            0.0003164377612984646,
+            0.9996779974509546,
+            4.136066488220262e-06,
+            1.4287212586569598e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.9405940594059405,
+            0.039603960396039604,
+            0.009900990099009901,
+            0.009900990099009901
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            1.5437779787356114e-05,
+            9.238596717560945e-06,
+            2.454615507521876e-05,
+            0.99995077746842
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            7.901897064951779e-06,
+            2.406847551423035e-05,
+            0.9373852348017959,
+            0.06258279482562495
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            7.570002260406983e-06,
+            0.999988131069237,
+            3.0327534110999944e-06,
+            1.2661750914302665e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9999888658541172,
+            5.767354768664564e-06,
+            3.716794094776956e-06,
+            1.6499970194966325e-06
+          ],
+          "generated": "World",
+          "verbal": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            0.045254129848234195,
+            0.0003404444608232711,
+            0.9277477489490524,
+            0.02665767674189005
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            0.17334968949351737,
+            6.061503026105702e-05,
+            0.8265840236726033,
+            5.671803618211247e-06
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            0.0001116587380477843,
+            0.0007043524867016637,
+            0.999150020867593,
+            3.396790765751825e-05
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            0.9,
+            0.1
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.00011270821120686247,
+            0.0008612386238063557,
+            0.9989966912047467,
+            2.936196024012302e-05
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            5.3924321561018915e-05,
+            7.855675739313662e-05,
+            0.9998642072058056,
+            3.3117152400870866e-06
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            6.456565605372052e-06,
+            5.436828168200196e-06,
+            1.4956148474838702e-05,
+            0.9999731504577516
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            1.7258676303729273e-05,
+            0.9999752764366474,
+            4.321830614543831e-06,
+            3.143056434291073e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9999904038465677,
+            4.671551870808757e-06,
+            3.159447324835698e-06,
+            1.7651542365952019e-06
+          ],
+          "generated": "World",
+          "verbal": [
+            0.95,
+            0.02,
+            0.01,
+            0.02
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            3.389878843128405e-06,
+            0.9999944525822244,
+            1.4505129146701426e-06,
+            7.07026017880904e-07
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            1.8568903170797745e-05,
+            7.824737058883577e-05,
+            0.9999002011902612,
+            2.982535979084911e-06
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            1.6244049120193233e-05,
+            0.00010914775609929509,
+            0.9998688796599989,
+            5.7285347816239305e-06
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            0.00012389606673133717,
+            0.00018197531880393393,
+            0.9996866241402204,
+            7.504474244404878e-06
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            5.9361235678351205e-06,
+            0.9999889080391497,
+            3.053883283088401e-06,
+            2.1019539993921793e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9970274346228941,
+            1.2561338214578011e-05,
+            1.1472404378523162e-05,
+            0.002948531634512896
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.95,
+            0.02,
+            0.01,
+            0.02
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9999941152332757,
+            3.406741915192035e-06,
+            1.7023470394755044e-06,
+            7.756777694231799e-07
+          ],
+          "generated": "World",
+          "verbal": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9999954354594136,
+            2.2303748013373146e-06,
+            1.4199559297079523e-06,
+            9.14209855285622e-07
+          ],
+          "generated": "World",
+          "verbal": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            5.425431013056556e-05,
+            0.0002503684260707534,
+            0.9996882235892398,
+            7.153674558824231e-06
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            0.9,
+            0.1
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            1.1538858361838493e-05,
+            0.9999817301387064,
+            4.723044673331441e-06,
+            2.0079582583729394e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            0.00011127785959975996,
+            0.0002164577833123485,
+            0.9996688338441762,
+            3.430512911714213e-06
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            1.917278647777313e-05,
+            0.00010142742272623824,
+            0.9998764269377901,
+            2.9728530060026414e-06
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            3.198882809448642e-05,
+            8.519898609881746e-05,
+            0.9998783639257018,
+            4.448260104861632e-06
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            3.63355543553629e-05,
+            0.00019428379080503602,
+            0.9997440149303658,
+            2.536572447373627e-05
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            6.091552322579243e-06,
+            0.999987271531454,
+            4.426161263416084e-06,
+            2.21075495997529e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            3.728902733456875e-05,
+            0.00017814862564348858,
+            0.9997675712692752,
+            1.6991077746665016e-05
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            3.9345309616298207e-05,
+            0.9999552764217352,
+            3.7995798853468026e-06,
+            1.5786887630740834e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            9.137168168658516e-06,
+            0.9999872237977112,
+            2.854934901264898e-06,
+            7.840992189450376e-07
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            6.035213499808052e-06,
+            0.9999899396704834,
+            2.719204848186284e-06,
+            1.3059111684682378e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            0.6761613695055708,
+            0.0028981577378856768,
+            0.009917092934419593,
+            0.31102337982212386
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            1.1878080517627829e-05,
+            0.9999794820600475,
+            5.670529051619402e-06,
+            2.96933038316727e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9999927382543758,
+            3.83390836792595e-06,
+            2.5553661099937076e-06,
+            8.724711463062827e-07
+          ],
+          "generated": "World",
+          "verbal": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            1.0459386205818125e-05,
+            0.99998570378278,
+            2.39608112778414e-06,
+            1.4407498863777887e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            0.0015892057305453094,
+            0.00013154406749734253,
+            0.9982696319443891,
+            9.61825756811194e-06
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            2.5792086750601192e-05,
+            0.000177833574916667,
+            0.9997921392256356,
+            4.2351126971625635e-06
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            8.641241827211059e-05,
+            8.513375079746753e-05,
+            0.00015500230995608785,
+            0.9996734515209742
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9999755901263774,
+            1.5389415895592506e-05,
+            5.81712588679744e-06,
+            3.203331840333877e-06
+          ],
+          "generated": "World",
+          "verbal": [
+            0.95,
+            0.02,
+            0.01,
+            0.02
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            5.691040442987501e-05,
+            0.00016554932127712963,
+            0.9997732914637013,
+            4.248810591745256e-06
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            7.190624749428465e-06,
+            0.9999876570815973,
+            3.6926161415765393e-06,
+            1.4596775116301745e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9998612729538368,
+            3.369015636077687e-05,
+            0.00010056929372371755,
+            4.467596078684862e-06
+          ],
+          "generated": "World",
+          "verbal": [
+            0.8636363636363636,
+            0.04545454545454546,
+            0.04545454545454546,
+            0.04545454545454546
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            1.098850717387131e-05,
+            6.442132205077773e-05,
+            0.9999221939402438,
+            2.3962305315340834e-06
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            6.480796619463011e-06,
+            2.988995085064971e-05,
+            0.9992792319597642,
+            0.0006843972927657343
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            3.994758080380927e-05,
+            5.620771875997542e-05,
+            0.9554077212007785,
+            0.04449612349965773
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9999724214964373,
+            1.62211170317584e-05,
+            8.594438609244127e-06,
+            2.7629479217482074e-06
+          ],
+          "generated": null,
+          "verbal": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            1.7163051055326052e-06,
+            1.0004271475430309e-05,
+            0.9996243444178572,
+            0.00036393500556196714
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.9,
+            0.1
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            6.723032738583062e-06,
+            0.9999907383944463,
+            1.654648363272404e-06,
+            8.839244519832799e-07
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            2.1763067138221697e-05,
+            0.00017111841180516681,
+            0.9998036508492902,
+            3.4676717663811294e-06
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            2.7377105215561576e-06,
+            0.9999950230506247,
+            1.3331393526245399e-06,
+            9.060995010809729e-07
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            2.0483465242277222e-05,
+            0.9999752347584524,
+            3.383520873193551e-06,
+            8.982554320982821e-07
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            0.002312321696482628,
+            0.997638082864066,
+            4.2564551469836865e-05,
+            7.030887981431423e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9999949705203939,
+            2.954663467334028e-06,
+            1.3671237759816372e-06,
+            7.076923627061382e-07
+          ],
+          "generated": "World",
+          "verbal": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            0.0004075799867423306,
+            0.00022091468508657477,
+            0.9993649879720791,
+            6.517356092153399e-06
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            1.0098479328172354e-05,
+            6.534962107865441e-05,
+            0.9999048530626694,
+            1.9698836923738927e-05
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            2.4107157666717215e-05,
+            5.5512014385038286e-06,
+            6.6425750748235e-06,
+            0.9999636990658198
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            1.1605755273068081e-05,
+            1.3107020470129865e-05,
+            0.006105727788522637,
+            0.9938695594357342
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            3.883255447005682e-05,
+            0.00011612867440712678,
+            0.9998421091138238,
+            2.9296572991778188e-06
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            3.196688053768439e-05,
+            8.237211242630331e-05,
+            0.9997493481154595,
+            0.00013631289157655944
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            0.9,
+            0.1
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9999932219968147,
+            4.068631236372469e-06,
+            1.8362978791526323e-06,
+            8.730740696048048e-07
+          ],
+          "generated": "World",
+          "verbal": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9979334259597018,
+            0.0017900610613946035,
+            0.00017751476310045672,
+            9.899821580302639e-05
+          ],
+          "generated": "Sports",
+          "verbal": null
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9999656509168192,
+            2.2758315071171553e-05,
+            7.665904116027864e-06,
+            3.924863993513105e-06
+          ],
+          "generated": "World",
+          "verbal": [
+            0.95,
+            0.02,
+            0.01,
+            0.02
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9999726323037739,
+            1.7573809527154237e-05,
+            5.66128333668804e-06,
+            4.132603362305912e-06
+          ],
+          "generated": "World",
+          "verbal": [
+            0.95,
+            0.02,
+            0.01,
+            0.02
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9974945726282245,
+            0.0016105160350743408,
+            0.00013085063683725815,
+            0.000764060699863848
+          ],
+          "generated": "World",
+          "verbal": [
+            0.95,
+            0.02,
+            0.01,
+            0.02
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            6.991475898826999e-06,
+            6.1464875938468234e-06,
+            2.0737216614319135e-05,
+            0.999966124819893
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            1.2262574732898245e-05,
+            0.9999782366230008,
+            6.203546239496082e-06,
+            3.2972560269303083e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            4.684350553061856e-06,
+            0.9999911815414221,
+            2.507036550529583e-06,
+            1.6270714742306192e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            6.744737214359029e-06,
+            1.8569010349266865e-05,
+            0.8449965778675226,
+            0.15497810838491394
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9999937810260885,
+            3.502767222595972e-06,
+            1.9550462913167634e-06,
+            7.611603976328419e-07
+          ],
+          "generated": "World",
+          "verbal": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            3.179184530248489e-06,
+            0.9999928568027121,
+            2.6353449932613398e-06,
+            1.328667764445961e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 2,
+          "p_readout": [
+            1.7148094961624484e-05,
+            8.089382919843558e-05,
+            0.999898719291138,
+            3.238784701855683e-06
+          ],
+          "generated": "Business",
+          "verbal": [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            5.858813882289456e-06,
+            1.9467847957828237e-05,
+            0.48049126628349104,
+            0.5194834070546688
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            2.75601609256427e-05,
+            2.7453080576572547e-05,
+            0.000154516322308628,
+            0.9997904704361892
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            2.7205532471027805e-05,
+            0.9999684160743086,
+            3.297775270140948e-06,
+            1.0806179502954148e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 3,
+          "p_readout": [
+            5.053081372479961e-06,
+            1.1931324306047154e-05,
+            0.9054660265221461,
+            0.09451698907217528
+          ],
+          "generated": "Technology",
+          "verbal": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            9.20592283333689e-06,
+            0.9999878949656378,
+            2.1345489133726004e-06,
+            7.645626155889483e-07
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 0,
+          "p_readout": [
+            0.9999921865262184,
+            4.921835453022687e-06,
+            2.0447021023280676e-06,
+            8.469362262275177e-07
+          ],
+          "generated": "World",
+          "verbal": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "y": 1,
+          "p_readout": [
+            1.8359607101091978e-05,
+            0.9999750031264745,
+            4.4992495429484994e-06,
+            2.1380168815103745e-06
+          ],
+          "generated": "Sports",
+          "verbal": [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ]
+        }
+      ]
+    }
+  },
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "seconds_total": 3878.4802069699945
+}

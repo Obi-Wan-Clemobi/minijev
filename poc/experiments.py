@@ -12,6 +12,10 @@
                  minijev readout: AG News accuracy + calibration + speed, and a direct prefill/decode
                  cost measurement
     fanout       E10, many questions on one state: six methods over 1 / 4 / 13 questions
+    quality      E11, labelled BoolQ + AG News: readout (raw, calibrated) vs the same model writing its
+                 answer or a probability: accuracy, ECE, parse failures, time per question
+    same_format  E12, one request answered in minijev's JSON: read out vs the same model writing that JSON
+    order_bias   E13, AG News in 4 option orders: listwise vs averaged vs debiased vs pointwise
     all          everything above
 
 Results go to poc/results/<name>[-<model>].json. Downloads are cached in poc/data/.
@@ -34,8 +38,8 @@ from pathlib import Path
 import torch
 from transformers import DynamicCache
 
-from minijev_poc import (CONTENT_FREE_STATE, MODEL, MODES, SYSTEM, Engine, Settings, answer, ask, choice_block, class_logits,
-                         noul_block, raw_scores)
+from minijev_poc import (CONTENT_FREE_STATE, MODEL, MODES, SYSTEM, Engine, Settings, answer, ask, choice_block,
+                         class_logits, noul_block, raw_scores, render_inline)
 
 HERE = Path(__file__).parent
 DATA, RESULTS = HERE / "data", HERE / "results"
@@ -951,10 +955,498 @@ def calibration(engine: Engine, n: int = 400) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# E11: quality on labelled data. The same model answers the same questions in four ways.
+
+
+def logit(p: float, eps: float = 1e-6) -> float:
+    p = min(max(p, eps), 1 - eps)
+    return math.log(p / (1 - p))
+
+
+def verbal_probability(text: str) -> float | None:
+    """A written probability ("0.8", "80%", "Probability: 0.8") as a float in [0, 1]. None = unparseable."""
+    m = re.search(r"(\d+(?:\.\d+)?)\s*(%?)", text)
+    if not m:
+        return None
+    v = float(m.group(1)) / (100 if m.group(2) or float(m.group(1)) > 1 else 1)
+    return v if 0 <= v <= 1 else None
+
+
+def fit_temperature_multiclass(logits: list[list[float]], labels: list[int]) -> float:
+    """T that minimizes the NLL of softmax(z / T), by golden-section search on log T."""
+    def nll_t(log_t: float) -> float:
+        t = math.exp(log_t)
+        total = 0.0
+        for z, y in zip(logits, labels):
+            m = max(v / t for v in z)
+            total -= z[y] / t - m - math.log(sum(math.exp(v / t - m) for v in z))
+        return total / len(labels)
+    a, b, g = -2.0, 3.0, (math.sqrt(5) - 1) / 2
+    for _ in range(60):
+        c, d = b - g * (b - a), a + g * (b - a)
+        a, b = (a, d) if nll_t(c) < nll_t(d) else (c, b)
+    return math.exp((a + b) / 2)
+
+
+def cross_fit_multiclass(logits: list[list[float]], labels: list[int]) -> list[list[float]]:
+    """Two-fold temperature scaling: fit T on one half, apply it to the other. Out-of-fold probabilities."""
+    half, out = len(logits) // 2, [None] * len(logits)
+    for fit_idx, apply_idx in ((range(half, len(logits)), range(half)), (range(half), range(half, len(logits)))):
+        t = fit_temperature_multiclass([logits[i] for i in fit_idx], [labels[i] for i in fit_idx])
+        for i in apply_idx:
+            out[i] = [v / t for v in logits[i]]
+    return [softmax_list(z) for z in out]
+
+
+def softmax_list(z: list[float]) -> list[float]:
+    m = max(z)
+    e = [math.exp(v - m) for v in z]
+    return [v / sum(e) for v in e]
+
+
+def binary_entry(z: list[float], y: list[int], seconds: list[float], out_tokens: float, fails: int = 0,
+                 has_probs: bool = True) -> dict:
+    """binary_metrics plus 95% bootstrap intervals for accuracy and ECE, and the time per question."""
+    pairs = list(zip(z, y))
+    m = binary_metrics(z, y)
+    m.pop("reliability")
+    for k in ("accuracy", "ece"):
+        m[f"{k}_ci95"] = bootstrap_ci(pairs, lambda s, k=k: binary_metrics([a for a, _ in s], [b for _, b in s])[k], n_boot=1000)
+    if not has_probs:
+        m["ece"] = m["ece_ci95"] = m["brier"] = m["nll"] = None
+    return {**m, "n": len(y), "parse_failures": fails, **mean_ci(seconds), "output_tokens": out_tokens, "has_probs": has_probs}
+
+
+def multiclass_entry(probs: list[list[float]], y: list[int], seconds: list[float], out_tokens: float,
+                     fails: int = 0, has_probs: bool = True) -> dict:
+    m = with_ci(probs, y)
+    if not has_probs:
+        m["ece"] = m["ece_ci95"] = m["brier"] = None
+    return {**m, "n": len(y), "parse_failures": fails, **mean_ci(seconds), "output_tokens": out_tokens, "has_probs": has_probs}
+
+
+def quality(engine: Engine, n_boolq: int = 200, n_ag: int = 120) -> dict:
+    """E11. BoolQ (yes/no) and AG News (4 topics), each question answered four ways by the same model:
+    readout; readout with 2-fold temperature scaling; the model writes its answer; the model writes a probability.
+    Unparsed replies count as wrong, and get an uninformative probability (0.5, or uniform) for ECE and Brier.
+    """
+    generate(engine, "warm up", 2)
+    out = {}
+
+    # ---- BoolQ: a yes/no question about a passage (Noul)
+    y, z_read, t_read, a_gen, t_gen, k_gen, p_verb, t_verb, k_verb = [], [], [], [], [], [], [], [], []
+    t_start = time.perf_counter()
+    for i, ex in enumerate(boolq(n_boolq)):
+        question = ex["question"][0].upper() + ex["question"][1:] + "?"
+        y.append(int(ex["answer"]))
+        t0 = time.perf_counter()
+        raw, _ = raw_scores(engine, {"state": ex["passage"], "questions": {"q": {"type": "noul", "instructions": question}}})
+        t_read.append(time.perf_counter() - t0)
+        z_read.append(raw["q"]["logits"][0] - raw["q"]["logits"][1])
+        head = f"STATE:\n{ex['passage']}\n\nQUESTION: {question}\n"
+        g = generate(engine, head + "Answer with Yes or No.", 4)
+        word = g["text"].strip().strip(".!*\"'").lower()
+        a_gen.append(1 if word.startswith("yes") else 0 if word.startswith("no") else None)
+        t_gen.append(g["seconds"]); k_gen.append(g["new_tokens"])
+        g = generate(engine, head + "How likely is it that the answer is yes? Reply with only a probability between 0 and 1.", 8)
+        p_verb.append(verbal_probability(g["text"]))
+        t_verb.append(g["seconds"]); k_verb.append(g["new_tokens"])
+        if (i + 1) % 50 == 0:
+            print(f"  BoolQ {i + 1}/{n_boolq}  ({time.perf_counter() - t_start:.0f}s)", flush=True)
+    wrong = lambda yi: logit(0.01) if yi else logit(0.99)  # an unparsed answer counts as wrong
+    z_gen = [logit(0.99) if a == 1 else logit(0.01) if a == 0 else wrong(yi) for a, yi in zip(a_gen, y)]
+    z_verb = [logit(p) if p is not None else 0.0 for p in p_verb]
+    verb_correct = [p is not None and (p > 0.5) == bool(yi) for p, yi in zip(p_verb, y)]
+    methods = {
+        "readout": binary_entry(z_read, y, t_read, 0),
+        "readout, calibrated": binary_entry(cross_fit(z_read, y, slope_only=True), y, t_read, 0),
+        "writes the answer": binary_entry(z_gen, y, t_gen, statistics.mean(k_gen), sum(a is None for a in a_gen), has_probs=False),
+        "writes a probability": binary_entry(z_verb, y, t_verb, statistics.mean(k_verb), sum(p is None for p in p_verb)),
+    }
+    methods["writes a probability"]["accuracy"] = sum(verb_correct) / len(y)  # unparsed = wrong, not a coin flip
+    methods["writes a probability"]["accuracy_ci95"] = bootstrap_ci(verb_correct, statistics.mean)
+    out["boolq"] = {"n": n_boolq, "base_rate": sum(y) / len(y), "chance": max(sum(y), len(y) - sum(y)) / len(y),
+                    "methods": methods,
+                    "rows": [{"y": yi, "p_readout": sigmoid(zr), "generated": a, "verbal": pv}
+                             for yi, zr, a, pv in zip(y, z_read, a_gen, p_verb)]}
+
+    # ---- AG News: pick the topic of a news article (Choice)
+    keys = list(AG_OPTIONS)
+    q = {"type": "choice", "instructions": AG_QUESTION, "criteria": AG_OPTIONS}
+    ask_probs = ("Reply with a JSON object that maps every option name to the probability that it is the right "
+                 "answer. The probabilities must add up to 1. Reply with the JSON object only.")
+    y, logits, t_read, a_gen, t_gen, k_gen, p_verb, t_verb, k_verb = [], [], [], [], [], [], [], [], []
+    t_start = time.perf_counter()
+    for i, ex in enumerate(ag_news(n_ag)):
+        y.append(ex["label"])
+        t0 = time.perf_counter()
+        raw, _ = raw_scores(engine, {"state": ex["text"], "questions": {"q": q}})
+        t_read.append(time.perf_counter() - t0)
+        logits.append(raw["q"]["logits"])
+        head = f"STATE:\n{ex['text']}\n\nQUESTION: {AG_QUESTION}\nOPTIONS:\n{options_text(AG_OPTIONS)}\n"
+        g = generate(engine, head + "Answer with the name of the best option only.", 10)
+        a_gen.append(match_option(g["text"], keys))
+        t_gen.append(g["seconds"]); k_gen.append(g["new_tokens"])
+        g = generate(engine, head + ask_probs, 16 * len(keys) + 16)
+        p_verb.append(parse_probs_lenient(g["text"], keys))
+        t_verb.append(g["seconds"]); k_verb.append(g["new_tokens"])
+        if (i + 1) % 30 == 0:
+            print(f"  AG News {i + 1}/{n_ag}  ({time.perf_counter() - t_start:.0f}s)", flush=True)
+    uniform = [1 / len(keys)] * len(keys)
+    onehot = lambda a, yi: [1.0 if k == a else 0.0 for k in keys] if a else [1.0 if j == (yi + 1) % len(keys) else 0.0 for j in range(len(keys))]
+    methods = {
+        "readout": multiclass_entry([softmax_list(z) for z in logits], y, t_read, 0),
+        "readout, calibrated": multiclass_entry(cross_fit_multiclass(logits, y), y, t_read, 0),
+        "writes the answer": multiclass_entry([onehot(a, yi) for a, yi in zip(a_gen, y)], y, t_gen, statistics.mean(k_gen),
+                                              sum(a is None for a in a_gen), has_probs=False),
+        "writes a probability": multiclass_entry([p if p else uniform for p in p_verb], y, t_verb, statistics.mean(k_verb),
+                                                 sum(p is None for p in p_verb)),
+    }
+    verb_correct = [p is not None and max(range(len(keys)), key=p.__getitem__) == yi for p, yi in zip(p_verb, y)]
+    methods["writes a probability"]["accuracy"] = sum(verb_correct) / len(y)
+    methods["writes a probability"]["accuracy_ci95"] = bootstrap_ci(verb_correct, statistics.mean)
+    out["ag_news"] = {"n": n_ag, "chance": 0.25, "methods": methods,
+                      "rows": [{"y": yi, "p_readout": softmax_list(z), "generated": a, "verbal": pv}
+                               for yi, z, a, pv in zip(y, logits, a_gen, p_verb)]}
+
+    for task, r in out.items():
+        print(f"\n{task} (n={r['n']}). [..] = 95% bootstrap interval")
+        print(f"{'method':24s} {'acc':>6s} {'acc CI':>13s} {'ECE':>6s} {'fails':>6s} {'s/q':>6s} {'out tok':>8s}")
+        for name, m in r["methods"].items():
+            ece = f"{m['ece']:6.3f}" if m["ece"] is not None else f"{'—':>6s}"
+            ci = m["accuracy_ci95"]
+            print(f"{name:24s} {m['accuracy']:6.3f} [{ci[0]:.3f},{ci[1]:.3f}] {ece} {m['parse_failures']:6d} "
+                  f"{m['mean_s']:6.2f} {m['output_tokens']:8.1f}")
+    return {"tasks": out}
+
+
+def same_format_prompt(doc: str, qs: dict) -> tuple[str, dict]:
+    """The prompt that asks the model to write minijev's response itself, and the JSON shape it must follow."""
+    lines, shape = [f"STATE:\n{doc}", "", "Answer every question below about the STATE.", ""], {}
+    for qid, q in qs.items():
+        text = render_inline(q["instructions"])
+        if q["type"] == "noul":
+            crit = q.get("criteria") or {}
+            lines.append(f"{qid} (yes/no): {text}")
+            for side, word in (("true", "Yes"), ("false", "No")):
+                if crit.get(side):
+                    lines.append(f"  {word} means: {render_inline(crit[side])}")
+            shape[qid] = {"noul": 0.0}
+        elif q["type"] == "choice":
+            lines.append(f"{qid} (pick one option): {text}")
+            lines += [f"  - {k}" + (f": {render_inline(d)}" if d is not None else "") for k, d in q["criteria"].items()]
+            shape[qid] = {"choice": "<option name>", "probabilities": {k: 0.0 for k in q["criteria"]}}
+        else:
+            lines.append(f"{qid} (scale, lowest first): {text}")
+            lines += [f"  {i}: {render_inline(level)}" for i, level in enumerate(q["criteria"])]
+            shape[qid] = {"score": 0.0, "probabilities": {str(i): 0.0 for i in range(len(q["criteria"]))}}
+        lines.append("")
+    lines += ["Reply with only a JSON object in exactly this shape. Replace every 0.0 with your number.",
+              "noul = the probability of yes. The probabilities of one question add up to 1.",
+              "score = the expected level: the sum of level × probability.",
+              json.dumps(shape)]
+    return "\n".join(lines), shape
+
+
+def check_written(parsed: dict | None, qs: dict) -> dict:
+    """Per question: the value the model wrote, or, in plain words, why code cannot use it."""
+    out = {}
+    for qid, q in qs.items():
+        if parsed is None:
+            out[qid] = {"ok": False, "problem": "The reply is not valid JSON, so no answer can be read from it."}
+            continue
+        a = parsed.get(qid)
+        if not isinstance(a, dict):
+            out[qid] = {"ok": False, "problem": f'The reply has no "{qid}" at the top level of the JSON. It left it out, '
+                                               "or put it inside another question."}
+            continue
+        try:
+            if q["type"] == "noul":
+                v = float(a["noul"])
+                assert 0 <= v <= 1, f'"noul" is {v}, but a probability must be between 0 and 1.'
+                out[qid] = {"ok": True, "noul": v}
+            else:
+                probs = a["probabilities"]
+                if not isinstance(probs, dict):
+                    raise ValueError('"probabilities" is not a list of name: number pairs.')
+                probs = {str(k): float(v) for k, v in probs.items()}
+                if q["type"] == "choice":
+                    names = set(q["criteria"])
+                    assert set(probs) == names, f'"probabilities" must name exactly the options {sorted(names)}; it has {sorted(probs)}.'
+                    assert a["choice"] in names, f'"choice" is "{a["choice"]}", which is not one of the options.'
+                    out[qid] = {"ok": True, "choice": a["choice"], "probabilities": probs,
+                                "sums_to_1": abs(sum(probs.values()) - 1) < 0.02}
+                else:
+                    levels = {str(i) for i in range(len(q["criteria"]))}
+                    assert set(probs) == levels, f'"probabilities" must name the levels {sorted(levels)}; it has {sorted(probs)}.'
+                    out[qid] = {"ok": True, "score": float(a["score"]), "probabilities": probs,
+                                "sums_to_1": abs(sum(probs.values()) - 1) < 0.02}
+        except KeyError as e:
+            out[qid] = {"ok": False, "problem": f"The answer is missing the field {e}."}
+        except (TypeError, ValueError) as e:
+            out[qid] = {"ok": False, "problem": str(e) if str(e).startswith('"') else "A value that must be a number is not a number."}
+        except AssertionError as e:
+            out[qid] = {"ok": False, "problem": str(e)}
+    return out
+
+
+class StructuredWriter:
+    """Structured output, the way an AI API with an enforced JSON format works.
+
+    The program writes every fixed part of the JSON (braces, keys, quotes) itself; those tokens are fed to the
+    model in one pass per piece. The model decides only the content, one token per step, and only among valid
+    tokens: the digits of a number, or the tokens of one of the option names. So the reply is always valid.
+    """
+
+    def __init__(self, engine: Engine, prompt: str):
+        self.e, self.cache, self.text, self.decided, self.forced = engine, DynamicCache(), "", 0, 0
+        ids = engine.tok.apply_chat_template([{"role": "system", "content": SYSTEM}, {"role": "user", "content": prompt}],
+                                             add_generation_prompt=True)
+        self.prompt_tokens = len(ids)
+        self._run(ids)
+        self.digits = [engine.tok.encode(d, add_special_tokens=False)[0] for d in "0123456789"]
+
+    def _run(self, ids: list[int]) -> None:
+        self.logits = self.e.model(torch.tensor([ids]), past_key_values=self.cache, use_cache=True).logits[0, -1]
+
+    def force(self, text: str) -> None:
+        ids = self.e.tok.encode(text, add_special_tokens=False)
+        self._run(ids)
+        self.forced += len(ids)
+        self.text += text
+
+    def pick(self, allowed: list[int]) -> int:
+        best = max(allowed, key=lambda t: self.logits[t].item())
+        self._run([best])
+        self.decided += 1
+        self.text += self.e.tok.decode([best])
+        return best
+
+    def number(self, max_first: int = 1) -> float:
+        """A number d.dd, first digit 0..max_first. For a probability (max_first 1), 1 is written as 1.00."""
+        first = self.digits.index(self.pick(self.digits[:max_first + 1]))
+        if max_first == 1 and first == 1:
+            self.force(".00")
+            return 1.0
+        self.force(".")
+        d1 = self.digits.index(self.pick(self.digits))
+        d2 = self.digits.index(self.pick(self.digits))
+        return first + d1 / 10 + d2 / 100
+
+    def option(self, names: list[str]) -> str:
+        """One of the names, token by token; ends with the closing quote."""
+        seqs = {n: self.e.tok.encode(n + '"', add_special_tokens=False) for n in names}
+        step, alive = 0, list(names)
+        while True:
+            t = self.pick(sorted({seqs[n][step] for n in alive if len(seqs[n]) > step}))
+            alive = [n for n in alive if len(seqs[n]) > step and seqs[n][step] == t]
+            step += 1
+            done = [n for n in alive if len(seqs[n]) == step]
+            if done:
+                return done[0]
+
+
+@torch.inference_mode()
+def generate_structured(engine: Engine, prompt: str, qs: dict) -> dict:
+    """The model writes minijev's response JSON with the format enforced. Returns the parsed JSON and the cost."""
+    t0 = time.perf_counter()
+    w = StructuredWriter(engine, prompt)
+    out: dict = {}
+    w.force("{")
+    for i, (qid, q) in enumerate(qs.items()):
+        w.force(("" if i == 0 else ", ") + json.dumps(qid) + ": {")
+        if q["type"] == "noul":
+            w.force('"noul": ')
+            out[qid] = {"noul": w.number()}
+        elif q["type"] == "choice":
+            w.force('"choice": "')
+            choice = w.option(list(q["criteria"]))
+            probs = {}
+            for j, k in enumerate(q["criteria"]):
+                w.force((', "probabilities": {' if j == 0 else ", ") + json.dumps(k) + ": ")
+                probs[k] = w.number()
+            out[qid] = {"choice": choice, "probabilities": probs}
+        else:
+            n = len(q["criteria"])
+            w.force('"score": ')
+            score = w.number(max_first=n - 1)
+            probs = {}
+            for j in range(n):
+                w.force((', "probabilities": {' if j == 0 else ", ") + f'"{j}": ')
+                probs[str(j)] = w.number()
+            out[qid] = {"score": score, "probabilities": probs}
+        w.force("}" if q["type"] == "noul" else "}}")
+    w.force("}")
+    return {"parsed": out, "text": w.text, "seconds": time.perf_counter() - t0, "decided_tokens": w.decided,
+            "forced_tokens": w.forced, "prompt_tokens": w.prompt_tokens}
+
+
+def same_format_run(engine: Engine, body: dict, settings: Settings | None = None, mode: str = "packed") -> dict:
+    """One request two ways: minijev's readout, and the same model writing minijev's response JSON itself."""
+    doc = body["state"] if isinstance(body["state"], str) else json.dumps(body["state"], indent=2, ensure_ascii=False)
+    prompt, shape = same_format_prompt(doc, body["questions"])
+    budget = int(len(engine.tok.encode(json.dumps(shape))) * 1.5) + 24  # room for every digit, and a little more
+    t0 = time.perf_counter()
+    readout = ask(engine, body, mode, settings=settings or Settings())
+    t_readout = time.perf_counter() - t0
+    g = generate(engine, prompt, budget)
+    parsed = parse_json(g["text"])
+    written = check_written(parsed, body["questions"])
+    st = generate_structured(engine, prompt, body["questions"])
+    structured = check_written(st["parsed"], body["questions"])
+
+    def agreement(written: dict) -> dict:
+        out = {}
+        for qid, q in body["questions"].items():
+            a, w = readout["answers"][qid], written[qid]
+            if not w["ok"]:
+                out[qid] = {"agree": False, "note": w["problem"]}
+            elif q["type"] == "noul":
+                out[qid] = {"agree": (a["noul"] > 0.5) == (w["noul"] > 0.5), "note": "same side of 0.5"}
+            elif q["type"] == "choice":
+                out[qid] = {"agree": a["choice"] == w["choice"], "note": "same option"}
+            else:
+                out[qid] = {"agree": round(a["score"]) == round(w["score"]), "note": "same rounded level"}
+        return out
+    compare = agreement(written)
+    return {
+        "model": engine.name,
+        "readout": {"seconds": t_readout, "output_tokens": 0, "response": readout["answers"],
+                    "input_tokens": readout["usage"]["input_tokens"]},
+        "written": {"seconds": g["seconds"], "output_tokens": g["new_tokens"], "prompt_tokens": g["prompt_tokens"],
+                    "token_budget": budget, "text": g["text"], "valid_json": parsed is not None,
+                    "answers": written, "usable": sum(w["ok"] for w in written.values())},
+        "structured": {"seconds": st["seconds"], "output_tokens": st["decided_tokens"], "forced_tokens": st["forced_tokens"],
+                       "prompt_tokens": st["prompt_tokens"], "text": st["text"], "valid_json": True,
+                       "answers": structured, "usable": sum(w["ok"] for w in structured.values())},
+        "compare": compare, "compare_structured": agreement(structured), "prompt": prompt,
+    }
+
+
+SUPPORT_TICKET = {
+    "state": "Hi, my Stripe integration has failed for 3 days. Losing sales. Help ASAP.",
+    "questions": {
+        "urgency": {"type": "noul", "instructions": "Does this message express urgency?"},
+        "team": {"type": "choice", "instructions": "Which team should handle this?", "criteria": {
+            "billing": "Payments, invoices, refunds", "technical": "Integrations, bugs, outages", "sales": "Pricing, new plans"}},
+        "tone": {"type": "score", "instructions": "How upset is the customer?", "criteria": ["calm", "mildly annoyed", "frustrated", "angry"]},
+    },
+}
+
+
+def same_format(engine: Engine, repeats: int = 3) -> dict:
+    """E12: the same request answered as minijev's JSON, read out vs written by the same model. Median of repeats."""
+    shoes = {"state": SHOES, "questions": {label.split(": ")[1].replace(" ", "_"): q
+                                           for label, state, q, _ in JEV_DOC_CASES if state == SHOES}}
+    generate(engine, "warm up", 2)
+    out = {}
+    for name, body in (("support_ticket", SUPPORT_TICKET), ("jev_shoes_5_choices", shoes)):
+        runs = [same_format_run(engine, body) for _ in range(repeats)]
+        r, w = [x["readout"]["seconds"] for x in runs], [x["written"]["seconds"] for x in runs]
+        st = [x["structured"]["seconds"] for x in runs]
+        last = runs[-1]
+        out[name] = {"questions": len(body["questions"]), "readout_seconds": statistics.median(r), "readout_all": r,
+                     "written_seconds": statistics.median(w), "written_all": w,
+                     "written_tokens": [x["written"]["output_tokens"] for x in runs],
+                     "usable": [x["written"]["usable"] for x in runs], "valid_json": [x["written"]["valid_json"] for x in runs],
+                     "agree": [sum(c["agree"] for c in x["compare"].values()) for x in runs],
+                     "structured_seconds": statistics.median(st), "structured_all": st,
+                     "structured_decided_tokens": [x["structured"]["output_tokens"] for x in runs],
+                     "structured_forced_tokens": [x["structured"]["forced_tokens"] for x in runs],
+                     "structured_usable": [x["structured"]["usable"] for x in runs],
+                     "structured_agree": [sum(c["agree"] for c in x["compare_structured"].values()) for x in runs],
+                     "example": last}
+        print(f"{name}: readout {statistics.median(r):.2f}s | written {statistics.median(w):.2f}s "
+              f"({statistics.median(w) / statistics.median(r):.1f}x), tokens {out[name]['written_tokens']}, "
+              f"usable {out[name]['usable']}/{len(body['questions'])}, agree {out[name]['agree']} | structured "
+              f"{statistics.median(st):.2f}s, decided {out[name]['structured_decided_tokens']}, "
+              f"usable {out[name]['structured_usable']}, agree {out[name]['structured_agree']}")
+    return out
+
+
+# ---------------------------------------------------------------------------
+# E13: the order flaw. A listwise Choice can prefer a letter position over the content. Three fixes, measured.
+
+
+def order_bias(engine: Engine, n: int = 120, orders_per_item: int = 4, seed: int = 0) -> dict:
+    """AG News, each article asked in several option orders (the original plus random shuffles).
+
+    One packed pass per (article, order) holds three questions: listwise (1 branch), averaged over every rotation
+    (k branches) and pointwise (k branches). A fourth method, debiased, divides the listwise probabilities by the
+    model's measured liking for each letter position (fitted on the other half of the articles; PriDe-style).
+    """
+    keys, k = list(AG_OPTIONS), len(AG_OPTIONS)
+    rng = random.Random(seed)
+    rows = []
+    t_start = time.perf_counter()
+    for i, ex in enumerate(ag_news(n)):
+        orders = [list(range(k))] + [rng.sample(range(k), k) for _ in range(orders_per_item - 1)]
+        for order in orders:
+            crit = {keys[j]: AG_OPTIONS[keys[j]] for j in order}
+            q = {"type": "choice", "instructions": AG_QUESTION, "criteria": crit}
+            qs = {m: {**q, "choice_mode": m} for m in ("listwise", "averaged", "pointwise")}
+            raw, _ = raw_scores(engine, {"state": ex["text"], "questions": qs})
+            canon = lambda p: [p[order.index(c)] for c in range(k)]  # back to the fixed option order
+            pos = softmax_list(raw["listwise"]["logits"])  # by letter position
+            rows.append({"item": i, "y": ex["label"], "order": order, "pos": pos,
+                         "listwise": canon(pos),
+                         "averaged": canon(softmax_list(raw["averaged"]["logits"])),
+                         "pointwise": canon(softmax_list(raw["pointwise"]["logits"]))})
+        if (i + 1) % 20 == 0:
+            print(f"  {i + 1}/{n}  ({time.perf_counter() - t_start:.0f}s)", flush=True)
+
+    # Debiased: the average probability per letter position, over articles whose options were shuffled, is the
+    # model's liking for that position (the content averages out). Fit on one half of the articles, apply to the other.
+    half = n // 2
+    for fit, apply in ((range(half, n), range(half)), (range(half), range(half, n))):
+        fit_rows = [r for r in rows if r["item"] in fit]
+        prior = [statistics.mean(r["pos"][j] for r in fit_rows) for j in range(k)]
+        for r in rows:
+            if r["item"] in apply:
+                d = [r["pos"][j] / prior[j] for j in range(k)]
+                d = [v / sum(d) for v in d]
+                r["debiased"] = [d[r["order"].index(c)] for c in range(k)]
+    liking = [statistics.mean(r["pos"][j] for r in rows) for j in range(k)]
+    picks = [statistics.mean(max(range(k), key=r["pos"].__getitem__) == j for r in rows) for j in range(k)]
+    truth = [statistics.mean(r["order"].index(r["y"]) == j for r in rows) for j in range(k)]
+
+    methods = {}
+    for m, branches in (("listwise", 1), ("debiased", 1), ("averaged", k), ("pointwise", k)):
+        by_item: dict = {}
+        for r in rows:
+            by_item.setdefault(r["item"], []).append(r)
+        winners = {i: [max(range(k), key=r[m].__getitem__) for r in rs] for i, rs in by_item.items()}
+        flips = [len(set(w)) > 1 for w in winners.values()]
+        spread = [max(max(r[m][c] for r in rs) - min(r[m][c] for r in rs) for c in range(k)) for rs in by_item.values()]
+        item_acc = [statistics.mean(w == rs[0]["y"] for w in winners[i]) for i, rs in by_item.items()]
+        met = multiclass_metrics([r[m] for r in rows], [r["y"] for r in rows])
+        ece_ci = bootstrap_ci(list(by_item.values()), lambda s: multiclass_metrics(
+            [r[m] for rs in s for r in rs], [r["y"] for rs in s for r in rs])["ece"], n_boot=500)
+        methods[m] = {"branches": branches, "flip_rate": statistics.mean(flips),
+                      "flip_rate_ci95": bootstrap_ci(flips, statistics.mean),
+                      "mean_max_dp": statistics.mean(spread),
+                      "accuracy": statistics.mean(item_acc), "accuracy_ci95": bootstrap_ci(item_acc, statistics.mean),
+                      "ece": met["ece"], "ece_ci95": ece_ci}
+
+    print(f"\nAG News, n={n} articles x {orders_per_item} option orders. [..] = 95% bootstrap interval")
+    print("position:            " + "  ".join(f"{'ABCD'[j]:>6s}" for j in range(k)))
+    print("mean probability:    " + "  ".join(f"{v:6.3f}" for v in liking))
+    print("model picks:         " + "  ".join(f"{v:6.3f}" for v in picks))
+    print("right answer is at:  " + "  ".join(f"{v:6.3f}" for v in truth))
+    print(f"{'method':10s} {'branches':>8s} {'flips':>6s} {'flips CI':>13s} {'max dp':>7s} {'acc':>6s} {'acc CI':>13s} {'ECE':>6s}")
+    for m, r in methods.items():
+        print(f"{m:10s} {r['branches']:8d} {r['flip_rate']:6.3f} [{r['flip_rate_ci95'][0]:.2f},{r['flip_rate_ci95'][1]:.2f}] "
+              f"{r['mean_max_dp']:7.3f} {r['accuracy']:6.3f} [{r['accuracy_ci95'][0]:.2f},{r['accuracy_ci95'][1]:.2f}] {r['ece']:6.3f}")
+    return {"n": n, "orders_per_item": orders_per_item,
+            "position": {"mean_probability": liking, "model_picks": picks, "right_answer_at": truth},
+            "methods": methods}
+
+
+# ---------------------------------------------------------------------------
 
 EXPERIMENTS = {"demo": demo, "tree": tree, "latency": latency, "jevdocs": jevdocs, "permutation": permutation,
                "calibration": calibration, "llm_vs_minijev": llm_vs_minijev,
-               "fanout": lambda engine: {"rows": fan_out(engine, 500)}}
+               "fanout": lambda engine: {"rows": fan_out(engine, 500)}, "quality": quality, "same_format": same_format, "order_bias": order_bias}
 
 
 def tag(model: str) -> str:

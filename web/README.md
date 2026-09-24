@@ -13,9 +13,10 @@ The API address comes from `NEXT_PUBLIC_API_URL` (default `http://localhost:8000
 | Page | What it shows |
 |---|---|
 | Playground | The question editor (Noul, Choice options, Score levels, or raw JSON), the answers, and the calibration dials. The dials re-score the returned logits in the page (`lib/scoring.ts`), so they need no model run. |
-| Compare | Your request through the readout, "1 token + logprobs", generated names, and one JSON call. Also the recorded 13-question results. |
+| Compare | Everything uses the same model; only the way of getting the answer changes. 1: your request answered in minijev's JSON format, read out vs written freely vs written with the format enforced. 2: quality on questions with known answers (E11). 3: other ways to ask several questions, and the recorded 13-question speed results. |
 | Under the hood | The prefix tree, the attention mask to scale, and the tokens of each branch with their position ids. |
-| Findings | Charts from `poc/results/*.json`. |
+| Findings | Charts from `poc/results/*.json`, including the option-order flaw and its fixes (E13). |
+| Weaknesses | The register in `docs/WEAKNESSES.md` as expandable rows with filters. The page reads the file on every load, so an edit shows at once. |
 
 Checks: `npm test` compares `lib/scoring.ts` with the Python `answer()` on 60 fixture cases
 (`poc/tests/scoring_fixture.py` writes them). `npm run lint` and `npx tsc --noEmit` check the code.
