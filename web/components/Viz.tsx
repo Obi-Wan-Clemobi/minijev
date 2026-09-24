@@ -1,9 +1,11 @@
 "use client";
+import type { HelpKey } from "@/lib/help";
 import type { ChoiceAnswer, NoulAnswer, ScoreAnswer } from "@/lib/scoring";
+import { Tip } from "./Tip";
 
 const f2 = (x: number) => x.toFixed(2);
 
-export function Ring({ value, label }: { value: number; label: string }) {
+export function Ring({ value, label, help }: { value: number; label: string; help: HelpKey }) {
   const c = 2 * Math.PI * 22;
   return (
     <div className="w-[120px] shrink-0 flex flex-col items-center justify-center gap-1.5 border-l border-line">
@@ -13,7 +15,7 @@ export function Ring({ value, label }: { value: number; label: string }) {
           strokeDasharray={`${(value * c).toFixed(1)} ${c.toFixed(1)}`} transform="rotate(-90 30 30)" />
       </svg>
       <span className="text-xl font-semibold tabular-nums">{f2(value)}</span>
-      <span className="text-[11px] text-muted text-center">{label}</span>
+      <span className="text-[11px] text-muted text-center flex items-center gap-0.5">{label}<Tip k={help} /></span>
     </div>
   );
 }
@@ -72,7 +74,7 @@ export function ScoreColumns({ a, raw }: { a: ScoreAnswer; raw: ScoreAnswer }) {
       </div>
       <div className="relative h-5">
         <div className="anim absolute top-0 -translate-x-1/2 text-xs font-mono text-accent whitespace-nowrap"
-          style={{ left: `${(a.score / (n - 1)) * (100 - 100 / n) + 50 / n}%` }}>▲ E[level] = {f2(a.score)}</div>
+          style={{ left: `${(a.score / (n - 1)) * (100 - 100 / n) + 50 / n}%` }}><Tip k="expected">▲ E[level] = {f2(a.score)}</Tip></div>
       </div>
       <div className="grid gap-3 text-xs text-muted text-center" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
         {levels.map((k) => <span key={k} className="truncate" title={a.legend[k]}>{k} · {a.legend[k]}</span>)}

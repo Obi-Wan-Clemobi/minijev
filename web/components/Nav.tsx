@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useSyncExternalStore } from "react";
 import { useStore } from "@/lib/store";
 import { Icon } from "./Icon";
+import { Tip } from "./Tip";
 
 const LINKS = [["/", "Playground"], ["/compare", "Compare"], ["/hood", "Under the hood"], ["/findings", "Findings"]];
 
@@ -38,7 +39,8 @@ export function Nav() {
         ))}
       </nav>
       <div className="flex-1" />
-      <label className="hidden md:flex items-center gap-2 h-9 px-3 rounded-md border border-line bg-card text-[13px]">
+      <Tip k="model" className="hidden md:inline-flex">
+      <label className="flex items-center gap-2 h-9 px-3 rounded-md border border-line bg-card text-[13px]">
         <span className={`w-2 h-2 rounded-full ${switching ? "bg-warn animate-pulse" : model ? "bg-ok" : "bg-ghost"}`} />
         <span className="sr-only">Model</span>
         <select value={model} disabled={switching || !models.length} onChange={(e) => switchModel(e.target.value)}
@@ -46,12 +48,15 @@ export function Nav() {
           {!models.length && <option value="">API offline</option>}
           {models.map((m) => <option key={m} value={m} className="bg-card">{m.split("/")[1]}</option>)}
         </select>
-        <span className="text-muted">· CPU</span>
+        <span className="text-muted">{switching ? "· loading model…" : "· CPU"}</span>
       </label>
-      <button onClick={toggle} aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
-        className="w-9 h-9 rounded-md border border-line grid place-items-center hover:bg-track transition-colors">
-        <Icon name={dark ? "sun" : "moon"} />
-      </button>
+      </Tip>
+      <Tip k="theme">
+        <button onClick={toggle} aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
+          className="w-9 h-9 rounded-md border border-line grid place-items-center hover:bg-track transition-colors">
+          <Icon name={dark ? "sun" : "moon"} />
+        </button>
+      </Tip>
     </header>
   );
 }

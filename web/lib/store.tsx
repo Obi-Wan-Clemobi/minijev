@@ -51,6 +51,8 @@ type Store = {
   presets: Preset[]; presetId: string; loadPreset: (p: Preset) => void;
   response: AskResponse | null; running: boolean; error: string | null;
   run: () => Promise<void>;
+  stale: boolean; // the request, evaluation or default modes changed since the last run
+  canUndo: boolean; undoPreset: () => void;
   model: string; models: string[]; switchModel: (name: string) => Promise<void>; switching: boolean;
   req: Req;
 };
@@ -71,6 +73,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [models, setModels] = useState<string[]>([]);
   const [switching, setSwitching] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [lastRun, setLastRun] = useState<string | null>(null);
+  const [undo, setUndo] = useState<{ stateText: string; items: QItem[]; presetId: string } | null>(null);
 
   useEffect(() => {
     try {
@@ -93,22 +97,31 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [loaded, stateText, items, settings, presetId, mode]);
 
   const req = useMemo(() => toReq(stateText, items), [stateText, items]);
+  // Everything that changes what the model computes. The temperatures and the bias are not in it: they act instantly.
+  const runKey = JSON.stringify({ req, mode, c: settings.choice_mode, s: settings.score_mode, model });
 
   const run = useCallback(async () => {
     setRunning(true); setError(null);
-    try { setResponse(await api.ask(req, settings, mode)); }
+    const key = runKey;
+    try { setResponse(await api.ask(req, settings, mode)); setLastRun(key); }
     catch (e) { setError((e as Error).message); }
     finally { setRunning(false); }
-  }, [req, settings, mode]);
+  }, [req, settings, mode, runKey]);
 
   const store: Store = {
-    stateText, setStateText: (s) => { setStateText(s); setPresetId(""); },
-    items, setItems: (f) => { setItemsRaw(f); setPresetId(""); },
+    stateText, setStateText: (s) => { setStateText(s); setPresetId(""); setUndo(null); },
+    items, setItems: (f) => { setItemsRaw(f); setPresetId(""); setUndo(null); },
     settings, setSettings: setSettingsRaw,
     mode, setMode,
     presets, presetId,
-    loadPreset: (p) => { setStateText(stateToText(p.state)); setItemsRaw(fromQuestions(p.questions)); setPresetId(p.id); setResponse(null); },
+    loadPreset: (p) => {
+      setUndo((u) => u ?? { stateText, items, presetId });
+      setStateText(stateToText(p.state)); setItemsRaw(fromQuestions(p.questions)); setPresetId(p.id);
+    },
+    canUndo: undo !== null,
+    undoPreset: () => { if (undo) { setStateText(undo.stateText); setItemsRaw(undo.items); setPresetId(undo.presetId); setUndo(null); } },
     response, running, error, run,
+    stale: response !== null && lastRun !== runKey,
     model, models, switching,
     switchModel: async (name) => {
       setSwitching(true); setError(null);

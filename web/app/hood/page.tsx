@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Icon } from "@/components/Icon";
+import { Tip } from "@/components/Tip";
 import { RequestEditor, useReady } from "@/components/RequestEditor";
 import { api, type TreeResponse } from "@/lib/api";
 import { useStore } from "@/lib/store";
@@ -29,10 +30,12 @@ export default function Hood() {
     <div className="flex-1 grid lg:grid-cols-[minmax(400px,480px)_minmax(0,1fr)]">
       <aside className="lg:border-r border-line px-4 md:px-6 py-6 lg:sticky lg:top-16 lg:self-start lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto">
         <RequestEditor presets>
-          <button onClick={run} disabled={!ready || running}
-            className="h-10 px-4 rounded-lg bg-inv-bg text-inv-fg text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-40">
-            <Icon name="play" size={14} fill />{running ? "Running…" : "Run the model for label mass"}
-          </button>
+          <Tip k="hoodRun">
+            <button onClick={run} disabled={!ready || running}
+              className="h-10 px-4 rounded-lg bg-inv-bg text-inv-fg text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-40">
+              <Icon name="play" size={14} fill />{running ? "Running…" : "Run the model for label mass"}
+            </button>
+          </Tip>
         </RequestEditor>
       </aside>
       <div className="min-w-0">
@@ -102,7 +105,7 @@ function Tree({ tree, k, setK, response, showTemplate, setShowTemplate }: {
             </svg>
           </div>
           <div className="w-full sm:w-[210px] flex flex-col gap-1.5 max-h-[460px] overflow-y-auto">
-            <span className="text-xs text-muted uppercase tracking-wider">Branches</span>
+            <span className="text-xs text-muted uppercase tracking-wider flex items-center gap-1">Branches <Tip k="hoodBranch" /></span>
             {B.map((b, i) => {
               const m = mass(b, i);
               return (
@@ -118,7 +121,7 @@ function Tree({ tree, k, setK, response, showTemplate, setShowTemplate }: {
 
         <section className="rounded-xl border border-line bg-card p-6 flex flex-col gap-3.5">
           <div className="flex items-baseline justify-between gap-3 flex-wrap">
-            <h2 className="text-[15px] font-semibold">Attention mask · {tree.total} × {tree.total}, to scale</h2>
+            <h2 className="text-[15px] font-semibold flex items-center gap-1">Attention mask · {tree.total} × {tree.total}, to scale <Tip k="hoodMask" /></h2>
             <span className="text-xs text-muted">rows attend to columns</span>
           </div>
           <div className="flex gap-4 flex-wrap">
@@ -150,6 +153,7 @@ function Tree({ tree, k, setK, response, showTemplate, setShowTemplate }: {
             <input type="checkbox" checked={showTemplate} onChange={(e) => setShowTemplate(e.target.checked)} className="accent-[var(--accent)]" />
             show the template tokens ({lo} before, {P - hi} after)
           </label>
+          <Tip k="hoodTemplate" />
         </div>
         <div className="flex flex-wrap gap-1 font-mono text-[11px]" aria-label="State tokens with positions">
           {tree.prefix.tokens.map((t, i) => {
@@ -171,7 +175,7 @@ function Tree({ tree, k, setK, response, showTemplate, setShowTemplate }: {
 
       <section className="rounded-xl border border-line bg-card p-6 flex flex-col gap-3">
         <div className="flex items-baseline justify-between gap-3 flex-wrap">
-          <h2 className="text-[15px] font-semibold">Packed sequence · position ids restart after the state</h2>
+          <h2 className="text-[15px] font-semibold flex items-center gap-1">Packed sequence · position ids restart after the state <Tip k="hoodPositions" /></h2>
           <span className="text-xs text-muted font-mono">max position = {P} + longest branch − 1 = {tree.max_position}</span>
         </div>
         <div className="flex h-11 rounded-md overflow-hidden border border-line">

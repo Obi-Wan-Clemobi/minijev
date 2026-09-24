@@ -5,6 +5,7 @@ import { useState } from "react";
 import { fromQuestions, newKey, stateToText, textToState, useStore } from "@/lib/store";
 import type { QType } from "@/lib/types";
 import { Icon } from "./Icon";
+import { Tip } from "./Tip";
 import { blankQuestion, problems, QuestionCard } from "./QuestionEditor";
 
 export function PresetBar() {
@@ -16,6 +17,11 @@ export function PresetBar() {
           className={`h-[30px] px-3 rounded-[5px] text-[13px] transition-colors ${s.presetId === p.id ? "bg-track text-fg font-medium" : "text-muted hover:text-fg"}`}>{p.name}</button>
       ))}
       {!s.presets.length && <span className="h-[30px] px-3 text-[13px] text-muted grid place-items-center">start the API to load presets</span>}
+      {s.canUndo && (
+        <Tip k="undo">
+          <button onClick={s.undoPreset} className="h-[30px] px-3 rounded-[5px] text-[13px] text-accent hover:bg-track">Undo</button>
+        </Tip>
+      )}
     </div>
   );
 }
@@ -42,12 +48,13 @@ export function RequestEditor({ presets = false, children }: { presets?: boolean
 
   return (
     <div className="flex flex-col gap-5">
-      {presets && <div className="flex items-center gap-2 flex-wrap"><span className="text-[13px] text-muted">Preset</span><PresetBar /></div>}
+      {presets && <div className="flex items-center gap-2 flex-wrap"><span className="text-[13px] text-muted">Examples</span><Tip k="presets" /><PresetBar /></div>}
       <div className="flex items-center justify-between">
         <div className="flex border border-line rounded-lg p-[3px] gap-0.5">
           <button onClick={() => setView("form")} className={`h-7 px-3 rounded-[5px] text-xs ${view === "form" ? "bg-track text-fg" : "text-muted"}`}>Form</button>
           <button onClick={openJson} className={`h-7 px-3 rounded-[5px] text-xs flex items-center gap-1.5 ${view === "json" ? "bg-track text-fg" : "text-muted"}`}><Icon name="code" size={12} />JSON</button>
         </div>
+        <Tip k="formJson" className="mr-auto ml-1.5" />
         {s.response && <span className="text-xs text-muted font-mono">{s.response.usage.input_tokens} tokens in the last run</span>}
       </div>
 
@@ -65,7 +72,7 @@ export function RequestEditor({ presets = false, children }: { presets?: boolean
       ) : (
         <>
           <div className="flex flex-col gap-2">
-            <label htmlFor="state" className="text-xs font-medium text-muted uppercase tracking-wider">State · your text</label>
+            <span className="flex items-center gap-1"><label htmlFor="state" className="text-xs font-medium text-muted uppercase tracking-wider">State · your text</label><Tip k="state" /></span>
             <textarea id="state" rows={stateIsJson ? 8 : 3} value={s.stateText} onChange={(e) => s.setStateText(e.target.value)}
               placeholder="Type or paste any text: a message, a review, a paragraph…"
               className="resize-y w-full px-3.5 py-3 rounded-lg border border-line bg-card font-mono text-[13px] leading-relaxed outline-none focus:border-fg" />
@@ -76,9 +83,11 @@ export function RequestEditor({ presets = false, children }: { presets?: boolean
             <h2 className="text-xs font-medium text-muted uppercase tracking-wider">Questions · {s.items.length}</h2>
             <div className="flex gap-1.5">
               {(["noul", "choice", "score"] as QType[]).map((t) => (
-                <button key={t} onClick={() => add(t)} className="h-8 px-2.5 rounded-md border border-line text-[13px] flex items-center gap-1.5 hover:bg-track transition-colors">
-                  <Icon name="plus" size={14} />{t === "noul" ? "Noul" : t === "choice" ? "Choice" : "Score"}
-                </button>
+                <Tip key={t} k={t === "noul" ? "addNoul" : t === "choice" ? "addChoice" : "addScore"}>
+                  <button onClick={() => add(t)} className="h-8 px-2.5 rounded-md border border-line text-[13px] flex items-center gap-1.5 hover:bg-track transition-colors">
+                    <Icon name="plus" size={14} />{t === "noul" ? "Yes/no" : t === "choice" ? "Choice" : "Scale"}
+                  </button>
+                </Tip>
               ))}
             </div>
           </div>
@@ -103,5 +112,5 @@ export function RequestEditor({ presets = false, children }: { presets?: boolean
 export function useReady() {
   const s = useStore();
   const issues = problems(s.items);
-  return Object.keys(issues).length === 0 && s.items.length > 0 && s.stateText.trim().length > 0;
+  return Object.keys(issues).length === 0 && s.items.length > 0 && s.stateText.trim().length > 0 && !s.switching;
 }

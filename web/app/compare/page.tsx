@@ -2,16 +2,18 @@
 import { useEffect, useState } from "react";
 import { RaceBars, Waterfall, type RaceRow } from "@/components/Charts";
 import { Icon } from "@/components/Icon";
+import { Tip } from "@/components/Tip";
+import type { HelpKey } from "@/lib/help";
 import { RequestEditor, useReady } from "@/components/RequestEditor";
 import { api, type CompareResponse } from "@/lib/api";
 import { useStore } from "@/lib/store";
 
-const METHODS: { id: string; name: string; sub: string; tone: RaceRow["tone"]; slow?: boolean }[] = [
-  { id: "readout", name: "minijev readout", sub: "one packed pass, no decode", tone: "accent" },
-  { id: "logprobs_cached", name: "1 token + logprobs, cached", sub: "the same computation, one call per question", tone: "accent2" },
-  { id: "generate_cached", name: "Generate the name, cached", sub: "prompt caching, greedy decode", tone: "gen" },
-  { id: "generate_json", name: "One JSON call", sub: "all answers in one stream", tone: "gen" },
-  { id: "generate_uncached", name: "Generate, one call per question", sub: "state prefilled every time", tone: "gen", slow: true },
+const METHODS: { id: string; name: string; sub: string; tone: RaceRow["tone"]; slow?: boolean; help?: HelpKey }[] = [
+  { id: "readout", name: "minijev readout", sub: "one pass, writes nothing", tone: "accent" },
+  { id: "logprobs_cached", name: "1 token + logprobs, cached", sub: "the same maths, one call per question", tone: "accent2", help: "cmpLogprobs" },
+  { id: "generate_cached", name: "Generate the name, cached", sub: "writes the answer as words", tone: "gen", help: "cmpGenCached" },
+  { id: "generate_json", name: "One JSON call", sub: "writes all answers as JSON", tone: "gen", help: "cmpJson" },
+  { id: "generate_uncached", name: "Generate, one call per question", sub: "reads the text again every time", tone: "gen", slow: true, help: "cmpUncached" },
 ];
 
 type Rec = { questions: number; [k: string]: unknown };
@@ -83,17 +85,21 @@ export default function Compare() {
           <div className="flex-1" />
           <fieldset className="flex gap-3 flex-wrap text-[13px]">
             <legend className="sr-only">Methods</legend>
+            <Tip k="cmpMethods" />
             {METHODS.filter((m) => m.id !== "readout").map((m) => (
-              <label key={m.id} className="flex items-center gap-1.5">
-                <input type="checkbox" checked={picked.includes(m.id)} className="accent-[var(--accent)]"
-                  onChange={(e) => setPicked((p) => (e.target.checked ? [...p, m.id] : p.filter((x) => x !== m.id)))} />
-                {m.name}{m.slow ? " (slow)" : ""}
-              </label>
+              <span key={m.id} className="flex items-center gap-0.5">
+                <label className="flex items-center gap-1.5">
+                  <input type="checkbox" checked={picked.includes(m.id)} className="accent-[var(--accent)]"
+                    onChange={(e) => setPicked((p) => (e.target.checked ? [...p, m.id] : p.filter((x) => x !== m.id)))} />
+                  {m.name}{m.slow ? " (slow)" : ""}
+                </label>
+                {m.help && <Tip k={m.help} />}
+              </span>
             ))}
           </fieldset>
-          <button onClick={run} disabled={busy || !ready} className="h-10 px-4 rounded-lg bg-inv-bg text-inv-fg text-sm font-medium flex items-center gap-2 disabled:opacity-40">
+          <Tip k="cmpRun"><button onClick={run} disabled={busy || !ready} className="h-10 px-4 rounded-lg bg-inv-bg text-inv-fg text-sm font-medium flex items-center gap-2 disabled:opacity-40">
             <Icon name="play" size={14} fill />{busy ? "Running… (this takes seconds on a CPU)" : "Run comparison"}
-          </button>
+          </button></Tip>
         </div>
         {err && <p role="alert" className="text-sm text-warn">{err}</p>}
         {res ? <RaceBars rows={live} /> : <p className="text-sm text-muted">Not run yet. The readout always runs as the reference.</p>}
@@ -101,6 +107,7 @@ export default function Compare() {
         {res && (
           <div className="overflow-x-auto">
             <table className="w-full text-[13px] font-mono">
+              <caption className="text-left text-xs text-muted pb-2">Each method&apos;s answer. Orange = differs from the readout; &quot;unparsed&quot; = the written text could not be matched to an option. <Tip k="agreement" /></caption>
               <thead><tr className="text-muted text-left"><th className="font-normal py-1.5 pr-4">question</th>{METHODS.filter((m) => res.methods[m.id]).map((m) => <th key={m.id} className="font-normal py-1.5 pr-4">{m.name}</th>)}</tr></thead>
               <tbody>
                 {Object.keys(res.questions).map((q) => (
@@ -122,6 +129,7 @@ export default function Compare() {
         <section className="rounded-xl border border-line bg-card p-6 flex flex-col gap-3.5">
           <div className="flex items-center gap-3 flex-wrap">
             <h2 className="text-[15px] font-semibold">Measured: 13 GDPR questions, 500-token state</h2>
+            <Tip k="cmpRecorded" />
             <div className="flex-1" />
             <div className="flex border border-line rounded-lg p-[3px] gap-0.5 font-mono">
               {["0.5B", "1.5B"].map((m) => (
@@ -134,7 +142,7 @@ export default function Compare() {
           {recRows.length ? <RaceBars rows={recRows} /> : <p className="text-sm text-muted">Start the API to load the recorded results.</p>}
         </section>
         <section className="rounded-xl border border-line bg-card p-6 flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold">Where the time goes · {recModel}</h2>
+          <h2 className="text-[15px] font-semibold flex items-center gap-1">Where the time goes · {recModel} <Tip k="cmpWaterfall" /></h2>
           {fall.length > 0 && (
             <>
               <Waterfall steps={fall} labels={["one call per question", "cache the state", "stop at the first token", "one pass for all branches"]} />

@@ -13,6 +13,7 @@ const PATHS: Record<string, string> = {
   info: "M12 16v-4M12 8h.01M12 22a10 10 0 100-20 10 10 0 000 20z",
   code: "M16 18l6-6-6-6M8 6l-6 6 6 6",
   copy: "M8 8h12v12H8zM4 16V4h12",
+  reset: "M3 12a9 9 0 109-9 9.7 9.7 0 00-6.7 2.8L3 8M3 3v5h5",
 };
 
 export function Icon({ name, size = 16, className = "", fill = false }: { name: string; size?: number; className?: string; fill?: boolean }) {

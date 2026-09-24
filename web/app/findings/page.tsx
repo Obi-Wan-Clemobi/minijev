@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
 import { IntervalRow } from "@/components/Charts";
+import { Tip } from "@/components/Tip";
 import { api } from "@/lib/api";
 
 type Bin = { conf_bin: string; n: number; mean_conf: number | null; accuracy: number | null };
@@ -72,14 +73,16 @@ export default function Findings() {
       <div className="grid xl:grid-cols-[480px_minmax(0,1fr)] gap-6">
         <section className="rounded-xl border border-line bg-card p-6 flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <h2 className="text-[15px] font-semibold">Reliability · BoolQ, n = {res[size].calibration.n}</h2>
+            <h2 className="text-[15px] font-semibold flex items-center gap-1">Reliability · BoolQ, n = {res[size].calibration.n} <Tip k="fReliability" /></h2>
             <div className="flex gap-2">
+              <Tip k="fSize" />
               <div className="flex border border-line rounded-lg p-[3px] gap-0.5">
                 {["0.5B", "1.5B"].map((s) => <button key={s} onClick={() => setSize(s)} aria-pressed={size === s} className={`h-[30px] px-2.5 rounded-[5px] text-xs font-mono ${size === s ? "bg-track text-fg" : "text-muted"}`}>{s}</button>)}
               </div>
               <div className="flex border border-line rounded-lg p-[3px] gap-0.5">
                 {[["raw", "Raw"], ["temp", "Temperature"], ["both", "Both"]].map(([k, l]) => <button key={k} onClick={() => setView(k)} aria-pressed={view === k} className={`h-[30px] px-2.5 rounded-[5px] text-xs ${view === k ? "bg-track text-fg" : "text-muted"}`}>{l}</button>)}
               </div>
+              <Tip k="fView" />
             </div>
           </div>
           <Reliability raw={m.raw.reliability} temp={m["temperature (2-fold)"].reliability} view={view} />
@@ -92,7 +95,7 @@ export default function Findings() {
 
         <div className="flex flex-col gap-6">
           <section className="rounded-xl border border-line bg-card p-6 flex flex-col gap-3">
-            <div className="flex items-baseline justify-between"><h2 className="text-[15px] font-semibold">Calibration error (ECE) · lower is better</h2><span className="text-xs text-muted font-mono">axis 0–0.40</span></div>
+            <div className="flex items-baseline justify-between"><h2 className="text-[15px] font-semibold flex items-center gap-1">Calibration error (ECE) · lower is better <Tip k="fEce" /></h2><span className="text-xs text-muted font-mono">axis 0–0.40</span></div>
             {ece("0.5B", "raw", "0.5B · raw", "bg-gen")}
             {ece("0.5B", "temperature (2-fold)", "0.5B · temperature", "bg-accent")}
             {ece("0.5B", "contextual", '0.5B · contextual "N/A"', "bg-ghost")}

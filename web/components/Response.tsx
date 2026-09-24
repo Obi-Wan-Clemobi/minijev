@@ -5,6 +5,7 @@ import { rescore, type ChoiceAnswer, type NoulAnswer, type ScoreAnswer } from "@
 import { useStore } from "@/lib/store";
 import { ChoiceBars, NoulMeter, Ring, ScoreColumns } from "./Viz";
 import { Icon } from "./Icon";
+import { Tip } from "./Tip";
 
 const TABS = ["Answers", "JSON", "cURL", "Raw logits"] as const;
 const r2 = (x: unknown): unknown =>
@@ -12,12 +13,12 @@ const r2 = (x: unknown): unknown =>
     ? Array.isArray(x) ? x.map(r2) : Object.fromEntries(Object.entries(x).map(([k, v]) => [k, k === "legend" ? v : r2(v)])) : x;
 
 export function Response() {
-  const { response, settings, running, error, req } = useStore();
+  const { response, settings, running, error, req, stale } = useStore();
+  const calibrated = settings.temp_noul !== 1 || settings.temp_choice !== 1 || settings.temp_score !== 1 || settings.bias_noul !== 0;
   const [tab, setTab] = useState<(typeof TABS)[number]>("Answers");
   const answers = useMemo(() => response && rescore(response.questions, response.debug.raw, settings), [response, settings]);
   const raw = useMemo(() => response && rescore(response.questions, response.debug.raw,
     { ...settings, temp_noul: 1, temp_choice: 1, temp_score: 1, bias_noul: 0 }), [response, settings]);
-  const stale = response && JSON.stringify(Object.keys(response.questions)) !== JSON.stringify(Object.keys(req.questions));
   const lowMass = response ? Object.entries(response.debug.raw).filter(([, r]) => Math.min(...r.mass) < settings.min_label_mass) : [];
   const minMass = response ? Math.min(...Object.values(response.debug.raw).flatMap((r) => r.mass)) : 1;
 
@@ -30,6 +31,7 @@ export function Response() {
               className={`h-9 px-3 text-[13px] -mb-px border-b-2 whitespace-nowrap transition-colors ${tab === t ? "border-fg text-fg font-medium" : "border-transparent text-muted hover:text-fg"}`}>{t}</button>
           ))}
         </div>
+        <Tip k="tabs" />
         <div className="flex-1" />
         {response && <span className="text-xs font-mono text-ok">● 200</span>}
         {response && <span className="text-xs font-mono text-muted">{response.usage.latency_ms} ms</span>}
@@ -38,7 +40,12 @@ export function Response() {
       {error && (
         <div role="alert" className="rounded-lg border border-warn p-4 text-sm flex gap-2 items-start"><Icon name="alert" className="text-warn mt-0.5 shrink-0" /><span>{error}</span></div>
       )}
-      {stale && <div className="text-xs text-warn">The questions changed since the last run. Press Run to update the answers.</div>}
+      {stale && (
+        <div className="flex items-center gap-1.5 text-xs text-warn">
+          <Icon name="alert" size={12} />The request changed since the last run. The answers below are for the previous request. Press Run to update them.
+          <Tip k="stale" />
+        </div>
+      )}
       {!response && !error && (
         <div className="rounded-xl border border-dashed border-line p-10 text-center text-sm text-muted">
           {running ? "Running one forward pass on the CPU…" : "Press Run (⌘↵) to read the answers out of one forward pass."}
@@ -47,10 +54,13 @@ export function Response() {
 
       {response && answers && raw && tab === "Answers" && (
         <div className={`flex flex-col gap-4 transition-opacity ${running ? "opacity-50" : ""}`}>
-          <div className="flex items-center gap-4 text-xs text-muted">
-            <span className="flex items-center gap-1.5"><span className="w-[18px] h-2 rounded-sm bg-accent" />calibrated</span>
-            <span className="flex items-center gap-1.5"><span className="w-[18px] h-2 rounded-sm border border-dashed border-ghost" />raw (T = 1)</span>
-          </div>
+          {calibrated ? (
+            <div className="flex items-center gap-4 text-xs text-muted">
+              <span className="flex items-center gap-1.5"><span className="w-[18px] h-2 rounded-sm bg-accent" />calibrated</span>
+              <span className="flex items-center gap-1.5"><span className="w-[18px] h-2 rounded-sm border border-dashed border-ghost" />raw (T = 1)</span>
+              <Tip k="legend" />
+            </div>
+          ) : <p className="text-xs text-muted">Raw answers (all dials at their defaults). Move a calibration dial to compare.</p>}
           {Object.entries(response.questions).map(([id, q]) => {
             const a = answers[id], b = raw[id];
             const mode = q.type === "choice" ? q.choice_mode : q.type === "score" ? q.score_mode : null;
@@ -61,15 +71,15 @@ export function Response() {
                     <span className="font-mono text-[13px] font-medium">{id}</span>
                     <span className="text-xs text-muted">{q.type === "noul" ? "Noul" : q.type === "choice" ? "Choice" : "Score"}{mode ? ` · ${mode}` : ""} · {q.instructions}</span>
                     <div className="flex-1" />
-                    {a.type === "noul" && <><span className="text-3xl font-semibold tracking-tight tabular-nums">{a.noul.toFixed(2)}</span><span className="text-xs text-muted">P(yes)</span></>}
+                    {a.type === "noul" && <><span className="text-3xl font-semibold tracking-tight tabular-nums">{a.noul.toFixed(2)}</span><span className="text-xs text-muted flex items-center gap-0.5">P(yes)<Tip k="pyes" /></span></>}
                     {a.type === "score" && <><span className="text-3xl font-semibold tracking-tight tabular-nums">{a.score.toFixed(2)}</span><span className="text-xs text-muted">of {Object.keys(a.probabilities).length - 1}</span></>}
                   </div>
                   {a.type === "noul" && <NoulMeter a={a} raw={b as NoulAnswer} />}
                   {a.type === "choice" && <ChoiceBars a={a} raw={b as ChoiceAnswer} descriptions={(q.criteria ?? {}) as Record<string, string | null>} />}
                   {a.type === "score" && <ScoreColumns a={a} raw={b as ScoreAnswer} />}
                 </div>
-                {a.type === "choice" && <Ring value={a.confidence} label="confidence" />}
-                {a.type === "score" && <Ring value={a.confidence} label="ordinal confidence" />}
+                {a.type === "choice" && <Ring value={a.confidence} label="confidence" help="choiceConfidence" />}
+                {a.type === "score" && <Ring value={a.confidence} label="ordinal confidence" help="scoreConfidence" />}
               </article>
             );
           })}
@@ -105,8 +115,9 @@ export function Response() {
           <span><span className="text-muted">output</span> <span className="font-mono font-semibold">0</span></span>
           <span><span className="text-muted">latency</span> <span className="font-mono">{response.usage.latency_ms} ms</span></span>
           <span className="text-muted font-mono text-xs">{response.model.replace("minijev-poc (", "").replace(")", "")}</span>
+          <Tip k="usage" />
           <div className="flex-1" />
-          {lowMass.length ? (
+          <Tip k="massChip">{lowMass.length ? (
             <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border border-warn text-warn">
               <Icon name="alert" size={12} />low label mass: {lowMass.map(([id]) => id).join(", ")}
             </span>
@@ -114,7 +125,7 @@ export function Response() {
             <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border border-line">
               <Icon name="check" size={12} className="text-ok" />label mass ≥ {minMass.toFixed(3)} on every branch
             </span>
-          )}
+          )}</Tip>
         </div>
       )}
     </div>

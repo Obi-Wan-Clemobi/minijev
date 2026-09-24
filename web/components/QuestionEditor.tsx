@@ -4,8 +4,9 @@ import type { QItem } from "@/lib/store";
 import type { QType, Question } from "@/lib/types";
 import { levelText } from "@/lib/scoring";
 import { Icon } from "./Icon";
+import { Tip } from "./Tip";
 
-const TYPE_LABEL: Record<QType, string> = { noul: "Noul", choice: "Choice", score: "Score" };
+const TYPE_LABEL: Record<QType, string> = { noul: "Noul · yes/no", choice: "Choice · pick one", score: "Score · scale" };
 const input = "w-full h-9 px-2.5 rounded-md border border-line bg-card text-sm outline-none focus:border-fg transition-colors";
 const iconBtn = "w-8 h-8 shrink-0 rounded-md grid place-items-center text-muted hover:text-fg hover:bg-track disabled:opacity-30 disabled:hover:bg-transparent transition-colors";
 
@@ -80,8 +81,11 @@ export function QuestionCard({ item, index, count, issues, onChange, onRemove, o
         <label className="sr-only" htmlFor={`${uid}-id`}>Question id</label>
         <input id={`${uid}-id`} value={id} onChange={(e) => onChange(q, e.target.value.replace(/\s/g, "_"), item.opts)}
           className="h-8 flex-1 min-w-0 px-2 rounded-md border border-transparent hover:border-line focus:border-fg bg-transparent font-mono text-[13px] font-medium outline-none" />
-        <button className={iconBtn} aria-label="Move question up" disabled={index === 0} onClick={() => onMove(-1)}><Icon name="up" size={14} /></button>
-        <button className={iconBtn} aria-label="Move question down" disabled={index === count - 1} onClick={() => onMove(1)}><Icon name="down" size={14} /></button>
+        <Tip k="qid" />
+        <Tip k="moveQ">
+          <button className={iconBtn} aria-label="Move question up" disabled={index === 0} onClick={() => onMove(-1)}><Icon name="up" size={14} /></button>
+          <button className={iconBtn} aria-label="Move question down" disabled={index === count - 1} onClick={() => onMove(1)}><Icon name="down" size={14} /></button>
+        </Tip>
         <button className={iconBtn} aria-label={`Remove question ${id}`} onClick={onRemove}><Icon name="x" size={14} /></button>
       </div>
       <div className="flex items-center gap-2 flex-wrap -mt-1">
@@ -90,16 +94,18 @@ export function QuestionCard({ item, index, count, issues, onChange, onRemove, o
           className="h-7 px-2 rounded-full border border-line bg-card text-xs font-medium text-muted outline-none">
           {(["noul", "choice", "score"] as QType[]).map((t) => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}
         </select>
-        {q.type !== "noul" && (
+        <Tip k="qtype" />
+        {q.type !== "noul" && (<>
           <select aria-label="Readout mode" value={mode}
             onChange={(e) => set({ [modeKey]: e.target.value === "default" ? undefined : e.target.value } as Partial<Question>)}
-            className="h-7 px-2 rounded-full border border-line bg-card text-xs text-muted outline-none">
-            <option value="default">default mode</option>
-            <option value="listwise">listwise</option>
-            <option value="pointwise">pointwise</option>
+            className="h-7 max-w-[150px] px-2 rounded-full border border-line bg-card text-xs text-muted outline-none">
+            <option value="default">asked: default</option>
+            <option value="listwise">asked: listwise (all at once)</option>
+            <option value="pointwise">asked: pointwise (one by one)</option>
           </select>
-        )}
-        <span className="text-xs text-muted font-mono whitespace-nowrap">{nBranches} branch{nBranches === 1 ? "" : "es"}</span>
+          <Tip k="readoutMode" />
+        </>)}
+        <Tip k="branches"><span tabIndex={0} className="text-xs text-muted font-mono whitespace-nowrap rounded">{nBranches} branch{nBranches === 1 ? "" : "es"}</span></Tip>
       </div>
 
       <label className="sr-only" htmlFor={`${uid}-text`}>Question</label>
@@ -108,7 +114,8 @@ export function QuestionCard({ item, index, count, issues, onChange, onRemove, o
         className="w-full resize-y min-h-9 px-2.5 py-2 rounded-md border border-line bg-card text-sm outline-none focus:border-fg" />
 
       {q.type === "noul" && (
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 relative">
+          <Tip k="noulMeans" className="absolute right-0 -top-1" />
           {(["true", "false"] as const).map((k) => {
             const crit = (q.criteria ?? {}) as { true?: string; false?: string };
             return (
@@ -127,7 +134,7 @@ export function QuestionCard({ item, index, count, issues, onChange, onRemove, o
       {q.type === "choice" && (
         <div className="flex flex-col gap-1.5">
           <div className="grid grid-cols-[20px_minmax(0,0.8fr)_minmax(0,1.4fr)_32px] gap-2 text-[11px] text-muted uppercase tracking-wider">
-            <span /><span>Option</span><span>Description (optional)</span><span />
+            <span /><span className="flex items-center gap-1">Option <Tip k="optionName" /></span><span className="flex items-center gap-1">Description (optional) <Tip k="optionDesc" /></span><span />
           </div>
           {rows.map(([k, d], i) => (
             <div key={i} className="grid grid-cols-[20px_minmax(0,0.8fr)_minmax(0,1.4fr)_32px] gap-2 items-center">
@@ -147,7 +154,7 @@ export function QuestionCard({ item, index, count, issues, onChange, onRemove, o
 
       {q.type === "score" && (
         <div className="flex flex-col gap-1.5">
-          <span className="text-[11px] text-muted uppercase tracking-wider">Levels, lowest first</span>
+          <span className="text-[11px] text-muted uppercase tracking-wider flex items-center gap-1">Levels, lowest first <Tip k="levels" /></span>
           {levelsOf(q).map((lv, i, levels) => (
             <div key={i} className="flex gap-2 items-center">
               <span className="w-5 font-mono text-xs text-muted text-center">{i}</span>
