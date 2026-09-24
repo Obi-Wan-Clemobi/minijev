@@ -14,7 +14,7 @@ average gap between stated confidence and accuracy.
 
 | # | Weakness | Area | Severity | Status |
 |---|---|---|---|---|
-| W1 | The option order changes listwise answers | Method | High | Fixes measured (E13) |
+| W1 | The option order changes listwise answers | Method | High | Partly: averaged and pointwise fix it; listwise is still the default |
 | W2 | Raw probabilities are overconfident | Calibration | High | Partly: fixed for Noul, open for Choice and Score |
 | W3 | Calibration exists only for Noul, and does not transfer | Calibration | High | Open |
 | W4 | The 0.5B model is at chance on BoolQ | Model | High | Use 1.5B or larger; open |
@@ -43,12 +43,16 @@ average gap between stated confidence and accuracy.
   likes some letters more than others, whatever the options are. So moving an option can change the winner.
 - **Evidence (Measured):** on 8 documented Choices, a rotation of the options changed the winner in 54% of the
   rotations at 0.5B and 9% at 1.5B (RESEARCH.md §7.3 R4). E13 measures it on 120 AG News articles with known answers
-  (RESEARCH.md §7.3 R10).
-- **Candidate fixes, all measured in E13:**
-  - *All orders averaged:* ask once per rotation in the same pass and average each option's probability. It costs
-    one branch per option, but the text is still read once. The app offers it as "asked: all orders averaged".
+  (RESEARCH.md §7.3 R10): as-is, the answer changed with the order for 20% of the articles at
+  0.5B and 8% at 1.5B.
+- **Fixes, measured in E13 (WALKTHROUGH.md §6.10):**
+  - *All orders averaged:* ask once per rotation in the same pass and average each option's probability. Flips
+    fall to 3% (0.5B) and 2% (1.5B), and ECE falls at 0.5B. It costs one branch per option;
+    the text is still read once. The app offers it as "asked: all orders averaged". Best at 0.5B.
   - *Debiased:* divide out the model's measured liking for each letter (PriDe, Zheng et al. 2024). One branch.
-  - *Pointwise:* judge each option alone. It cannot depend on the order, by construction.
+    Flips only fall to 18% and 8%: the position effect depends on the content.
+  - *Pointwise:* judge each option alone. 0% flips, by construction; one branch per option. Best at 1.5B:
+    accuracy 0.908 and ECE 0.073, against 0.840 and 0.143 as-is.
 - **What Jev may do (Inferred):** Jev judges Score levels "separately", without "a level's number or its neighbours"
   (Stated, row 12): that removes position effects for Scores. Large Choices go through an independent scoring stage
   first (Stated, row 11). Jev's probability maps come back in a different key order from the request (Observed,

@@ -222,7 +222,9 @@ Claude vs Jev* on identical data. This comparison is the most informative experi
   - **Known weakness: the answer depends on the option order.** In the POC, a rotation of the options changed the
     winner in 54% of rotations at 0.5B and 9% at 1.5B (RESEARCH.md §7.3 R4). `choice_mode: "pointwise"` judges each
     option on its own, as a Score level. It gives exactly the same answer for every order. It is also Jev's first
-    stage for large option sets.
+    stage for large option sets. `choice_mode: "averaged"` asks every rotation of the list in the same pass and
+    averages each option's probability. On 120 AG News articles it cut the answer changes from 20% to 3% at 0.5B,
+    and pointwise cut them to 0% (RESEARCH.md §7.3 R10).
 - **More than 25 options:** use two stages, as Jev does. Score every option pointwise and keep the top few. Then ask
   one listwise Choice over the remaining options. Alternatively, use verified single-token pairs (`AA`, `AB`, …).
 - **Score is pointwise.** This is Jev's documented behaviour:
@@ -480,6 +482,8 @@ diagram (PNG) · latency p50/p95.
   calibrated readout, written answer, written probability. Measure accuracy, ECE, parse failures, and time.
 - **E12 Same answer format.** One request answered in minijev's response JSON: read out, written freely by the same
   model, and written with the format enforced (structured output). Measure time, written tokens, and usable answers.
+- **E13 Option-order flaw.** Ask each labelled Choice in several option orders. Measure how often the answer changes,
+  and the accuracy and ECE, for listwise, debiased, all-orders-averaged, and pointwise readouts.
 
 **Status in the POC** (RESEARCH.md §7.3, WALKTHROUGH.md):
 
@@ -494,6 +498,7 @@ diagram (PNG) · latency p50/p95.
 | E10 | Done; see WALKTHROUGH.md |
 | E11 | Done at 0.5B and 1.5B (RESEARCH.md §7.3 R8) |
 | E12 | Done at 0.5B and 1.5B (RESEARCH.md §7.3 R9) |
+| E13 | Done at 0.5B and 1.5B (RESEARCH.md §7.3 R10) |
 | E2, E5, E6 | Open |
 
 ---

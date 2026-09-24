@@ -735,6 +735,13 @@ out, written freely, and written with the format enforced (structured output). F
 - Free writing broke the format at 0.5B (1 of 3 and 0 of 5 answers usable). An enforced format made every answer
   usable, but it did not make the written numbers agree with the model's internal probabilities.
 
+**R10. The option-order flaw and three fixes (E13).** 120 AG News articles, each in 4 option orders. Full table:
+WALKTHROUGH.md §6.10. As-is, the answer changed with the order for 20% of the articles at 0.5B
+and 8% at 1.5B. All orders averaged: 3% and 2%.
+Pointwise: 0%. Debiasing by the letter liking: 18% and 8%, so the
+position effect depends on the content (Inferred). For Jev (Inferred): order-invariant judging (Score levels judged
+separately, row 12) and option shuffling or averaging (row 24) fit these lessons.
+
 **What the POC does not show:**
 - Jev's accuracy, which comes from its model and training.
 - Jev's speed, which comes from its hardware.

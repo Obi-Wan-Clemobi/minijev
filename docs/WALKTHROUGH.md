@@ -26,7 +26,13 @@ third-party measurements), **Inferred** (our reasoning). **Measured** means a re
   - Against the usual LLM patterns, minijev is much faster: 1.6× for one written label, 7× for written
     probabilities, and 5–7× for 13 questions sent one by one or as one JSON call.
   - Most of the saving at 13 questions (84–85%) comes from one prefill of the state. Prompt caching copies it.
+  - When the same model must return minijev's exact JSON, reading it out is 7–40× faster than writing it, and a
+    small model often breaks the format when it writes (§6.8).
   - See §6.
+- **Quality:** a written one-word answer is as accurate as the readout, but written probabilities are the least
+  honest and the slowest (§6.7).
+- **The option order can change a listwise answer** (20% of articles at 0.5B, 8% at 1.5B). Asking all orders and
+  averaging, or judging each option alone, removes it (§6.10). docs/WEAKNESSES.md lists every open weakness.
 
 ---
 
@@ -778,11 +784,50 @@ shows several of them:
 |---|---|---|
 | Written probabilities are poorly calibrated and slow (§6.7) | Output tokens are free; answers are probabilities (row 27) | Jev reads probabilities out; it does not write them |
 | A written reply can break the format (§6.8) | Answers can never fall outside the declared options (Stated) | A readout over the declared labels, so a format error is impossible |
-| The option order changes listwise answers (§5 R4, E13) | Score levels are judged "separately", without their number or neighbours (row 12); probability maps return in a different key order (row 24) | Order-invariant judging for Scores, and option shuffling or averaging for Choices |
+| The option order changes listwise answers (§5 R4, §6.10) | Score levels are judged "separately", without their number or neighbours (row 12); probability maps return in a different key order (row 24) | Order-invariant judging for Scores, and option shuffling or averaging for Choices |
 | Raw probabilities are overconfident (§5 R6, §6.7) | Probabilities "optimized against outcomes" (row 6) | Calibration is trained in, not added afterwards |
 
 docs/WEAKNESSES.md lists every open weakness, with a candidate fix and this Jev evidence for each. The web app shows
 the same register on its Weaknesses page.
+
+### 6.10 The option-order flaw, and three fixes
+
+A listwise Choice shows the options as A, B, C, D, and the model picks a letter. If the model read only the content,
+the order of the options would never change its answer. Experiment E13 (`poc/results/order_bias*.json`) tests this:
+120 AG News articles with known topics, each asked in 4 option orders (the original and 3 random shuffles).
+"Answer flips" is the share of articles whose answer changed when only the order changed.
+
+| Way of asking | Branches | 0.5B: answer flips | 0.5B accuracy | 0.5B ECE | 1.5B: answer flips | 1.5B accuracy | 1.5B ECE |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| As-is (listwise) | 1 | 20% [13%–28%] | 0.838 [0.78–0.89] | 0.130 | 8% [3%–13%] | 0.840 [0.78–0.90] | 0.143 |
+| Debiased (letter liking divided out) | 1 | 18% [12%–24%] | 0.844 [0.79–0.90] | 0.125 | 8% [3%–13%] | 0.840 [0.78–0.90] | 0.143 |
+| All orders averaged | 4 | 3% [1%–7%] | 0.881 [0.82–0.93] | 0.074 | 2% [0%–4%] | 0.844 [0.78–0.91] | 0.114 |
+| Pointwise | 4 | 0% [0%–0%] | 0.850 [0.78–0.91] | 0.086 | 0% [0%–0%] | 0.908 [0.85–0.96] | 0.073 |
+
+Which letter the model picks, against where the right answer is (picks / right answer):
+
+| Model | A | B | C | D |
+|---|---:|---:|---:|---:|
+| 0.5B | 20% / 27% | 26% / 26% | 25% / 22% | 30% / 25% |
+| 1.5B | 24% / 27% | 28% / 26% | 25% / 22% | 23% / 25% |
+
+The results show these points:
+- **The flaw is real at both sizes.** As-is, the answer changed with the order for 20% of the
+  articles at 0.5B and 8% at 1.5B.
+- **All orders averaged almost removes it** (3% and 2%), and it
+  also gives the most honest probabilities at 0.5B (ECE 0.074 against 0.130).
+  It costs one branch per option, but the text is still read once. It is not exactly zero, because it averages the
+  rotations (ABCD, BCDA, …), not every possible order.
+- **Pointwise removes it completely,** by construction: no option sees another. At 1.5B it is also the most accurate
+  (0.908) and the most honest (ECE 0.073); at 0.5B, pointwise judging
+  of each option alone is weaker (W5), so averaging wins there.
+- **Debiasing barely helps** (18% and 8%). So the flaw is not a
+  simple liking for one letter (Inferred). How much a position pulls depends on the options and the text, so only a
+  fix that shows every option at every position removes it.
+- **Accuracy changes little.** The accuracy intervals of the four ways overlap at each size. The fixes make the answer
+  stable and honest more than they make it right.
+
+The app offers the fix as the Choice mode "asked: all orders averaged". The Findings page shows this experiment.
 
 ## 7. Next steps
 

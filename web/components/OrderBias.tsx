@@ -43,7 +43,7 @@ export function OrderBias({ data, size }: { data: OrderData | null; size: string
                 </div>
                 <div className="flex flex-col items-center justify-end gap-1 h-full">
                   <span className="text-[11px] font-mono text-muted">{Math.round(pos.right_answer_at[j] * 100)}%</span>
-                  <div className="w-6 rounded-t-sm bg-track border border-line" style={{ height: `${(pos.right_answer_at[j] / maxPick) * 140}px` }} />
+                  <div className="w-6 rounded-t-sm bg-ghost" style={{ height: `${(pos.right_answer_at[j] / maxPick) * 140}px` }} />
                 </div>
               </div>
             ))}
@@ -53,7 +53,7 @@ export function OrderBias({ data, size }: { data: OrderData | null; size: string
           </div>
           <span className="text-xs text-muted flex gap-4">
             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-gen rounded-sm" />model picks this letter</span>
-            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-track border border-line rounded-sm" />right answer is at this letter</span>
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-ghost rounded-sm" />right answer is at this letter</span>
           </span>
         </div>
         <div className="flex flex-col gap-1 overflow-x-auto">
