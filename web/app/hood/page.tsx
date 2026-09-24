@@ -78,6 +78,80 @@ function Tree({ tree, k, setK, response, showTemplate, setShowTemplate }: {
         <span className="font-mono text-xs text-muted">{P} + {B.map((b) => b.length).join(" + ")} = {tree.total} tokens</span>
       </div>
 
+      <section className="rounded-xl border border-line bg-card p-6 flex flex-col gap-4">
+        <div className="flex items-center gap-2">
+          <h2 className="text-[17px] font-semibold m-0">What is a readout?</h2>
+          <Tip k="hoodReadout" />
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="rounded-lg border border-line bg-track p-4 flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-warn">Generation</span>
+              <span className="text-xs text-muted">(normal LLM)</span>
+            </div>
+            <div className="flex flex-col gap-2 font-mono text-xs">
+              <div className="flex items-center gap-2">
+                <span className="text-muted">pass 1 →</span>
+                <span className="px-2 py-1 rounded bg-warn/20 text-warn">b</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted">pass 2 →</span>
+                <span className="px-2 py-1 rounded bg-warn/20 text-warn">i</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted">pass 3 →</span>
+                <span className="px-2 py-1 rounded bg-warn/20 text-warn">l</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted">pass 4 →</span>
+                <span className="px-2 py-1 rounded bg-warn/20 text-warn">l</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted">pass 5 →</span>
+                <span className="px-2 py-1 rounded bg-warn/20 text-warn">i</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted">pass 6 →</span>
+                <span className="px-2 py-1 rounded bg-warn/20 text-warn">n</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted">pass 7 →</span>
+                <span className="px-2 py-1 rounded bg-warn/20 text-warn">g</span>
+              </div>
+            </div>
+            <p className="text-xs text-muted m-0 pt-2 border-t border-line">7 model passes to write "billing"</p>
+          </div>
+
+          <div className="rounded-lg border border-accent bg-soft p-4 flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-accent">Readout</span>
+              <span className="text-xs text-muted">(minijev)</span>
+            </div>
+            <div className="flex flex-col gap-2 font-mono text-xs">
+              <div className="flex items-center gap-2">
+                <span className="text-muted">pass 1 →</span>
+                <div className="flex gap-1.5">
+                  <span className="px-2 py-1 rounded bg-accent/20 text-accent">A: 0.02</span>
+                  <span className="px-2 py-1 rounded bg-accent/20 text-accent">B: 0.04</span>
+                  <span className="px-2 py-1 rounded bg-accent text-inv-fg font-semibold">C: 0.94</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5 text-xs pt-2">
+              <span className="text-fg">Answer: <span className="font-semibold">C (billing)</span> with 94% confidence</span>
+              <span className="text-muted">All probabilities returned instantly</span>
+            </div>
+            <p className="text-xs text-muted m-0 pt-2 border-t border-line">1 model pass, probabilities extracted directly</p>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 text-sm text-muted">
+          <p className="m-0">Every language model already computes probabilities for all ~150,000 tokens at every position. Generation samples from those probabilities and loops. A readout uses them directly and stops.</p>
+          <p className="m-0 font-medium text-fg">The answer IS the probabilities—no tokens are generated.</p>
+        </div>
+      </section>
+
       <div className="grid xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] gap-6">
         <section className="rounded-xl border border-line bg-card p-6 flex gap-5 flex-wrap">
           <div className="flex-1 min-w-[300px] flex flex-col gap-3">

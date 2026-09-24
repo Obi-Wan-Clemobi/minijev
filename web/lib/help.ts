@@ -207,6 +207,10 @@ export const HELP = {
     "Debiased needs 1 branch at run time, but it needs a one-time measurement of the model's letter liking first." ] },
 
   // ---- hood
+  hoodReadout: { t: "What is a readout?", e: "display", d: [
+    "Instead of asking the model to generate an answer token by token (\"b\", \"i\", \"l\", \"l\", \"i\", \"n\", \"g\"), minijev reads the probabilities of the allowed answer tokens (A, B, C) from one forward pass.",
+    "Every language model computes probabilities for all ~150,000 tokens at every position. Generation samples from those probabilities and loops. A readout uses them directly and stops.",
+    "The answer IS the probabilities: the option with the highest probability is the predicted choice, and you get calibrated confidence for all options." ] },
   hoodBranch: { t: "Branches", e: "display", d: ["Each box is one mini-question the model answers. Click one to follow it through the picture, the grid, and the token list."] },
   hoodMask: { t: "Who can see what", e: "display", d: [
     "Each row is a token, each column is a token it is allowed to look at. Blue = allowed.",
