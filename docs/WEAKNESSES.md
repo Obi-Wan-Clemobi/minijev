@@ -14,7 +14,7 @@ average gap between stated confidence and accuracy.
 
 | # | Weakness | Area | Severity | Status |
 |---|---|---|---|---|
-| W1 | The option order changes listwise answers | Method | High | Partly: averaged and pointwise fix it; listwise is still the default |
+| W1 | The option order changes listwise answers | Method | High | Fixed at 1.5B (pointwise default); 0.5B uses averaged |
 | W2 | Raw probabilities are overconfident | Calibration | High | Partly: fixed for Noul, open for Choice and Score |
 | W3 | Calibration exists only for Noul, and does not transfer | Calibration | High | Open |
 | W4 | The 0.5B model is at chance on BoolQ | Model | High | Use 1.5B or larger; open |

@@ -1,0 +1,675 @@
+- generic [active] [ref=f5e1]:
+  - banner [ref=f5e2]:
+    - link "mj minijev local" [ref=f5e3] [cursor=pointer]:
+      - /url: /
+      - generic [ref=f5e4]: mj
+      - generic [ref=f5e5]: minijev
+      - generic [ref=f5e6]: local
+    - navigation [ref=f5e7]:
+      - link "Playground" [ref=f5e8] [cursor=pointer]:
+        - /url: /
+      - link "Compare" [ref=f5e9] [cursor=pointer]:
+        - /url: /compare
+      - link "Under the hood" [ref=f5e10] [cursor=pointer]:
+        - /url: /hood
+      - link "Findings" [ref=f5e11] [cursor=pointer]:
+        - /url: /findings
+      - link "Weaknesses" [ref=f5e12] [cursor=pointer]:
+        - /url: /weaknesses
+    - generic [ref=f5e14]:
+      - generic [ref=f5e16]: Model
+      - combobox "Model · CPU" [ref=f5e17] [cursor=pointer]:
+        - option "Qwen2.5-0.5B-Instruct" [selected]
+        - option "Qwen2.5-1.5B-Instruct"
+      - generic [ref=f5e18]: · CPU
+    - button "Switch to light theme" [ref=f5e20] [cursor=pointer]
+  - main [ref=f5e23]:
+    - generic [ref=f5e24]:
+      - generic [ref=f5e25]:
+        - generic [ref=f5e26]: Examples
+        - 'button "About: Examples" [ref=f5e28] [cursor=pointer]'
+        - generic [ref=f5e31]:
+          - button "Support ticket" [ref=f5e419] [cursor=pointer]
+          - button "Jev doc cases" [ref=f5e420] [cursor=pointer]
+          - button "GDPR · 13 questions" [ref=f5e421] [cursor=pointer]
+          - button "Undo" [ref=f5e1172] [cursor=pointer]
+        - generic [ref=f5e33]: Evaluation
+        - 'button "About: Evaluation" [ref=f5e35] [cursor=pointer]'
+        - generic [ref=f5e38]:
+          - button "naive" [ref=f5e39] [cursor=pointer]
+          - button "kv" [ref=f5e40] [cursor=pointer]
+          - button "packed" [pressed] [ref=f5e41] [cursor=pointer]
+        - button "Running… ⌘↵" [disabled] [ref=f5e1920] [cursor=pointer]:
+          - text: Running…
+          - generic [ref=f5e46]: ⌘↵
+      - generic [ref=f5e47]:
+        - generic [ref=f5e49]:
+          - generic [ref=f5e50]:
+            - generic [ref=f5e51]:
+              - button "Form" [ref=f5e52] [cursor=pointer]
+              - button "JSON" [ref=f5e53] [cursor=pointer]
+            - 'button "About: Form or JSON" [ref=f5e57] [cursor=pointer]'
+          - generic [ref=f5e60]:
+            - generic [ref=f5e61]:
+              - generic [ref=f5e62]: State · your text
+              - 'button "About: State (your text)" [ref=f5e64] [cursor=pointer]'
+            - textbox "State · your text" [ref=f5e67]:
+              - /placeholder: "Type or paste any text: a message, a review, a paragraph…"
+              - text: "{ \"article\": { \"source\": \"https://en.wikipedia.org/?oldid=1363040264\", \"text\": \"The General Data Protection Regulation (Regulation (EU) 2016/679), abbreviated GDPR, is a European Union regulation on information privacy in the European Union (EU) and the European Economic Area (EEA). The GDPR is an important component of EU privacy law and human rights law, in particular Article 8(1) of the Charter of Fundamental Rights of the European Union. It also governs the transfer of personal data outside the EU and EEA. The GDPR's goals are to enhance individuals' control and rights over their personal information and to simplify the regulations for international business. It supersedes the Data Protection Directive 95/46/EC and, among other things, simplifies the terminology.\\nThe European Parliament and Council of the European Union adopted the GDPR on 14 April 2016, to become effective on 25 May 2018. As an EU regulation (instead of a directive), the GDPR has direct legal effect and does not require transposition into national law. However, it also provides flexibility for individual member states to modify (derogate from) some of its provisions.\\nAs an example of the Brussels effect, the regulation became a model for many other laws around the world, including in Brazil, Japan, Singapore, South Africa, South Korea, Sri Lanka, and Thailand. After leaving the European Union, the United Kingdom enacted its \\\"UK GDPR\\\", identical to the GDPR. The California Consumer Privacy Act (CCPA), adopted on 28 June 2018, has many similarities with the GDPR.\\n\\n\\n== Contents ==\\nThe GDPR 2016 has eleven chapters, concerning general provisions, principles, rights of the data subject, duties of data controllers or processors, transfers of personal data to third-party countries, supervisory authorities, cooperation among member states, remedies, liability or penalties for breach of rights, provisions related to specific processing situations, and miscellaneous final provisions. The GDPR also contains 173 recitals purposed to clarify scope and rationale for the regulatory provisions, as well as its legislative intents – Recital 4, for instance, begins by saying that the processing of personal data should be \\\"designed to serve mankind\\\".\\n\\n\\n=== General provisions ===\\nThe regulation applies if the data controller, or processor, or the data subject (person) is based in the EU. The regulation also applies to organisations based outside the EU if they collect or process personal data\" } }"
+            - generic [ref=f5e68]: JSON state · sent as structure · prefilled once, shared by every branch
+          - generic [ref=f5e69]:
+            - heading "Questions · 13" [level=2] [ref=f5e422]
+            - generic [ref=f5e71]:
+              - button "Yes/no" [ref=f5e73] [cursor=pointer]
+              - button "Choice" [ref=f5e77] [cursor=pointer]
+              - button "Scale" [ref=f5e81] [cursor=pointer]
+          - region "Question breach_72h" [ref=f5e1173]:
+            - generic [ref=f5e1174]:
+              - generic [ref=f5e1175]: Question id
+              - textbox "Question id" [ref=f5e1176]: breach_72h
+              - 'button "About: Question name" [ref=f5e1178] [cursor=pointer]'
+              - generic [ref=f5e1181]:
+                - button "Move question up" [disabled] [ref=f5e1182] [cursor=pointer]
+                - button "Move question down" [ref=f5e1185] [cursor=pointer]
+              - button "Remove question breach_72h" [ref=f5e1188] [cursor=pointer]
+            - generic [ref=f5e1191]:
+              - generic [ref=f5e1192]: Type
+              - combobox "Type" [ref=f5e1193] [cursor=pointer]:
+                - option "Noul · yes/no" [selected]
+                - option "Choice · pick one"
+                - option "Score · scale"
+              - 'button "About: Question kind" [ref=f5e1195] [cursor=pointer]'
+              - generic [ref=f5e1198]: 1 branch
+            - generic [ref=f5e1200]: Question
+            - textbox "Question" [ref=f5e1201]:
+              - /placeholder: Ask one question about the state
+              - text: Must a personal data breach be reported to the supervisory authority within 72 hours?
+            - generic [ref=f5e1202]:
+              - 'button "About: Yes means / No means" [ref=f5e1204] [cursor=pointer]'
+              - generic [ref=f5e1207]:
+                - text: Yes means (optional)
+                - textbox "Yes means (optional)" [ref=f5e1208]
+              - generic [ref=f5e1209]:
+                - text: No means (optional)
+                - textbox "No means (optional)" [ref=f5e1210]
+          - region "Question applies_non_eu" [ref=f5e1211]:
+            - generic [ref=f5e1212]:
+              - generic [ref=f5e1213]: Question id
+              - textbox "Question id" [ref=f5e1214]: applies_non_eu
+              - 'button "About: Question name" [ref=f5e1216] [cursor=pointer]'
+              - generic [ref=f5e1219]:
+                - button "Move question up" [ref=f5e1220] [cursor=pointer]
+                - button "Move question down" [ref=f5e1223] [cursor=pointer]
+              - button "Remove question applies_non_eu" [ref=f5e1226] [cursor=pointer]
+            - generic [ref=f5e1229]:
+              - generic [ref=f5e1230]: Type
+              - combobox "Type" [ref=f5e1231] [cursor=pointer]:
+                - option "Noul · yes/no" [selected]
+                - option "Choice · pick one"
+                - option "Score · scale"
+              - 'button "About: Question kind" [ref=f5e1233] [cursor=pointer]'
+              - generic [ref=f5e1236]: 1 branch
+            - generic [ref=f5e1238]: Question
+            - textbox "Question" [ref=f5e1239]:
+              - /placeholder: Ask one question about the state
+              - text: Does the regulation apply to organisations established outside the EU that offer goods or services to people in the EU?
+            - generic [ref=f5e1240]:
+              - 'button "About: Yes means / No means" [ref=f5e1242] [cursor=pointer]'
+              - generic [ref=f5e1245]:
+                - text: Yes means (optional)
+                - textbox "Yes means (optional)" [ref=f5e1246]
+              - generic [ref=f5e1247]:
+                - text: No means (optional)
+                - textbox "No means (optional)" [ref=f5e1248]
+          - region "Question dpo_all_orgs" [ref=f5e1249]:
+            - generic [ref=f5e1250]:
+              - generic [ref=f5e1251]: Question id
+              - textbox "Question id" [ref=f5e1252]: dpo_all_orgs
+              - 'button "About: Question name" [ref=f5e1254] [cursor=pointer]'
+              - generic [ref=f5e1257]:
+                - button "Move question up" [ref=f5e1258] [cursor=pointer]
+                - button "Move question down" [ref=f5e1261] [cursor=pointer]
+              - button "Remove question dpo_all_orgs" [ref=f5e1264] [cursor=pointer]
+            - generic [ref=f5e1267]:
+              - generic [ref=f5e1268]: Type
+              - combobox "Type" [ref=f5e1269] [cursor=pointer]:
+                - option "Noul · yes/no" [selected]
+                - option "Choice · pick one"
+                - option "Score · scale"
+              - 'button "About: Question kind" [ref=f5e1271] [cursor=pointer]'
+              - generic [ref=f5e1274]: 1 branch
+            - generic [ref=f5e1276]: Question
+            - textbox "Question" [ref=f5e1277]:
+              - /placeholder: Ask one question about the state
+              - text: Must every organisation appoint a Data Protection Officer, regardless of what data it processes?
+            - generic [ref=f5e1278]:
+              - 'button "About: Yes means / No means" [ref=f5e1280] [cursor=pointer]'
+              - generic [ref=f5e1283]:
+                - text: Yes means (optional)
+                - textbox "Yes means (optional)" [ref=f5e1284]
+              - generic [ref=f5e1285]:
+                - text: No means (optional)
+                - textbox "No means (optional)" [ref=f5e1286]
+          - region "Question pre_ticked_consent" [ref=f5e1287]:
+            - generic [ref=f5e1288]:
+              - generic [ref=f5e1289]: Question id
+              - textbox "Question id" [ref=f5e1290]: pre_ticked_consent
+              - 'button "About: Question name" [ref=f5e1292] [cursor=pointer]'
+              - generic [ref=f5e1295]:
+                - button "Move question up" [ref=f5e1296] [cursor=pointer]
+                - button "Move question down" [ref=f5e1299] [cursor=pointer]
+              - button "Remove question pre_ticked_consent" [ref=f5e1302] [cursor=pointer]
+            - generic [ref=f5e1305]:
+              - generic [ref=f5e1306]: Type
+              - combobox "Type" [ref=f5e1307] [cursor=pointer]:
+                - option "Noul · yes/no" [selected]
+                - option "Choice · pick one"
+                - option "Score · scale"
+              - 'button "About: Question kind" [ref=f5e1309] [cursor=pointer]'
+              - generic [ref=f5e1312]: 1 branch
+            - generic [ref=f5e1314]: Question
+            - textbox "Question" [ref=f5e1315]:
+              - /placeholder: Ask one question about the state
+              - text: Can valid consent be obtained through pre-ticked boxes or inactivity?
+            - generic [ref=f5e1316]:
+              - 'button "About: Yes means / No means" [ref=f5e1318] [cursor=pointer]'
+              - generic [ref=f5e1321]:
+                - text: Yes means (optional)
+                - textbox "Yes means (optional)" [ref=f5e1322]
+              - generic [ref=f5e1323]:
+                - text: No means (optional)
+                - textbox "No means (optional)" [ref=f5e1324]
+          - region "Question right_erasure" [ref=f5e1325]:
+            - generic [ref=f5e1326]:
+              - generic [ref=f5e1327]: Question id
+              - textbox "Question id" [ref=f5e1328]: right_erasure
+              - 'button "About: Question name" [ref=f5e1330] [cursor=pointer]'
+              - generic [ref=f5e1333]:
+                - button "Move question up" [ref=f5e1334] [cursor=pointer]
+                - button "Move question down" [ref=f5e1337] [cursor=pointer]
+              - button "Remove question right_erasure" [ref=f5e1340] [cursor=pointer]
+            - generic [ref=f5e1343]:
+              - generic [ref=f5e1344]: Type
+              - combobox "Type" [ref=f5e1345] [cursor=pointer]:
+                - option "Noul · yes/no" [selected]
+                - option "Choice · pick one"
+                - option "Score · scale"
+              - 'button "About: Question kind" [ref=f5e1347] [cursor=pointer]'
+              - generic [ref=f5e1350]: 1 branch
+            - generic [ref=f5e1352]: Question
+            - textbox "Question" [ref=f5e1353]:
+              - /placeholder: Ask one question about the state
+              - text: Does the regulation grant individuals a right to erasure of their personal data?
+            - generic [ref=f5e1354]:
+              - 'button "About: Yes means / No means" [ref=f5e1356] [cursor=pointer]'
+              - generic [ref=f5e1359]:
+                - text: Yes means (optional)
+                - textbox "Yes means (optional)" [ref=f5e1360]
+              - generic [ref=f5e1361]:
+                - text: No means (optional)
+                - textbox "No means (optional)" [ref=f5e1362]
+          - region "Question data_portability" [ref=f5e1363]:
+            - generic [ref=f5e1364]:
+              - generic [ref=f5e1365]: Question id
+              - textbox "Question id" [ref=f5e1366]: data_portability
+              - 'button "About: Question name" [ref=f5e1368] [cursor=pointer]'
+              - generic [ref=f5e1371]:
+                - button "Move question up" [ref=f5e1372] [cursor=pointer]
+                - button "Move question down" [ref=f5e1375] [cursor=pointer]
+              - button "Remove question data_portability" [ref=f5e1378] [cursor=pointer]
+            - generic [ref=f5e1381]:
+              - generic [ref=f5e1382]: Type
+              - combobox "Type" [ref=f5e1383] [cursor=pointer]:
+                - option "Noul · yes/no" [selected]
+                - option "Choice · pick one"
+                - option "Score · scale"
+              - 'button "About: Question kind" [ref=f5e1385] [cursor=pointer]'
+              - generic [ref=f5e1388]: 1 branch
+            - generic [ref=f5e1390]: Question
+            - textbox "Question" [ref=f5e1391]:
+              - /placeholder: Ask one question about the state
+              - text: Does the regulation include a right to data portability?
+            - generic [ref=f5e1392]:
+              - 'button "About: Yes means / No means" [ref=f5e1394] [cursor=pointer]'
+              - generic [ref=f5e1397]:
+                - text: Yes means (optional)
+                - textbox "Yes means (optional)" [ref=f5e1398]
+              - generic [ref=f5e1399]:
+                - text: No means (optional)
+                - textbox "No means (optional)" [ref=f5e1400]
+          - region "Question us_federal_law" [ref=f5e1401]:
+            - generic [ref=f5e1402]:
+              - generic [ref=f5e1403]: Question id
+              - textbox "Question id" [ref=f5e1404]: us_federal_law
+              - 'button "About: Question name" [ref=f5e1406] [cursor=pointer]'
+              - generic [ref=f5e1409]:
+                - button "Move question up" [ref=f5e1410] [cursor=pointer]
+                - button "Move question down" [ref=f5e1413] [cursor=pointer]
+              - button "Remove question us_federal_law" [ref=f5e1416] [cursor=pointer]
+            - generic [ref=f5e1419]:
+              - generic [ref=f5e1420]: Type
+              - combobox "Type" [ref=f5e1421] [cursor=pointer]:
+                - option "Noul · yes/no" [selected]
+                - option "Choice · pick one"
+                - option "Score · scale"
+              - 'button "About: Question kind" [ref=f5e1423] [cursor=pointer]'
+              - generic [ref=f5e1426]: 1 branch
+            - generic [ref=f5e1428]: Question
+            - textbox "Question" [ref=f5e1429]:
+              - /placeholder: Ask one question about the state
+              - text: Is the GDPR a United States federal law?
+            - generic [ref=f5e1430]:
+              - 'button "About: Yes means / No means" [ref=f5e1432] [cursor=pointer]'
+              - generic [ref=f5e1435]:
+                - text: Yes means (optional)
+                - textbox "Yes means (optional)" [ref=f5e1436]
+              - generic [ref=f5e1437]:
+                - text: No means (optional)
+                - textbox "No means (optional)" [ref=f5e1438]
+          - region "Question criminal_penalties" [ref=f5e1439]:
+            - generic [ref=f5e1440]:
+              - generic [ref=f5e1441]: Question id
+              - textbox "Question id" [ref=f5e1442]: criminal_penalties
+              - 'button "About: Question name" [ref=f5e1444] [cursor=pointer]'
+              - generic [ref=f5e1447]:
+                - button "Move question up" [ref=f5e1448] [cursor=pointer]
+                - button "Move question down" [ref=f5e1451] [cursor=pointer]
+              - button "Remove question criminal_penalties" [ref=f5e1454] [cursor=pointer]
+            - generic [ref=f5e1457]:
+              - generic [ref=f5e1458]: Type
+              - combobox "Type" [ref=f5e1459] [cursor=pointer]:
+                - option "Noul · yes/no" [selected]
+                - option "Choice · pick one"
+                - option "Score · scale"
+              - 'button "About: Question kind" [ref=f5e1461] [cursor=pointer]'
+              - generic [ref=f5e1464]: 1 branch
+            - generic [ref=f5e1466]: Question
+            - textbox "Question" [ref=f5e1467]:
+              - /placeholder: Ask one question about the state
+              - text: Does the GDPR itself impose criminal penalties such as imprisonment?
+            - generic [ref=f5e1468]:
+              - 'button "About: Yes means / No means" [ref=f5e1470] [cursor=pointer]'
+              - generic [ref=f5e1473]:
+                - text: Yes means (optional)
+                - textbox "Yes means (optional)" [ref=f5e1474]
+              - generic [ref=f5e1475]:
+                - text: No means (optional)
+                - textbox "No means (optional)" [ref=f5e1476]
+          - region "Question instrument_type" [ref=f5e1477]:
+            - generic [ref=f5e1478]:
+              - generic [ref=f5e1479]: Question id
+              - textbox "Question id" [ref=f5e1480]: instrument_type
+              - 'button "About: Question name" [ref=f5e1482] [cursor=pointer]'
+              - generic [ref=f5e1485]:
+                - button "Move question up" [ref=f5e1486] [cursor=pointer]
+                - button "Move question down" [ref=f5e1489] [cursor=pointer]
+              - button "Remove question instrument_type" [ref=f5e1492] [cursor=pointer]
+            - generic [ref=f5e1495]:
+              - generic [ref=f5e1496]: Type
+              - combobox "Type" [ref=f5e1497] [cursor=pointer]:
+                - option "Noul · yes/no"
+                - option "Choice · pick one" [selected]
+                - option "Score · scale"
+              - 'button "About: Question kind" [ref=f5e1499] [cursor=pointer]'
+              - combobox "Readout mode" [ref=f5e1502] [cursor=pointer]:
+                - 'option "asked: default" [selected]'
+                - 'option "asked: listwise (all at once)"'
+                - 'option "asked: pointwise (one by one)"'
+                - 'option "asked: all orders averaged"'
+              - 'button "About: How the question is asked" [ref=f5e1504] [cursor=pointer]'
+              - generic [ref=f5e1507]: 1 branch
+            - generic [ref=f5e1509]: Question
+            - textbox "Question" [ref=f5e1510]:
+              - /placeholder: Ask one question about the state
+              - text: What kind of EU legal instrument is the GDPR?
+            - generic [ref=f5e1511]:
+              - generic [ref=f5e1512]:
+                - generic [ref=f5e1514]:
+                  - text: Option
+                  - 'button "About: Option name" [ref=f5e1516] [cursor=pointer]'
+                - generic [ref=f5e1519]:
+                  - text: Description (optional)
+                  - 'button "About: Option description" [ref=f5e1521] [cursor=pointer]'
+              - generic [ref=f5e1525]:
+                - generic [ref=f5e1526]: A
+                - textbox "Option 1 name" [ref=f5e1527]: Regulation
+                - textbox "Option 1 description" [ref=f5e1528]: Directly binding law in all member states, no national implementation needed.
+                - button "Remove option Regulation" [ref=f5e1529] [cursor=pointer]
+              - generic [ref=f5e1532]:
+                - generic [ref=f5e1533]: B
+                - textbox "Option 2 name" [ref=f5e1534]: Directive
+                - textbox "Option 2 description" [ref=f5e1535]: Sets goals that member states implement through national law.
+                - button "Remove option Directive" [ref=f5e1536] [cursor=pointer]
+              - generic [ref=f5e1539]:
+                - generic [ref=f5e1540]: C
+                - textbox "Option 3 name" [ref=f5e1541]: Treaty
+                - textbox "Option 3 description" [ref=f5e1542]: An international treaty between states.
+                - button "Remove option Treaty" [ref=f5e1543] [cursor=pointer]
+              - generic [ref=f5e1546]:
+                - generic [ref=f5e1547]: D
+                - textbox "Option 4 name" [ref=f5e1548]: Recommendation
+                - textbox "Option 4 description" [ref=f5e1549]: Non-binding guidance.
+                - button "Remove option Recommendation" [ref=f5e1550] [cursor=pointer]
+              - button "Add option" [ref=f5e1553] [cursor=pointer]
+          - region "Question max_fine" [ref=f5e1556]:
+            - generic [ref=f5e1557]:
+              - generic [ref=f5e1558]: Question id
+              - textbox "Question id" [ref=f5e1559]: max_fine
+              - 'button "About: Question name" [ref=f5e1561] [cursor=pointer]'
+              - generic [ref=f5e1564]:
+                - button "Move question up" [ref=f5e1565] [cursor=pointer]
+                - button "Move question down" [ref=f5e1568] [cursor=pointer]
+              - button "Remove question max_fine" [ref=f5e1571] [cursor=pointer]
+            - generic [ref=f5e1574]:
+              - generic [ref=f5e1575]: Type
+              - combobox "Type" [ref=f5e1576] [cursor=pointer]:
+                - option "Noul · yes/no"
+                - option "Choice · pick one" [selected]
+                - option "Score · scale"
+              - 'button "About: Question kind" [ref=f5e1578] [cursor=pointer]'
+              - combobox "Readout mode" [ref=f5e1581] [cursor=pointer]:
+                - 'option "asked: default" [selected]'
+                - 'option "asked: listwise (all at once)"'
+                - 'option "asked: pointwise (one by one)"'
+                - 'option "asked: all orders averaged"'
+              - 'button "About: How the question is asked" [ref=f5e1583] [cursor=pointer]'
+              - generic [ref=f5e1586]: 1 branch
+            - generic [ref=f5e1588]: Question
+            - textbox "Question" [ref=f5e1589]:
+              - /placeholder: Ask one question about the state
+              - text: What is the maximum administrative fine for the most serious infringements?
+            - generic [ref=f5e1590]:
+              - generic [ref=f5e1591]:
+                - generic [ref=f5e1593]:
+                  - text: Option
+                  - 'button "About: Option name" [ref=f5e1595] [cursor=pointer]'
+                - generic [ref=f5e1598]:
+                  - text: Description (optional)
+                  - 'button "About: Option description" [ref=f5e1600] [cursor=pointer]'
+              - generic [ref=f5e1604]:
+                - generic [ref=f5e1605]: A
+                - textbox "Option 1 name" [ref=f5e1606]: TwentyM_or_4pct
+                - textbox "Option 1 description" [ref=f5e1607]: Up to EUR 20 million or 4% of annual worldwide turnover, whichever is greater.
+                - button "Remove option TwentyM_or_4pct" [ref=f5e1608] [cursor=pointer]
+              - generic [ref=f5e1611]:
+                - generic [ref=f5e1612]: B
+                - textbox "Option 2 name" [ref=f5e1613]: TenM_or_2pct
+                - textbox "Option 2 description" [ref=f5e1614]: Up to EUR 10 million or 2% of annual worldwide turnover, whichever is greater.
+                - button "Remove option TenM_or_2pct" [ref=f5e1615] [cursor=pointer]
+              - generic [ref=f5e1618]:
+                - generic [ref=f5e1619]: C
+                - textbox "Option 3 name" [ref=f5e1620]: FixedCap
+                - textbox "Option 3 description" [ref=f5e1621]: A fixed amount not tied to turnover.
+                - button "Remove option FixedCap" [ref=f5e1622] [cursor=pointer]
+              - generic [ref=f5e1625]:
+                - generic [ref=f5e1626]: D
+                - textbox "Option 4 name" [ref=f5e1627]: NoFines
+                - textbox "Option 4 description" [ref=f5e1628]: The GDPR provides no administrative fines.
+                - button "Remove option NoFines" [ref=f5e1629] [cursor=pointer]
+              - button "Add option" [ref=f5e1632] [cursor=pointer]
+          - region "Question individual_rights" [ref=f5e1635]:
+            - generic [ref=f5e1636]:
+              - generic [ref=f5e1637]: Question id
+              - textbox "Question id" [ref=f5e1638]: individual_rights
+              - 'button "About: Question name" [ref=f5e1640] [cursor=pointer]'
+              - generic [ref=f5e1643]:
+                - button "Move question up" [ref=f5e1644] [cursor=pointer]
+                - button "Move question down" [ref=f5e1647] [cursor=pointer]
+              - button "Remove question individual_rights" [ref=f5e1650] [cursor=pointer]
+            - generic [ref=f5e1653]:
+              - generic [ref=f5e1654]: Type
+              - combobox "Type" [ref=f5e1655] [cursor=pointer]:
+                - option "Noul · yes/no"
+                - option "Choice · pick one"
+                - option "Score · scale" [selected]
+              - 'button "About: Question kind" [ref=f5e1657] [cursor=pointer]'
+              - combobox "Readout mode" [ref=f5e1660] [cursor=pointer]:
+                - 'option "asked: default" [selected]'
+                - 'option "asked: listwise (all at once)"'
+                - 'option "asked: pointwise (one by one)"'
+              - 'button "About: How the question is asked" [ref=f5e1662] [cursor=pointer]'
+              - generic [ref=f5e1665]: 4 branches
+            - generic [ref=f5e1667]: Question
+            - textbox "Question" [ref=f5e1668]:
+              - /placeholder: Ask one question about the state
+              - text: How strong are the rights the GDPR grants to individuals over their data?
+            - generic [ref=f5e1669]:
+              - generic [ref=f5e1670]:
+                - text: Levels, lowest first
+                - 'button "About: Scale levels" [ref=f5e1672] [cursor=pointer]'
+              - generic [ref=f5e1675]:
+                - generic [ref=f5e1676]: "0"
+                - textbox "Level 0" [ref=f5e1677]: "None: individuals get no rights over their data."
+                - button "Move level 0 up" [disabled] [ref=f5e1678] [cursor=pointer]
+                - button "Move level 0 down" [ref=f5e1681] [cursor=pointer]
+                - button "Remove level 0" [ref=f5e1684] [cursor=pointer]
+              - generic [ref=f5e1687]:
+                - generic [ref=f5e1688]: "1"
+                - textbox "Level 1" [ref=f5e1689]: "Weak: a right to be informed, but little control."
+                - button "Move level 1 up" [ref=f5e1690] [cursor=pointer]
+                - button "Move level 1 down" [ref=f5e1693] [cursor=pointer]
+                - button "Remove level 1" [ref=f5e1696] [cursor=pointer]
+              - generic [ref=f5e1699]:
+                - generic [ref=f5e1700]: "2"
+                - textbox "Level 2" [ref=f5e1701]: "Moderate: access and correction rights, but limited means to act on them."
+                - button "Move level 2 up" [ref=f5e1702] [cursor=pointer]
+                - button "Move level 2 down" [ref=f5e1705] [cursor=pointer]
+                - button "Remove level 2" [ref=f5e1708] [cursor=pointer]
+              - generic [ref=f5e1711]:
+                - generic [ref=f5e1712]: "3"
+                - textbox "Level 3" [ref=f5e1713]: "Strong: access, erasure, portability, and objection rights, with enforcement behind them."
+                - button "Move level 3 up" [ref=f5e1714] [cursor=pointer]
+                - button "Move level 3 down" [disabled] [ref=f5e1717] [cursor=pointer]
+                - button "Remove level 3" [ref=f5e1720] [cursor=pointer]
+              - button "Add level" [ref=f5e1723] [cursor=pointer]
+          - region "Question penalty_severity" [ref=f5e1726]:
+            - generic [ref=f5e1727]:
+              - generic [ref=f5e1728]: Question id
+              - textbox "Question id" [ref=f5e1729]: penalty_severity
+              - 'button "About: Question name" [ref=f5e1731] [cursor=pointer]'
+              - generic [ref=f5e1734]:
+                - button "Move question up" [ref=f5e1735] [cursor=pointer]
+                - button "Move question down" [ref=f5e1738] [cursor=pointer]
+              - button "Remove question penalty_severity" [ref=f5e1741] [cursor=pointer]
+            - generic [ref=f5e1744]:
+              - generic [ref=f5e1745]: Type
+              - combobox "Type" [ref=f5e1746] [cursor=pointer]:
+                - option "Noul · yes/no"
+                - option "Choice · pick one"
+                - option "Score · scale" [selected]
+              - 'button "About: Question kind" [ref=f5e1748] [cursor=pointer]'
+              - combobox "Readout mode" [ref=f5e1751] [cursor=pointer]:
+                - 'option "asked: default" [selected]'
+                - 'option "asked: listwise (all at once)"'
+                - 'option "asked: pointwise (one by one)"'
+              - 'button "About: How the question is asked" [ref=f5e1753] [cursor=pointer]'
+              - generic [ref=f5e1756]: 4 branches
+            - generic [ref=f5e1758]: Question
+            - textbox "Question" [ref=f5e1759]:
+              - /placeholder: Ask one question about the state
+              - text: How severe are the penalties the GDPR provides for non-compliance?
+            - generic [ref=f5e1760]:
+              - generic [ref=f5e1761]:
+                - text: Levels, lowest first
+                - 'button "About: Scale levels" [ref=f5e1763] [cursor=pointer]'
+              - generic [ref=f5e1766]:
+                - generic [ref=f5e1767]: "0"
+                - textbox "Level 0" [ref=f5e1768]: "None: no penalties of any kind."
+                - button "Move level 0 up" [disabled] [ref=f5e1769] [cursor=pointer]
+                - button "Move level 0 down" [ref=f5e1772] [cursor=pointer]
+                - button "Remove level 0" [ref=f5e1775] [cursor=pointer]
+              - generic [ref=f5e1778]:
+                - generic [ref=f5e1779]: "1"
+                - textbox "Level 1" [ref=f5e1780]: "Symbolic: small fixed fines unlikely to change behavior."
+                - button "Move level 1 up" [ref=f5e1781] [cursor=pointer]
+                - button "Move level 1 down" [ref=f5e1784] [cursor=pointer]
+                - button "Remove level 1" [ref=f5e1787] [cursor=pointer]
+              - generic [ref=f5e1790]:
+                - generic [ref=f5e1791]: "2"
+                - textbox "Level 2" [ref=f5e1792]: "Substantial: fines large enough to matter to most companies."
+                - button "Move level 2 up" [ref=f5e1793] [cursor=pointer]
+                - button "Move level 2 down" [ref=f5e1796] [cursor=pointer]
+                - button "Remove level 2" [ref=f5e1799] [cursor=pointer]
+              - generic [ref=f5e1802]:
+                - generic [ref=f5e1803]: "3"
+                - textbox "Level 3" [ref=f5e1804]: "Severe: fines scaled to global revenue, material even to the largest companies."
+                - button "Move level 3 up" [ref=f5e1805] [cursor=pointer]
+                - button "Move level 3 down" [disabled] [ref=f5e1808] [cursor=pointer]
+                - button "Remove level 3" [ref=f5e1811] [cursor=pointer]
+              - button "Add level" [ref=f5e1814] [cursor=pointer]
+          - region "Question compliance_burden" [ref=f5e1817]:
+            - generic [ref=f5e1818]:
+              - generic [ref=f5e1819]: Question id
+              - textbox "Question id" [ref=f5e1820]: compliance_burden
+              - 'button "About: Question name" [ref=f5e1822] [cursor=pointer]'
+              - generic [ref=f5e1825]:
+                - button "Move question up" [ref=f5e1826] [cursor=pointer]
+                - button "Move question down" [disabled] [ref=f5e1829] [cursor=pointer]
+              - button "Remove question compliance_burden" [ref=f5e1832] [cursor=pointer]
+            - generic [ref=f5e1835]:
+              - generic [ref=f5e1836]: Type
+              - combobox "Type" [ref=f5e1837] [cursor=pointer]:
+                - option "Noul · yes/no"
+                - option "Choice · pick one"
+                - option "Score · scale" [selected]
+              - 'button "About: Question kind" [ref=f5e1839] [cursor=pointer]'
+              - combobox "Readout mode" [ref=f5e1842] [cursor=pointer]:
+                - 'option "asked: default" [selected]'
+                - 'option "asked: listwise (all at once)"'
+                - 'option "asked: pointwise (one by one)"'
+              - 'button "About: How the question is asked" [ref=f5e1844] [cursor=pointer]'
+              - generic [ref=f5e1847]: 5 branches
+            - generic [ref=f5e1849]: Question
+            - textbox "Question" [ref=f5e1850]:
+              - /placeholder: Ask one question about the state
+              - text: How heavy is the compliance burden the GDPR places on organisations?
+            - generic [ref=f5e1851]:
+              - generic [ref=f5e1852]:
+                - text: Levels, lowest first
+                - 'button "About: Scale levels" [ref=f5e1854] [cursor=pointer]'
+              - generic [ref=f5e1857]:
+                - generic [ref=f5e1858]: "0"
+                - textbox "Level 0" [ref=f5e1859]: "Negligible: no meaningful obligations."
+                - button "Move level 0 up" [disabled] [ref=f5e1860] [cursor=pointer]
+                - button "Move level 0 down" [ref=f5e1863] [cursor=pointer]
+                - button "Remove level 0" [ref=f5e1866] [cursor=pointer]
+              - generic [ref=f5e1869]:
+                - generic [ref=f5e1870]: "1"
+                - textbox "Level 1" [ref=f5e1871]: "Light: a few notices and disclosures."
+                - button "Move level 1 up" [ref=f5e1872] [cursor=pointer]
+                - button "Move level 1 down" [ref=f5e1875] [cursor=pointer]
+                - button "Remove level 1" [ref=f5e1878] [cursor=pointer]
+              - generic [ref=f5e1881]:
+                - generic [ref=f5e1882]: "2"
+                - textbox "Level 2" [ref=f5e1883]: "Moderate: documented processes and some dedicated roles for larger processors."
+                - button "Move level 2 up" [ref=f5e1884] [cursor=pointer]
+                - button "Move level 2 down" [ref=f5e1887] [cursor=pointer]
+                - button "Remove level 2" [ref=f5e1890] [cursor=pointer]
+              - generic [ref=f5e1893]:
+                - generic [ref=f5e1894]: "3"
+                - textbox "Level 3" [ref=f5e1895]: "Heavy: records, impact assessments, officers, and breach procedures for many organisations."
+                - button "Move level 3 up" [ref=f5e1896] [cursor=pointer]
+                - button "Move level 3 down" [ref=f5e1899] [cursor=pointer]
+                - button "Remove level 3" [ref=f5e1902] [cursor=pointer]
+              - generic [ref=f5e1905]:
+                - generic [ref=f5e1906]: "4"
+                - textbox "Level 4" [ref=f5e1907]: "Extreme: obligations so demanding that ordinary organisations cannot fully comply."
+                - button "Move level 4 up" [ref=f5e1908] [cursor=pointer]
+                - button "Move level 4 down" [disabled] [ref=f5e1911] [cursor=pointer]
+                - button "Remove level 4" [ref=f5e1914] [cursor=pointer]
+              - button "Add level" [ref=f5e1917] [cursor=pointer]
+          - region "Calibration" [ref=f5e285]:
+            - generic [ref=f5e286]:
+              - heading "Calibration" [level=2] [ref=f5e289]
+              - generic [ref=f5e290]: the dials change the answers instantly · no need to run the model
+            - generic [ref=f5e291]:
+              - button "Raw · T = 1" [pressed] [ref=f5e292] [cursor=pointer]
+              - button "0.5B BoolQ · T = 2.72" [ref=f5e293] [cursor=pointer]
+              - button "0.5B Platt · T = 2.92, b = 0.21" [ref=f5e294] [cursor=pointer]
+              - button "1.5B BoolQ · T = 1.93" [ref=f5e295] [cursor=pointer]
+              - 'button "About: Calibration presets" [ref=f5e297] [cursor=pointer]'
+            - generic [ref=f5e300]:
+              - generic [ref=f5e301]:
+                - generic [ref=f5e302]:
+                  - generic [ref=f5e303]: Temperature · yes/no (Noul)
+                  - 'button "About: Temperature · yes/no" [ref=f5e305] [cursor=pointer]'
+                  - generic [ref=f5e308]: "1.00"
+                  - button "Reset Temperature · yes/no (Noul)" [disabled] [ref=f5e310] [cursor=pointer]
+                - slider "Temperature · yes/no (Noul)" [ref=f5e313] [cursor=pointer]: "1"
+                - generic [ref=f5e314]:
+                  - generic [ref=f5e315]: "0.25"
+                  - generic [ref=f5e316]: "1"
+                  - generic [ref=f5e317]: "4"
+              - generic [ref=f5e318]:
+                - generic [ref=f5e319]:
+                  - generic [ref=f5e320]: Bias · yes/no (Noul)
+                  - 'button "About: Bias · yes/no" [ref=f5e322] [cursor=pointer]'
+                  - generic [ref=f5e325]: "0.00"
+                  - button "Reset Bias · yes/no (Noul)" [disabled] [ref=f5e327] [cursor=pointer]
+                - slider "Bias · yes/no (Noul)" [ref=f5e330] [cursor=pointer]: "0"
+                - generic [ref=f5e331]:
+                  - generic [ref=f5e332]: "-2"
+                  - generic [ref=f5e333]: "0"
+                  - generic [ref=f5e334]: "2"
+              - generic [ref=f5e335]:
+                - generic [ref=f5e336]:
+                  - generic [ref=f5e337]: Temperature · multiple choice
+                  - 'button "About: Temperature · multiple choice" [ref=f5e339] [cursor=pointer]'
+                  - generic [ref=f5e342]: "1.00"
+                  - button "Reset Temperature · multiple choice" [disabled] [ref=f5e344] [cursor=pointer]
+                - slider "Temperature · multiple choice" [ref=f5e347] [cursor=pointer]: "1"
+                - generic [ref=f5e348]:
+                  - generic [ref=f5e349]: "0.25"
+                  - generic [ref=f5e350]: "1"
+                  - generic [ref=f5e351]: "4"
+              - generic [ref=f5e352]:
+                - generic [ref=f5e353]:
+                  - generic [ref=f5e354]: Temperature · scale (Score)
+                  - 'button "About: Temperature · scale" [ref=f5e356] [cursor=pointer]'
+                  - generic [ref=f5e359]: "1.00"
+                  - button "Reset Temperature · scale (Score)" [disabled] [ref=f5e361] [cursor=pointer]
+                - slider "Temperature · scale (Score)" [ref=f5e364] [cursor=pointer]: "1"
+                - generic [ref=f5e365]:
+                  - generic [ref=f5e366]: "0.25"
+                  - generic [ref=f5e367]: "1"
+                  - generic [ref=f5e368]: "4"
+            - generic [ref=f5e369]:
+              - generic [ref=f5e370]:
+                - generic [ref=f5e371]:
+                  - text: Multiple choice asked as
+                  - 'button "About: Default for multiple choice" [ref=f5e373] [cursor=pointer]'
+                - combobox [ref=f5e376] [cursor=pointer]:
+                  - option "listwise" [selected]
+                  - option "pointwise"
+                  - option "averaged"
+              - generic [ref=f5e377]:
+                - generic [ref=f5e378]:
+                  - text: Scale questions asked as
+                  - 'button "About: Default for scales" [ref=f5e380] [cursor=pointer]'
+                - combobox [ref=f5e383] [cursor=pointer]:
+                  - option "pointwise" [selected]
+                  - option "listwise"
+            - generic [ref=f5e384]:
+              - generic [ref=f5e385]:
+                - text: Warn below label mass
+                - 'button "About: Warn below label mass" [ref=f5e387] [cursor=pointer]'
+              - spinbutton [ref=f5e390]: "0.5"
+            - generic [ref=f5e391]:
+              - paragraph [ref=f5e392]: "poc/minijev.env: MINIJEV_TEMP_NOUL=1.00 MINIJEV_BIAS_NOUL=0.000 MINIJEV_TEMP_CHOICE=1.00 MINIJEV_TEMP_SCORE=1.00 MINIJEV_CHOICE_MODE=listwise MINIJEV_SCORE_MODE=pointwise"
+              - 'button "About: Save as defaults" [ref=f5e394] [cursor=pointer]'
+        - generic [ref=f5e398]:
+          - generic [ref=f5e399]:
+            - tablist "Response views" [ref=f5e400]:
+              - tab "Answers" [selected] [ref=f5e401] [cursor=pointer]
+              - tab "JSON" [ref=f5e402] [cursor=pointer]
+              - tab "cURL" [ref=f5e403] [cursor=pointer]
+              - tab "Raw logits" [ref=f5e404] [cursor=pointer]
+            - 'button "About: Views" [ref=f5e406] [cursor=pointer]'
+          - generic [ref=f5e409]: Running one forward pass on the CPU…
+  - button "Open Next.js Dev Tools" [ref=f5e415] [cursor=pointer]
+  - alert [ref=f5e1170]
+  - 'tooltip "Run (⌘↵) Ask the model. It reads your text and questions once and gives a probability for every allowed answer. It does not write any words back. That is the whole idea: read the answer out instead of generating it. After a run, the calibration dials change the answers instantly."':
+    - generic: Run (⌘↵)
+    - generic: Ask the model. It reads your text and questions once and gives a probability for every allowed answer.
+    - generic: "It does not write any words back. That is the whole idea: read the answer out instead of generating it."
+    - generic: After a run, the calibration dials change the answers instantly.

@@ -16,6 +16,12 @@ export type Settings = {
   temp_choice: number;
   temp_score: number;
   bias_noul: number;
+  // Per-mode temperature overrides (optional, falls back to temp_choice/temp_score)
+  temp_choice_listwise?: number;
+  temp_choice_pointwise?: number;
+  temp_choice_averaged?: number;
+  temp_score_pointwise?: number;
+  temp_score_listwise?: number;
   choice_mode: "listwise" | "pointwise" | "averaged";
   score_mode: "pointwise" | "listwise";
   min_label_mass: number;

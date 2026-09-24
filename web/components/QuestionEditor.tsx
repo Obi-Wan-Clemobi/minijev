@@ -105,6 +105,11 @@ export function QuestionCard({ item, index, count, issues, onChange, onRemove, o
             {q.type === "choice" && <option value="averaged">asked: all orders averaged</option>}
           </select>
           <Tip k="readoutMode" />
+          {q.type === "choice" && mode === "default" && (
+            <span className="text-[11px] text-muted italic">
+              Default: 1.5B uses pointwise (0% flips), 0.5B uses averaged (3% flips)
+            </span>
+          )}
         </>)}
         <Tip k="branches"><span tabIndex={0} className="text-xs text-muted font-mono whitespace-nowrap rounded">{nBranches} branch{nBranches === 1 ? "" : "es"}</span></Tip>
       </div>

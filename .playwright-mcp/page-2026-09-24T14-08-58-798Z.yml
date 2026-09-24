@@ -1,0 +1,120 @@
+- generic [active] [ref=f3e1]:
+  - banner [ref=f3e2]:
+    - link "mj minijev local" [ref=f3e3] [cursor=pointer]:
+      - /url: /
+      - generic [ref=f3e4]: mj
+      - generic [ref=f3e5]: minijev
+      - generic [ref=f3e6]: local
+    - navigation [ref=f3e7]:
+      - link "Playground" [ref=f3e8] [cursor=pointer]:
+        - /url: /
+      - link "Compare" [ref=f3e9] [cursor=pointer]:
+        - /url: /compare
+      - link "Under the hood" [ref=f3e10] [cursor=pointer]:
+        - /url: /hood
+      - link "Findings" [ref=f3e11] [cursor=pointer]:
+        - /url: /findings
+      - link "Weaknesses" [ref=f3e12] [cursor=pointer]:
+        - /url: /weaknesses
+    - generic [ref=f3e14]:
+      - generic [ref=f3e16]: Model
+      - combobox "Model · CPU" [disabled] [ref=f3e17] [cursor=pointer]:
+        - option "API offline" [selected]
+      - generic [ref=f3e18]: · CPU
+    - button "Switch to light theme" [ref=f3e20] [cursor=pointer]
+  - main [ref=f3e23]:
+    - generic [ref=f3e24]:
+      - generic [ref=f3e25]:
+        - heading "Read the answer out, or let the model write it?" [level=1] [ref=f3e26]
+        - generic [ref=f3e27]:
+          - paragraph [ref=f3e28]: "Everything on this page is the same model (Qwen) on this laptop. There is no second or bigger AI here. What changes is only how we get the answer out of it:"
+          - generic [ref=f3e29]:
+            - generic [ref=f3e30]: "Reads the answer out (minijev): the model reads the text and questions once, and we look at how likely it finds each allowed answer. It writes nothing."
+            - generic [ref=f3e33]: "Reads out, one question per request: the same trick done through an AI API that returns probabilities, one question at a time."
+            - generic [ref=f3e36]: "Writes the answer (the usual chatbot way): the model types its answer as text, word piece by word piece, and code reads the text back."
+      - group [ref=f3e39]:
+        - generic "Edit the request · your own state and questions Hi, my Stripe integration has failed for 3 days. Losing sales. Help ASAP." [ref=f3e40] [cursor=pointer]:
+          - text: Edit the request · your own state and questions
+          - generic [ref=f3e43]: Hi, my Stripe integration has failed for 3 days. Losing sales. Help ASAP.
+        - option "Noul · yes/no" [selected]
+        - option "Choice · pick one"
+        - option "Score · scale"
+        - option "Noul · yes/no"
+        - option "Choice · pick one" [selected]
+        - option "Score · scale"
+        - 'option "asked: default" [selected]'
+        - 'option "asked: listwise (all at once)"'
+        - 'option "asked: pointwise (one by one)"'
+        - 'option "asked: all orders averaged"'
+        - option "Noul · yes/no"
+        - option "Choice · pick one"
+        - option "Score · scale" [selected]
+        - 'option "asked: default" [selected]'
+        - 'option "asked: listwise (all at once)"'
+        - 'option "asked: pointwise (one by one)"'
+      - generic [ref=f3e44]:
+        - generic [ref=f3e45]:
+          - generic [ref=f3e46]:
+            - heading [level=2] [ref=f3e47]:
+              - text: "1 · Same model, same questions, same answer format: which is faster?"
+              - 'button "About: Same answer format" [ref=f3e49] [cursor=pointer]'
+            - paragraph [ref=f3e52]: "Both sides use the same model on your text and questions, and both return the same JSON. minijev reads every probability out of one pass and writes nothing. The model writing it is told to type that exact JSON itself, one token at a time: once freely, and once with the format enforced, as AI APIs with structured output do."
+          - button "Run both" [ref=f3e54] [cursor=pointer]
+        - paragraph [ref=f3e57]: Uses the request from the Playground. Edit it above, then press Run both.
+      - generic [ref=f3e58]:
+        - generic [ref=f3e59]:
+          - heading [level=2] [ref=f3e60]:
+            - text: 2 · Which way gives better answers? Questions with known answers
+            - 'button "About: Quality on questions with known answers" [ref=f3e62] [cursor=pointer]'
+          - generic [ref=f3e65]:
+            - button "Yes/no · BoolQ" [pressed] [ref=f3e66] [cursor=pointer]
+            - button "Multiple choice · AG News" [ref=f3e67] [cursor=pointer]
+          - 'button "About: Question set" [ref=f3e69] [cursor=pointer]'
+          - generic [ref=f3e72]:
+            - button "Qwen2.5-0.5B" [pressed] [ref=f3e73] [cursor=pointer]
+            - button "Qwen2.5-1.5B" [ref=f3e74] [cursor=pointer]
+        - paragraph [ref=f3e75]:
+          - text: No results for this model yet. Run
+          - code [ref=f3e76]: cd poc && uv run python experiments.py quality
+          - text: ", then reload."
+      - generic [ref=f3e77]:
+        - generic [ref=f3e78]:
+          - heading "3 · Other ways to ask several questions · your request, 3 questions" [level=2] [ref=f3e79]
+          - group "Methods" [ref=f3e80]:
+            - 'button "About: Methods to compare" [ref=f3e83] [cursor=pointer]'
+            - generic [ref=f3e86]:
+              - generic [ref=f3e87]:
+                - checkbox "Reads out, one question per request" [checked] [ref=f3e88]
+                - text: Reads out, one question per request
+              - 'button "About: Reads out, one question per request" [ref=f3e90] [cursor=pointer]'
+            - generic [ref=f3e93]:
+              - generic [ref=f3e94]:
+                - checkbox "Writes each answer" [checked] [ref=f3e95]
+                - text: Writes each answer
+              - 'button "About: Writes each answer" [ref=f3e97] [cursor=pointer]'
+            - generic [ref=f3e100]:
+              - generic [ref=f3e101]:
+                - checkbox "Writes all answers as one JSON" [checked] [ref=f3e102]
+                - text: Writes all answers as one JSON
+              - 'button "About: Writes all answers as one JSON" [ref=f3e104] [cursor=pointer]'
+            - generic [ref=f3e107]:
+              - generic [ref=f3e108]:
+                - checkbox "Writes each answer, resends the text (slow)" [ref=f3e109]
+                - text: Writes each answer, resends the text (slow)
+              - 'button "About: Writes each answer, resends the text (slow)" [ref=f3e111] [cursor=pointer]'
+          - button "Run comparison" [ref=f3e115] [cursor=pointer]
+        - paragraph [ref=f3e118]: Not run yet. The readout always runs as the reference.
+      - generic [ref=f3e119]:
+        - generic [ref=f3e120]:
+          - generic [ref=f3e121]:
+            - 'heading "Measured earlier: 13 questions about one 500-token article" [level=2] [ref=f3e122]'
+            - 'button "About: Measured earlier" [ref=f3e124] [cursor=pointer]'
+            - generic [ref=f3e127]:
+              - button "Qwen2.5-0.5B" [pressed] [ref=f3e128] [cursor=pointer]
+              - button "Qwen2.5-1.5B" [ref=f3e129] [cursor=pointer]
+          - paragraph [ref=f3e130]: Median of 3 runs in rotating order; whiskers show the full spread. poc/results/fanout*.json.
+          - paragraph [ref=f3e131]: Start the API to load the recorded results.
+        - heading [level=2] [ref=f3e133]:
+          - text: Where the time goes · 0.5B
+          - 'button "About: Where the time goes" [ref=f3e135] [cursor=pointer]'
+  - button "Open Next.js Dev Tools" [ref=f3e143] [cursor=pointer]

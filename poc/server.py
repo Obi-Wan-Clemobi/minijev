@@ -267,7 +267,7 @@ def v1_presets():
          "jev": {k: q["jev"] for k, q in shoes.items()}},
     ]
     if gdpr is not None:
-        presets.append({"id": "gdpr", "name": "GDPR · 13 questions", "state": gdpr, "questions": GDPR_QUESTIONS})
+        presets.append({"id": "gdpr", "name": "GDPR · 13 questions", "state": gdpr["article"]["text"], "questions": GDPR_QUESTIONS})
     return presets
 
 

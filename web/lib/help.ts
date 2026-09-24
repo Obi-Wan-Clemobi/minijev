@@ -92,6 +92,24 @@ export const HELP = {
     "If it is low, the model \"wanted to say something else\": the question is probably confusing. Then the page shows a warning.",
     "This only controls the warning; it changes no answer." ] },
   envLine: { t: "Save as defaults", e: "display", d: ["Copy this line into poc/minijev.env to make these settings the defaults when the API starts."] },
+  calProfiles: { t: "Calibration profiles", e: "instant", d: [
+    "Quick presets that scale the fitted temperatures by a factor.",
+    "Conservative: multiply by 0.8 (less confident, closer to 0.5). Balanced: use fitted values as-is (multiply by 1.0). Aggressive: multiply by 1.2 (more confident, closer to 0 or 1).",
+    "These multiply all temperature dials by the same factor." ] },
+  fittedECE: { t: "Fitted calibration quality (ECE)", e: "display", d: [
+    "Expected Calibration Error measured on labeled data for this combination of model, primitive, and mode.",
+    "Lower is better: 0.05 means the model's confidence is typically within 5% of the true accuracy.",
+    "Values are from BoolQ (yes/no) or AG News (multiple choice) held-out splits." ] },
+  unfittedWarning: { t: "Unfitted combination", e: "display", d: [
+    "No calibration has been fitted for this specific combination of model, primitive type, and mode.",
+    "The temperature shown is a generic default. For best calibration, use a fitted combination (see E11 in docs/RESEARCH.md)." ] },
+  perModeTemp: { t: "Per-mode temperature override", e: "instant", d: [
+    "Set a different temperature for each mode (listwise, pointwise, averaged).",
+    "When set, this overrides the general temperature dial for questions using this mode.",
+    "Leave blank to use the general temperature setting." ] },
+  resetAllCal: { t: "Reset all to fitted defaults", e: "instant", d: [
+    "Reset all calibration dials to the fitted defaults for the current model.",
+    "This applies the temperatures measured on labeled data (see docs/RESEARCH.md §7.3 R6)." ] },
 
   // ---- response
   tabs: { t: "Views", e: "display", d: [

@@ -11,7 +11,14 @@ import { DEFAULT_SETTINGS } from "./types";
 export type QItem = { key: string; id: string; q: Question; opts?: [string, string][] };
 
 let counter = 0;
-export const newKey = () => `k${Date.now().toString(36)}${(counter++).toString(36)}`;
+// Use crypto.randomUUID if available (browser), fallback to counter only for SSR
+export const newKey = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return `k${crypto.randomUUID()}`;
+  }
+  // SSR fallback - counter only, no Date.now() to avoid hydration mismatch
+  return `k${(counter++).toString(36)}`;
+};
 
 export function stateToText(state: unknown): string {
   return typeof state === "string" ? state : JSON.stringify(state, null, 2);

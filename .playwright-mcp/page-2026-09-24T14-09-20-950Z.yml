@@ -1,0 +1,289 @@
+- generic [active] [ref=f3e1]:
+  - banner [ref=f3e2]:
+    - link "mj minijev local" [ref=f3e3] [cursor=pointer]:
+      - /url: /
+      - generic [ref=f3e4]: mj
+      - generic [ref=f3e5]: minijev
+      - generic [ref=f3e6]: local
+    - navigation [ref=f3e7]:
+      - link "Playground" [ref=f3e8] [cursor=pointer]:
+        - /url: /
+      - link "Compare" [ref=f3e9] [cursor=pointer]:
+        - /url: /compare
+      - link "Under the hood" [ref=f3e10] [cursor=pointer]:
+        - /url: /hood
+      - link "Findings" [ref=f3e11] [cursor=pointer]:
+        - /url: /findings
+      - link "Weaknesses" [ref=f3e12] [cursor=pointer]:
+        - /url: /weaknesses
+    - generic [ref=f3e14]:
+      - generic [ref=f3e16]: Model
+      - combobox "Model · CPU" [ref=f3e17] [cursor=pointer]:
+        - option "Qwen2.5-0.5B-Instruct" [selected]
+        - option "Qwen2.5-1.5B-Instruct"
+      - generic [ref=f3e18]: · CPU
+    - button "Switch to light theme" [ref=f3e20] [cursor=pointer]
+  - main [ref=f3e23]:
+    - generic [ref=f3e24]:
+      - generic [ref=f3e25]:
+        - heading "Read the answer out, or let the model write it?" [level=1] [ref=f3e26]
+        - generic [ref=f3e27]:
+          - paragraph [ref=f3e28]: "Everything on this page is the same model (Qwen2.5-0.5B-Instruct) on this laptop. There is no second or bigger AI here. What changes is only how we get the answer out of it:"
+          - generic [ref=f3e29]:
+            - generic [ref=f3e30]: "Reads the answer out (minijev): the model reads the text and questions once, and we look at how likely it finds each allowed answer. It writes nothing."
+            - generic [ref=f3e33]: "Reads out, one question per request: the same trick done through an AI API that returns probabilities, one question at a time."
+            - generic [ref=f3e36]: "Writes the answer (the usual chatbot way): the model types its answer as text, word piece by word piece, and code reads the text back."
+      - group [ref=f3e39]:
+        - generic "Edit the request · your own state and questions Urgent!" [ref=f3e147] [cursor=pointer]:
+          - text: Edit the request · your own state and questions
+          - generic [ref=f3e43]: Urgent!
+        - option "Noul · yes/no" [selected]
+        - option "Choice · pick one"
+        - option "Score · scale"
+        - option "Noul · yes/no"
+        - option "Choice · pick one" [selected]
+        - option "Score · scale"
+        - 'option "asked: default" [selected]'
+        - 'option "asked: listwise (all at once)"'
+        - 'option "asked: pointwise (one by one)"'
+        - 'option "asked: all orders averaged"'
+        - option "Noul · yes/no"
+        - option "Choice · pick one"
+        - option "Score · scale" [selected]
+        - 'option "asked: default" [selected]'
+        - 'option "asked: listwise (all at once)"'
+        - 'option "asked: pointwise (one by one)"'
+      - generic [ref=f3e44]:
+        - generic [ref=f3e45]:
+          - generic [ref=f3e46]:
+            - heading [level=2] [ref=f3e47]:
+              - text: "1 · Same model, same questions, same answer format: which is faster?"
+              - 'button "About: Same answer format" [ref=f3e49] [cursor=pointer]'
+            - paragraph [ref=f3e52]: "Both sides use Qwen2.5-0.5B-Instruct on your text and questions, and both return the same JSON. minijev reads every probability out of one pass and writes nothing. The model writing it is told to type that exact JSON itself, one token at a time: once freely, and once with the format enforced, as AI APIs with structured output do."
+          - button "Running both… (the writing side takes a while)" [disabled] [ref=f3e401] [cursor=pointer]
+        - paragraph [ref=f3e57]: Uses the request from the Playground. Edit it above, then press Run both.
+      - generic [ref=f3e58]:
+        - generic [ref=f3e59]:
+          - heading [level=2] [ref=f3e60]:
+            - text: 2 · Which way gives better answers? Questions with known answers
+            - 'button "About: Quality on questions with known answers" [ref=f3e62] [cursor=pointer]'
+          - generic [ref=f3e65]:
+            - button "Yes/no · BoolQ" [pressed] [ref=f3e66] [cursor=pointer]
+            - button "Multiple choice · AG News" [ref=f3e67] [cursor=pointer]
+          - 'button "About: Question set" [ref=f3e69] [cursor=pointer]'
+          - generic [ref=f3e72]:
+            - button "Qwen2.5-0.5B" [pressed] [ref=f3e73] [cursor=pointer]
+            - button "Qwen2.5-1.5B" [ref=f3e74] [cursor=pointer]
+        - generic [ref=f3e148]:
+          - generic [ref=f3e149]:
+            - generic [ref=f3e150]:
+              - generic [ref=f3e151]: 200 questions
+              - generic [ref=f3e152]:
+                - text: Accuracy
+                - 'button "About: Accuracy" [ref=f3e154] [cursor=pointer]'
+              - generic [ref=f3e157]:
+                - text: Calibration error
+                - 'button "About: Calibration error (lower = more honest)" [ref=f3e159] [cursor=pointer]'
+              - generic [ref=f3e162]:
+                - text: Time / question
+                - 'button "About: Time per question" [ref=f3e164] [cursor=pointer]'
+              - generic [ref=f3e167]:
+                - text: Written
+                - 'button "About: Tokens written" [ref=f3e169] [cursor=pointer]'
+            - generic [ref=f3e172]:
+              - generic [ref=f3e173]:
+                - generic [ref=f3e174]:
+                  - text: Reads out (minijev)
+                  - 'button "About: Reads out (minijev)" [ref=f3e177] [cursor=pointer]'
+                - generic [ref=f3e180]: writes nothing
+              - generic [ref=f3e181]:
+                - img "0.630, interval 0.565 to 0.695" [ref=f3e182]
+                - generic [ref=f3e187]: 0.630 [0.56–0.69]
+              - generic [ref=f3e188]:
+                - img "0.218, interval 0.169 to 0.284" [ref=f3e189]
+                - generic [ref=f3e193]: 0.218 [0.17–0.28]
+              - generic [ref=f3e194]: 0.53 s
+              - generic [ref=f3e198]:
+                - generic [ref=f3e199]: 0.0 tokens
+                - generic [ref=f3e200]: 0 unreadable
+            - generic [ref=f3e201]:
+              - generic [ref=f3e202]:
+                - generic [ref=f3e203]:
+                  - text: Reads out, calibrated
+                  - 'button "About: Reads out, calibrated" [ref=f3e206] [cursor=pointer]'
+                - generic [ref=f3e209]: plus the temperature dial
+              - generic [ref=f3e210]:
+                - img "0.630, interval 0.565 to 0.695" [ref=f3e211]
+                - generic [ref=f3e216]: 0.630 [0.56–0.69]
+              - generic [ref=f3e217]:
+                - img "0.045, interval 0.045 to 0.128" [ref=f3e218]
+                - generic [ref=f3e222]: 0.045 [0.05–0.13]
+              - generic [ref=f3e223]: 0.53 s
+              - generic [ref=f3e227]:
+                - generic [ref=f3e228]: 0.0 tokens
+                - generic [ref=f3e229]: 0 unreadable
+            - generic [ref=f3e230]:
+              - generic [ref=f3e231]:
+                - generic [ref=f3e232]:
+                  - text: Writes the answer
+                  - 'button "About: Writes the answer" [ref=f3e235] [cursor=pointer]'
+                - generic [ref=f3e238]: e.g. "Yes" or "Sports"
+              - generic [ref=f3e239]:
+                - img "0.630, interval 0.565 to 0.695" [ref=f3e240]
+                - generic [ref=f3e245]: 0.630 [0.56–0.69]
+              - generic [ref=f3e246]: no probability to check
+              - generic [ref=f3e248]: 0.76 s
+              - generic [ref=f3e252]:
+                - generic [ref=f3e253]: 2.8 tokens
+                - generic [ref=f3e254]: 0 unreadable
+            - generic [ref=f3e255]:
+              - generic [ref=f3e256]:
+                - generic [ref=f3e257]:
+                  - text: Writes a probability
+                  - 'button "About: Writes a probability" [ref=f3e260] [cursor=pointer]'
+                - generic [ref=f3e263]: e.g. "0.8" or a JSON list
+              - generic [ref=f3e264]:
+                - img "0.635, interval 0.565 to 0.700" [ref=f3e265]
+                - generic [ref=f3e270]: 0.635 [0.56–0.70]
+              - generic [ref=f3e271]:
+                - img "0.288, interval 0.229 to 0.368" [ref=f3e272]
+                - generic [ref=f3e276]: 0.288 [0.23–0.37]
+              - generic [ref=f3e277]: 1.23 s
+              - generic [ref=f3e281]:
+                - generic [ref=f3e282]: 5.8 tokens
+                - generic [ref=f3e283]: 0 unreadable
+          - generic [ref=f3e284]:
+            - generic [ref=f3e285]:
+              - text: Speed vs accuracy · both models
+              - 'button "About: Speed vs accuracy" [ref=f3e287] [cursor=pointer]'
+            - img "Seconds per question against accuracy, for every method and both models" [ref=f3e290]:
+              - generic [ref=f3e291]: 0.0s
+              - generic [ref=f3e292]: 1.7s
+              - generic [ref=f3e293]: 3.3s
+              - generic [ref=f3e294]: "0.51"
+              - generic [ref=f3e295]: "0.76"
+              - generic [ref=f3e296]: "1.00"
+              - generic [ref=f3e297]: seconds per question → (left is faster)
+              - 'generic "Reads out (minijev), 0.5B: 0.63 in 0.53 s" [ref=f3e298]'
+              - 'generic "Reads out, calibrated, 0.5B: 0.63 in 0.53 s" [ref=f3e299]'
+              - 'generic "Writes the answer, 0.5B: 0.63 in 0.76 s" [ref=f3e300]'
+              - 'generic "Writes a probability, 0.5B: 0.64 in 1.23 s" [ref=f3e301]'
+              - 'generic "Reads out (minijev), 1.5B: 0.82 in 1.59 s" [ref=f3e302]'
+              - 'generic "Reads out, calibrated, 1.5B: 0.82 in 1.59 s" [ref=f3e303]'
+              - 'generic "Writes the answer, 1.5B: 0.82 in 2.11 s" [ref=f3e304]'
+              - 'generic "Writes a probability, 1.5B: 0.74 in 3.34 s" [ref=f3e305]'
+            - generic [ref=f3e306]: ● 0.5B · ■ 1.5B · dashed orange = always guessing the most common answer
+          - list [ref=f3e307]:
+            - listitem [ref=f3e308]: Reading the answer out took 0.53 s per question; writing it took 0.76 s (1.4×), and writing a probability 1.23 s (2.3×).
+            - listitem [ref=f3e309]: "Accuracy: readout 0.63 vs written 0.63. The intervals overlap, so the two are equally right: it is the same model."
+            - listitem [ref=f3e310]: "Honesty: the calibrated readout's error is 0.045; the written probabilities' error is 0.288."
+      - generic [ref=f3e77]:
+        - generic [ref=f3e78]:
+          - heading "3 · Other ways to ask several questions · your request, 3 questions" [level=2] [ref=f3e79]
+          - group "Methods" [ref=f3e80]:
+            - 'button "About: Methods to compare" [ref=f3e83] [cursor=pointer]'
+            - generic [ref=f3e86]:
+              - generic [ref=f3e87]:
+                - checkbox "Reads out, one question per request" [checked] [ref=f3e88]
+                - text: Reads out, one question per request
+              - 'button "About: Reads out, one question per request" [ref=f3e90] [cursor=pointer]'
+            - generic [ref=f3e93]:
+              - generic [ref=f3e94]:
+                - checkbox "Writes each answer" [checked] [ref=f3e95]
+                - text: Writes each answer
+              - 'button "About: Writes each answer" [ref=f3e97] [cursor=pointer]'
+            - generic [ref=f3e100]:
+              - generic [ref=f3e101]:
+                - checkbox "Writes all answers as one JSON" [checked] [ref=f3e102]
+                - text: Writes all answers as one JSON
+              - 'button "About: Writes all answers as one JSON" [ref=f3e104] [cursor=pointer]'
+            - generic [ref=f3e107]:
+              - generic [ref=f3e108]:
+                - checkbox "Writes each answer, resends the text (slow)" [ref=f3e109]
+                - text: Writes each answer, resends the text (slow)
+              - 'button "About: Writes each answer, resends the text (slow)" [ref=f3e111] [cursor=pointer]'
+          - button "Run comparison" [ref=f3e115] [cursor=pointer]
+        - paragraph [ref=f3e118]: Not run yet. The readout always runs as the reference.
+      - generic [ref=f3e119]:
+        - generic [ref=f3e120]:
+          - generic [ref=f3e121]:
+            - 'heading "Measured earlier: 13 questions about one 500-token article" [level=2] [ref=f3e122]'
+            - 'button "About: Measured earlier" [ref=f3e124] [cursor=pointer]'
+            - generic [ref=f3e127]:
+              - button "Qwen2.5-0.5B" [pressed] [ref=f3e128] [cursor=pointer]
+              - button "Qwen2.5-1.5B" [ref=f3e129] [cursor=pointer]
+          - paragraph [ref=f3e130]: Median of 3 runs in rotating order; whiskers show the full spread. poc/results/fanout*.json.
+          - generic [ref=f3e311]:
+            - generic [ref=f3e312]:
+              - generic [ref=f3e313]:
+                - generic [ref=f3e314]: Writes each answer, resends the text
+                - generic [ref=f3e315]: the text is read 13 times
+              - 'img "Writes each answer, resends the text: 31.40 seconds" [ref=f3e316]'
+              - generic [ref=f3e319]:
+                - generic [ref=f3e320]: 31.40 s
+                - generic [ref=f3e321]: 33 out · agree 69%
+            - generic [ref=f3e322]:
+              - generic [ref=f3e323]:
+                - generic [ref=f3e324]: Writes all answers as one JSON
+                - generic [ref=f3e325]: one request, 124 tokens written
+              - 'img "Writes all answers as one JSON: 30.89 seconds" [ref=f3e326]'
+              - generic [ref=f3e329]:
+                - generic [ref=f3e330]: 30.89 s
+                - generic [ref=f3e331]: 124 out · agree 62%
+            - generic [ref=f3e332]:
+              - generic [ref=f3e333]:
+                - generic [ref=f3e334]: Writes all answers in parallel
+                - generic [ref=f3e335]: 13 requests side by side
+              - 'img "Writes all answers in parallel: 10.14 seconds" [ref=f3e336]'
+              - generic [ref=f3e339]:
+                - generic [ref=f3e340]: 10.14 s
+                - generic [ref=f3e341]: 33 out · agree 69%
+            - generic [ref=f3e342]:
+              - generic [ref=f3e343]:
+                - generic [ref=f3e344]: Writes each answer
+                - generic [ref=f3e345]: text remembered between requests
+              - 'img "Writes each answer: 9.57 seconds" [ref=f3e346]'
+              - generic [ref=f3e349]:
+                - generic [ref=f3e350]: 9.57 s
+                - generic [ref=f3e351]: 33 out · agree 69%
+            - generic [ref=f3e352]:
+              - generic [ref=f3e353]:
+                - generic [ref=f3e354]: Reads out, one question per request
+                - generic [ref=f3e355]: like an AI API with probabilities
+              - 'img "Reads out, one question per request: 6.14 seconds" [ref=f3e356]'
+              - generic [ref=f3e359]:
+                - generic [ref=f3e360]: 6.14 s
+                - generic [ref=f3e361]: 13 out · agree 100%
+            - generic [ref=f3e362]:
+              - generic [ref=f3e363]:
+                - generic [ref=f3e364]: Reads out (minijev)
+                - generic [ref=f3e365]: all questions in one pass
+              - 'img "Reads out (minijev): 5.71 seconds" [ref=f3e366]'
+              - generic [ref=f3e369]:
+                - generic [ref=f3e370]: 5.71 s
+                - generic [ref=f3e371]: 0 out · reference
+        - generic [ref=f3e132]:
+          - heading [level=2] [ref=f3e133]:
+            - text: Where the time goes · 0.5B
+            - 'button "About: Where the time goes" [ref=f3e135] [cursor=pointer]'
+          - generic [ref=f3e372]:
+            - generic [ref=f3e373]:
+              - generic [ref=f3e374]: 31.4 s
+              - generic [ref=f3e377]: −21.8 s
+              - generic [ref=f3e380]: −3.4 s
+              - generic [ref=f3e383]: 5.7 s
+            - generic [ref=f3e386]:
+              - generic [ref=f3e387]: writes each answer, resends the text
+              - generic [ref=f3e388]: remember the text
+              - generic [ref=f3e389]: read out instead of writing
+              - generic [ref=f3e390]: all questions in one pass
+          - generic [ref=f3e395]:
+            - generic [ref=f3e396]: remember the text 85%
+            - generic [ref=f3e397]: read out 13%
+            - generic [ref=f3e398]: one pass 2%
+          - paragraph [ref=f3e399]: Most of the time is saved by reading the text only once. The next saving is reading the answer out instead of writing it. An AI API that remembers the text and returns probabilities can copy both.
+  - button "Open Next.js Dev Tools" [ref=f3e143] [cursor=pointer]
+  - alert [ref=f3e400]
+  - tooltip "Run both Runs your Playground request both ways, once each, on this laptop. The writing side takes seconds to minutes, depending on how many questions and options you have.":
+    - generic: Run both
+    - generic: Runs your Playground request both ways, once each, on this laptop. The writing side takes seconds to minutes, depending on how many questions and options you have.

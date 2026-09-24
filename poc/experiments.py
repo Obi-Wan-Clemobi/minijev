@@ -30,6 +30,7 @@ import json
 import math
 import random
 import re
+import ssl
 import statistics
 import time
 import urllib.request
@@ -43,6 +44,121 @@ from minijev_poc import (CONTENT_FREE_STATE, MODEL, MODES, SYSTEM, Engine, Setti
 
 HERE = Path(__file__).parent
 DATA, RESULTS = HERE / "data", HERE / "results"
+DATASETS = HERE / "datasets"
+MANIFEST_PATH = DATASETS / "manifest.json"
+
+# ---------------------------------------------------------------------------
+# Dataset versioning (W17)
+
+def _row_checksum(row: dict) -> str:
+    """Compute SHA256 checksum of a dataset row (serialized as stable JSON)."""
+    stable = json.dumps(row, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(stable.encode()).hexdigest()
+
+
+def _compute_manifest_entry(dataset_name: str, rows: list[dict]) -> dict:
+    """Compute manifest entry for a dataset with per-row checksums."""
+    checksums = [_row_checksum(row) for row in rows]
+    return {
+        "revision": "main",
+        "rows": len(rows),
+        "sha256": checksums,
+        "fetched": time.strftime("%Y-%m-%d")
+    }
+
+
+def _verify_dataset_checksums(dataset_name: str, rows: list[dict]) -> None:
+    """Verify that dataset rows match the manifest checksums. Fails loudly on mismatch."""
+    manifest = json.loads(MANIFEST_PATH.read_text())
+    if dataset_name not in manifest:
+        print(f"Warning: {dataset_name} not in manifest. Run with --update-manifest to pin it.")
+        return
+
+    entry = manifest[dataset_name]
+    expected_checksums = entry["sha256"]
+
+    if len(rows) != entry["rows"]:
+        raise ValueError(
+            f"Dataset {dataset_name} row count mismatch:\n"
+            f"  Expected: {entry['rows']} rows (from manifest {entry['fetched']})\n"
+            f"  Got: {len(rows)} rows\n"
+            f"This indicates the upstream dataset has changed.\n"
+            f"Run with --update-manifest to update the pinned version."
+        )
+
+    # Check each row's checksum
+    mismatches = []
+    for i, row in enumerate(rows):
+        actual = _row_checksum(row)
+        if actual != expected_checksums[i]:
+            mismatches.append((i, expected_checksums[i], actual))
+
+    if mismatches:
+        # Show first few mismatches
+        details = "\n".join(
+            f"  Row {i}: expected {exp[:12]}..., got {act[:12]}..."
+            for i, exp, act in mismatches[:5]
+        )
+        if len(mismatches) > 5:
+            details += f"\n  ... and {len(mismatches) - 5} more rows"
+
+        raise ValueError(
+            f"Dataset {dataset_name} checksum mismatch:\n"
+            f"  {len(mismatches)}/{len(rows)} rows differ from manifest ({entry['fetched']})\n"
+            f"{details}\n"
+            f"This indicates silent dataset drift. Options:\n"
+            f"  1. Run with --update-manifest to accept the new version\n"
+            f"  2. Investigate why the dataset changed\n"
+            f"  3. Delete {DATA} to re-download from scratch"
+        )
+
+
+def update_manifest() -> None:
+    """Generate or update manifest.json with checksums for all datasets."""
+    DATASETS.mkdir(exist_ok=True)
+
+    print("Downloading datasets and computing checksums...")
+
+    # BoolQ: download all rows (no sampling, no verification during download)
+    print("\n  BoolQ validation split...")
+    boolq_path = DATA / "boolq_validation.json"
+    if not boolq_path.exists():
+        rows, offset = [], 0
+        while True:
+            url = ("https://datasets-server.huggingface.co/rows?dataset=google/boolq&config=default"
+                   f"&split=validation&offset={offset}&length=100")
+            page = json.loads(fetch(url, DATA / f"boolq_page_{offset}.json").read_text())
+            rows += [r["row"] for r in page["rows"]]
+            offset += 100
+            print(f"    Downloaded {len(rows)} rows...", end="\r", flush=True)
+            if offset >= page["num_rows_total"]:
+                break
+        boolq_path.write_text(json.dumps(rows))
+    boolq_rows = json.loads(boolq_path.read_text())
+    print(f"    Downloaded {len(boolq_rows)} rows")
+
+    # AG News: download from four offsets
+    print("\n  AG News test split...")
+    agnews_rows = []
+    for offset in (0, 1900, 3800, 5700):
+        url = ("https://datasets-server.huggingface.co/rows?dataset=fancyzhx/ag_news&config=default"
+               f"&split=test&offset={offset}&length=100")
+        agnews_rows += [r["row"] for r in json.loads(fetch(url, DATA / f"agnews_{offset}.json").read_text())["rows"]]
+    print(f"    Downloaded {len(agnews_rows)} rows")
+
+    # Compute manifest
+    print("\n  Computing checksums...")
+    manifest = {
+        "boolq": _compute_manifest_entry("boolq", boolq_rows),
+        "ag_news": _compute_manifest_entry("ag_news", agnews_rows),
+    }
+
+    # Write manifest
+    MANIFEST_PATH.write_text(json.dumps(manifest, indent=2))
+    print(f"\n✓ Manifest written to {MANIFEST_PATH}")
+    print(f"  - boolq: {manifest['boolq']['rows']} rows")
+    print(f"  - ag_news: {manifest['ag_news']['rows']} rows")
+    print(f"  - Fetched: {manifest['boolq']['fetched']}")
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -95,7 +211,11 @@ def fetch(url: str, path: Path) -> Path:
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
         req = urllib.request.Request(url, headers={"User-Agent": "minijev-poc/0.1"})
-        with urllib.request.urlopen(req, timeout=60) as r:
+        # Disable SSL verification for corporate proxies
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        with urllib.request.urlopen(req, timeout=60, context=ssl_context) as r:
             path.write_bytes(r.read())
     return path
 
@@ -184,26 +304,44 @@ def tree(engine: Engine, n_tokens: int = 1000) -> dict:
             "seconds": {m: results[m][2] for m in MODES}, "rows": rows}
 
 
-def latency(engine: Engine, lengths=(250, 1000), counts=(1, 4, 13), repeats: int = 2) -> dict:
+def latency(engine: Engine, lengths=(250, 1000), counts=(1, 4, 13), repeats: int = 5) -> dict:
+    """E3: latency vs question count, with improved timing measurement (warm-up + rotation + median + IQR)."""
     keys = list(GDPR_QUESTIONS)
     out = []
-    raw_scores(engine, {"state": "warm up", "questions": {"q": GDPR_QUESTIONS["breach_72h"]}}, "packed")
+    # Warm-up: 3 runs to load model and compile kernels
+    for _ in range(3):
+        raw_scores(engine, {"state": "warm up", "questions": {"q": GDPR_QUESTIONS["breach_72h"]}}, "packed")
+
     for n_tokens in lengths:
         state = gdpr_state(engine, n_tokens)
         for n in counts:
             req = {"state": state, "questions": {k: GDPR_QUESTIONS[k] for k in keys[:n]}}
+            # Rotation order: modes are tested in [A, B, C, A, B] pattern to avoid systematic order effects
+            mode_order = [MODES[i % len(MODES)] for i in range(repeats)]
+            mode_times = {mode: [] for mode in MODES}
+            usage_per_mode = {}
+
+            for mode in mode_order:
+                t0 = time.perf_counter()
+                _, usage = raw_scores(engine, req, mode)
+                mode_times[mode].append(time.perf_counter() - t0)
+                usage_per_mode[mode] = usage
+
             for mode in MODES:
-                times = []
-                for _ in range(repeats):
-                    t0 = time.perf_counter()
-                    _, usage = raw_scores(engine, req, mode)
-                    times.append(time.perf_counter() - t0)
-                row = {"state_tokens": n_tokens, "questions": n, "mode": mode, "seconds": min(times),
-                       "input_tokens": usage["input_tokens"]}
+                times = mode_times[mode]
+                median = statistics.median(times)
+                q1 = statistics.quantiles(times, n=4)[0] if len(times) >= 2 else median
+                q3 = statistics.quantiles(times, n=4)[2] if len(times) >= 2 else median
+                row = {"state_tokens": n_tokens, "questions": n, "mode": mode,
+                       "median_s": median, "q1_s": q1, "q3_s": q3, "iqr_s": q3 - q1,
+                       "all_times": times,
+                       "input_tokens": usage_per_mode[mode]["input_tokens"]}
                 out.append(row)
-                print(f"state {n_tokens:5d} tok  questions {n:2d}  {mode:6s}  {min(times):6.2f}s  "
-                      f"(billed-style input tokens {usage['input_tokens']})")
-    return {"repeats": repeats, "rows": out, "note": "min over repeats; CPU fp32; 6 threads"}
+                print(f"state {n_tokens:5d} tok  questions {n:2d}  {mode:6s}  median {median:6.3f}s "
+                      f"[Q1={q1:.3f}, Q3={q3:.3f}]  (input tokens {usage_per_mode[mode]['input_tokens']})")
+    return {"repeats": repeats, "rows": out,
+            "note": f"median and IQR over {repeats} runs with rotation order; warm-up 3x; CPU fp32; 6 threads",
+            "rotation_pattern": "modes rotated in [A, B, C, A, B, ...] order to mitigate systematic order effects"}
 
 
 # Jev's published answers for documented inputs (docs.typesafe.ai, jev-1.13.0).
@@ -359,15 +497,19 @@ AG_OPTIONS = {  # AG News topics as a Choice, in label order 0..3
 AG_QUESTION = "What is the topic of this news article?"
 
 
-def ag_news(n: int, seed: int = 0) -> list[dict]:
-    """A seeded sample of AG News test items, taken from four places in the 7,600-row split."""
+def ag_news(n: int, seed: int = 0, verify: bool = True) -> list[dict]:
+    """A seeded stratified sample of AG News test items, taken from four places in the 7,600-row split.
+
+    Uses stratified sampling to preserve the label distribution across 4 topics (W15).
+    """
     rows = []
     for offset in (0, 1900, 3800, 5700):
         url = ("https://datasets-server.huggingface.co/rows?dataset=fancyzhx/ag_news&config=default"
                f"&split=test&offset={offset}&length=100")
         rows += [r["row"] for r in json.loads(fetch(url, DATA / f"agnews_{offset}.json").read_text())["rows"]]
-    random.Random(seed).shuffle(rows)
-    return rows[:n]
+    if verify and MANIFEST_PATH.exists():
+        _verify_dataset_checksums("ag_news", rows)
+    return stratified_sample(rows, n, "label", seed)
 
 
 def options_text(criteria: dict) -> str:
@@ -444,14 +586,23 @@ def generate_batched(engine: Engine, prefix: list[int], suffixes: list[list[int]
 
 
 @torch.inference_mode()
-def decode_cost(engine: Engine, context: int = 600, steps: int = 20, repeats: int = 3) -> dict:
+def decode_cost(engine: Engine, context: int = 600, steps: int = 20, repeats: int = 5) -> dict:
     """Prefill and decode cost per token, measured directly at one fixed context length.
 
     Prefill: one pass over `context` tokens. Decode: `steps` single-token passes on top of that
-    context. Median over repeats. This replaces a regression over mixed completions, whose
-    intercept came out negative.
+    context. Uses improved timing measurement: warm-up + median + IQR over repeats.
     """
     ids = engine.tok.encode(gdpr_text(), add_special_tokens=False)[:context]
+
+    # Warm-up: 3 runs
+    for _ in range(3):
+        cache = DynamicCache()
+        out = engine.model(torch.tensor([ids]), past_key_values=cache, use_cache=True, logits_to_keep=1)
+        nxt = out.logits[:, -1].argmax(-1, keepdim=True)
+        for _ in range(steps):
+            nxt = engine.model(nxt, past_key_values=cache, use_cache=True).logits[:, -1].argmax(-1, keepdim=True)
+
+    # Measure: 5 runs
     prefill, decode = [], []
     for _ in range(repeats):
         cache = DynamicCache()
@@ -463,12 +614,24 @@ def decode_cost(engine: Engine, context: int = 600, steps: int = 20, repeats: in
         for _ in range(steps):
             nxt = engine.model(nxt, past_key_values=cache, use_cache=True).logits[:, -1].argmax(-1, keepdim=True)
         decode.append((time.perf_counter() - t0) / steps)
-    ms_prefill, ms_decode = 1000 * statistics.median(prefill), 1000 * statistics.median(decode)
+
+    ms_prefill = [1000 * v for v in prefill]
+    ms_decode = [1000 * v for v in decode]
+
+    prefill_median = statistics.median(ms_prefill)
+    prefill_q1 = statistics.quantiles(ms_prefill, n=4)[0] if len(ms_prefill) >= 2 else prefill_median
+    prefill_q3 = statistics.quantiles(ms_prefill, n=4)[2] if len(ms_prefill) >= 2 else prefill_median
+
+    decode_median = statistics.median(ms_decode)
+    decode_q1 = statistics.quantiles(ms_decode, n=4)[0] if len(ms_decode) >= 2 else decode_median
+    decode_q3 = statistics.quantiles(ms_decode, n=4)[2] if len(ms_decode) >= 2 else decode_median
+
     return {"context_tokens": context, "decode_steps": steps, "repeats": repeats,
-            "ms_per_prefill_token": ms_prefill, "ms_per_decode_token": ms_decode,
-            "decode_over_prefill": ms_decode / ms_prefill,
-            "all_ms_per_prefill_token": [1000 * v for v in prefill],
-            "all_ms_per_decode_token": [1000 * v for v in decode]}
+            "ms_per_prefill_token": prefill_median, "prefill_q1": prefill_q1, "prefill_q3": prefill_q3, "prefill_iqr": prefill_q3 - prefill_q1,
+            "ms_per_decode_token": decode_median, "decode_q1": decode_q1, "decode_q3": decode_q3, "decode_iqr": decode_q3 - decode_q1,
+            "decode_over_prefill": decode_median / prefill_median,
+            "all_ms_per_prefill_token": ms_prefill,
+            "all_ms_per_decode_token": ms_decode}
 
 
 def match_option(text: str, keys: list[str]) -> str | None:
@@ -776,8 +939,12 @@ def fan_out(engine: Engine, state_tokens: int, counts=(1, 4, 13), repeats: int =
                 results[name] = methods[name]()
                 times[name].append(time.perf_counter() - t0)
         for name in methods:
-            row[name] = {"seconds": statistics.median(times[name]), "seconds_all": times[name],
-                         "output_tokens": results[name][1]}
+            t = times[name]
+            median = statistics.median(t)
+            q1 = statistics.quantiles(t, n=4)[0] if len(t) >= 2 else median
+            q3 = statistics.quantiles(t, n=4)[2] if len(t) >= 2 else median
+            row[name] = {"median_s": median, "q1_s": q1, "q3_s": q3, "iqr_s": q3 - q1,
+                         "seconds_all": t, "output_tokens": results[name][1]}
         picks = results["readout_packed"][0]
         for name in methods:
             ans = results[name][0]
@@ -787,8 +954,8 @@ def fan_out(engine: Engine, state_tokens: int, counts=(1, 4, 13), repeats: int =
             results["generate_batched_cached"][0][k] == results["generate_per_question_cached"][0][k] for k in qs) / n
         out.append(row)
         print(f"  {n:2d} questions: " + "  |  ".join(
-            f"{name} {row[name]['seconds']:.2f}s [{min(row[name]['seconds_all']):.2f}–"
-            f"{max(row[name]['seconds_all']):.2f}] ({row[name]['output_tokens']} tok)" for name in methods))
+            f"{name} {row[name]['median_s']:.2f}s [Q1={row[name]['q1_s']:.2f}, Q3={row[name]['q3_s']:.2f}] "
+            f"({row[name]['output_tokens']} tok)" for name in methods))
     return out
 
 
@@ -802,8 +969,45 @@ def pearson(x: list[float], y: list[float]) -> float:
 # Calibration on BoolQ (passage + yes/no question with a ground-truth answer)
 
 
-def boolq(n: int, seed: int = 0) -> list[dict]:
-    """A seeded sample of BoolQ validation (3,270 rows), via the Hugging Face datasets-server API."""
+def stratified_sample(rows: list[dict], n: int, label_key: str, seed: int) -> list[dict]:
+    """Stratified sampling that preserves label distribution (W15).
+
+    Groups rows by label, samples proportionally from each group, and ensures the
+    final sample maintains the original label distribution.
+    """
+    from collections import defaultdict
+    rng = random.Random(seed)
+
+    # Group by label
+    by_label = defaultdict(list)
+    for row in rows:
+        by_label[row[label_key]].append(row)
+
+    # Calculate proportional sample sizes
+    total = len(rows)
+    samples = []
+    for label, group in sorted(by_label.items()):
+        group_size = len(group)
+        # Sample proportionally, ensuring at least 1 from each label if possible
+        n_from_group = max(1, round(n * group_size / total))
+        n_from_group = min(n_from_group, group_size)  # Can't sample more than available
+        sampled = rng.sample(group, n_from_group)
+        samples.extend(sampled)
+
+    # If we have too many (due to rounding), randomly drop some
+    if len(samples) > n:
+        samples = rng.sample(samples, n)
+
+    # Shuffle to avoid label ordering
+    rng.shuffle(samples)
+    return samples
+
+
+def boolq(n: int, seed: int = 0, verify: bool = True) -> list[dict]:
+    """A seeded stratified sample of BoolQ validation (3,270 rows), via the Hugging Face datasets-server API.
+
+    Uses stratified sampling to preserve the label distribution of true/false answers (W15).
+    """
     path = DATA / "boolq_validation.json"
     if not path.exists():
         rows, offset = [], 0
@@ -817,8 +1021,9 @@ def boolq(n: int, seed: int = 0) -> list[dict]:
                 break
         path.write_text(json.dumps(rows))
     rows = json.loads(path.read_text())
-    random.Random(seed).shuffle(rows)
-    return rows[:n]
+    if verify and MANIFEST_PATH.exists():
+        _verify_dataset_checksums("boolq", rows)
+    return stratified_sample(rows, n, "answer", seed)
 
 
 def binary_metrics(z: list[float], y: list[int]) -> dict:
@@ -1025,10 +1230,12 @@ def multiclass_entry(probs: list[list[float]], y: list[int], seconds: list[float
     return {**m, "n": len(y), "parse_failures": fails, **mean_ci(seconds), "output_tokens": out_tokens, "has_probs": has_probs}
 
 
-def quality(engine: Engine, n_boolq: int = 200, n_ag: int = 120) -> dict:
+def quality(engine: Engine, n_boolq: int = 500, n_ag: int = 300) -> dict:
     """E11. BoolQ (yes/no) and AG News (4 topics), each question answered four ways by the same model:
     readout; readout with 2-fold temperature scaling; the model writes its answer; the model writes a probability.
     Unparsed replies count as wrong, and get an uninformative probability (0.5, or uniform) for ECE and Brier.
+
+    Sample sizes expanded in W15: BoolQ 200→500, AG News 120→300 to narrow confidence intervals.
     """
     generate(engine, "warm up", 2)
     out = {}
@@ -1334,33 +1541,47 @@ SUPPORT_TICKET = {
 }
 
 
-def same_format(engine: Engine, repeats: int = 3) -> dict:
-    """E12: the same request answered as minijev's JSON, read out vs written by the same model. Median of repeats."""
+def same_format(engine: Engine, repeats: int = 5) -> dict:
+    """E12: the same request answered as minijev's JSON, read out vs written by the same model.
+
+    Uses improved timing measurement: warm-up + median + IQR over 5 runs.
+    """
     shoes = {"state": SHOES, "questions": {label.split(": ")[1].replace(" ", "_"): q
                                            for label, state, q, _ in JEV_DOC_CASES if state == SHOES}}
-    generate(engine, "warm up", 2)
+    # Warm-up: 3 runs
+    for _ in range(3):
+        generate(engine, "warm up", 2)
+
     out = {}
     for name, body in (("support_ticket", SUPPORT_TICKET), ("jev_shoes_5_choices", shoes)):
         runs = [same_format_run(engine, body) for _ in range(repeats)]
         r, w = [x["readout"]["seconds"] for x in runs], [x["written"]["seconds"] for x in runs]
         st = [x["structured"]["seconds"] for x in runs]
         last = runs[-1]
-        out[name] = {"questions": len(body["questions"]), "readout_seconds": statistics.median(r), "readout_all": r,
-                     "written_seconds": statistics.median(w), "written_all": w,
+
+        # Compute median and IQR for each method
+        r_median, r_q1, r_q3 = statistics.median(r), statistics.quantiles(r, n=4)[0], statistics.quantiles(r, n=4)[2]
+        w_median, w_q1, w_q3 = statistics.median(w), statistics.quantiles(w, n=4)[0], statistics.quantiles(w, n=4)[2]
+        st_median, st_q1, st_q3 = statistics.median(st), statistics.quantiles(st, n=4)[0], statistics.quantiles(st, n=4)[2]
+
+        out[name] = {"questions": len(body["questions"]),
+                     "readout_median_s": r_median, "readout_q1_s": r_q1, "readout_q3_s": r_q3, "readout_iqr_s": r_q3 - r_q1, "readout_all": r,
+                     "written_median_s": w_median, "written_q1_s": w_q1, "written_q3_s": w_q3, "written_iqr_s": w_q3 - w_q1, "written_all": w,
                      "written_tokens": [x["written"]["output_tokens"] for x in runs],
                      "usable": [x["written"]["usable"] for x in runs], "valid_json": [x["written"]["valid_json"] for x in runs],
                      "agree": [sum(c["agree"] for c in x["compare"].values()) for x in runs],
-                     "structured_seconds": statistics.median(st), "structured_all": st,
+                     "structured_median_s": st_median, "structured_q1_s": st_q1, "structured_q3_s": st_q3, "structured_iqr_s": st_q3 - st_q1, "structured_all": st,
                      "structured_decided_tokens": [x["structured"]["output_tokens"] for x in runs],
                      "structured_forced_tokens": [x["structured"]["forced_tokens"] for x in runs],
                      "structured_usable": [x["structured"]["usable"] for x in runs],
                      "structured_agree": [sum(c["agree"] for c in x["compare_structured"].values()) for x in runs],
                      "example": last}
-        print(f"{name}: readout {statistics.median(r):.2f}s | written {statistics.median(w):.2f}s "
-              f"({statistics.median(w) / statistics.median(r):.1f}x), tokens {out[name]['written_tokens']}, "
-              f"usable {out[name]['usable']}/{len(body['questions'])}, agree {out[name]['agree']} | structured "
-              f"{statistics.median(st):.2f}s, decided {out[name]['structured_decided_tokens']}, "
-              f"usable {out[name]['structured_usable']}, agree {out[name]['structured_agree']}")
+        print(f"{name}: readout {r_median:.2f}s [Q1={r_q1:.2f}, Q3={r_q3:.2f}] | "
+              f"written {w_median:.2f}s [Q1={w_q1:.2f}, Q3={w_q3:.2f}] ({w_median / r_median:.1f}x), "
+              f"tokens {out[name]['written_tokens']}, usable {out[name]['usable']}/{len(body['questions'])}, "
+              f"agree {out[name]['agree']} | structured {st_median:.2f}s [Q1={st_q1:.2f}, Q3={st_q3:.2f}], "
+              f"decided {out[name]['structured_decided_tokens']}, usable {out[name]['structured_usable']}, "
+              f"agree {out[name]['structured_agree']}")
     return out
 
 
@@ -1368,12 +1589,14 @@ def same_format(engine: Engine, repeats: int = 3) -> dict:
 # E13: the order flaw. A listwise Choice can prefer a letter position over the content. Three fixes, measured.
 
 
-def order_bias(engine: Engine, n: int = 120, orders_per_item: int = 4, seed: int = 0) -> dict:
-    """AG News, each article asked in several option orders (the original plus random shuffles).
+def order_bias(engine: Engine, n: int = 300, orders_per_item: int = 4, seed: int = 0) -> dict:
+    """E13: AG News, each article asked in several option orders (the original plus random shuffles).
 
     One packed pass per (article, order) holds three questions: listwise (1 branch), averaged over every rotation
     (k branches) and pointwise (k branches). A fourth method, debiased, divides the listwise probabilities by the
     model's measured liking for each letter position (fitted on the other half of the articles; PriDe-style).
+
+    Sample size expanded in W15: 120→300 to narrow confidence intervals.
     """
     keys, k = list(AG_OPTIONS), len(AG_OPTIONS)
     rng = random.Random(seed)
@@ -1455,10 +1678,20 @@ def tag(model: str) -> str:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("name", choices=[*EXPERIMENTS, "all"])
+    ap.add_argument("name", nargs="?", choices=[*EXPERIMENTS, "all"], help="Experiment to run")
     ap.add_argument("--model", default=MODEL)
     ap.add_argument("--attn", default="eager", choices=["eager", "sdpa"])
+    ap.add_argument("--update-manifest", action="store_true",
+                    help="Generate/update dataset manifest with checksums (W17)")
     args = ap.parse_args()
+
+    if args.update_manifest:
+        update_manifest()
+        return
+
+    if args.name is None:
+        ap.error("experiment name is required (unless using --update-manifest)")
+
     engine = Engine(args.model, attn=args.attn)
     RESULTS.mkdir(exist_ok=True)
     for name in EXPERIMENTS if args.name == "all" else [args.name]:

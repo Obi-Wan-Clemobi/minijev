@@ -40,6 +40,17 @@ MODES = ("naive", "kv", "packed")
 SETTINGS_FILE = Path(__file__).with_name("minijev.env")
 
 
+def default_choice_mode(model_name: str) -> str:
+    """Model-size-aware default for choice_mode. Fixes W1 position bias at 1.5B.
+
+    E13 measured: 0.5B benefits from averaged (3% flips vs 20% listwise),
+    1.5B benefits from pointwise (0% flips, 0.908 acc vs 0.840 listwise).
+    """
+    if "0.5B" in model_name:
+        return os.getenv("MINIJEV_CHOICE_MODE_0_5B", "averaged")
+    return os.getenv("MINIJEV_CHOICE_MODE_1_5B", "pointwise")
+
+
 @dataclass(frozen=True)
 class Settings:
     """The dials of ask() and Engine. Each field is MINIJEV_<FIELD> in minijev.env or in the environment.
@@ -70,16 +81,61 @@ class Settings:
                     values[k.strip()] = v.strip().strip("\"'")
         values.update({k: v for k, v in os.environ.items() if k.startswith("MINIJEV_")})
         known = {"MINIJEV_" + f.name.upper(): f for f in fields(cls)}
-        unknown = sorted(set(values) - set(known))
+        # Allow model-specific and mode-specific temperature settings (for Task 2.2)
+        allowed = {
+            "MINIJEV_CHOICE_MODE_0_5B", "MINIJEV_CHOICE_MODE_1_5B",
+            "MINIJEV_TEMP_NOUL_0_5B", "MINIJEV_TEMP_NOUL_1_5B",
+            "MINIJEV_TEMP_CHOICE_LISTWISE_0_5B", "MINIJEV_TEMP_CHOICE_LISTWISE_1_5B",
+            "MINIJEV_TEMP_CHOICE_POINTWISE_0_5B", "MINIJEV_TEMP_CHOICE_POINTWISE_1_5B",
+            "MINIJEV_TEMP_CHOICE_AVERAGED_0_5B", "MINIJEV_TEMP_CHOICE_AVERAGED_1_5B",
+            "MINIJEV_TEMP_SCORE_0_5B", "MINIJEV_TEMP_SCORE_1_5B",
+        }
+        unknown = sorted(set(values) - set(known) - allowed)
         if unknown:
             raise ValueError(f"unknown settings {unknown}; known: {sorted(known)}")
         s = cls(**{f.name: type(f.default)(values[k]) for k, f in known.items() if k in values})
+        # Apply model-aware choice_mode default if not explicitly set via MINIJEV_CHOICE_MODE
+        if "MINIJEV_CHOICE_MODE" not in values:
+            s = cls(**{**{f.name: getattr(s, f.name) for f in fields(s)}, "choice_mode": default_choice_mode(s.model)})
         assert s.choice_mode in ("listwise", "pointwise", "averaged"), f"MINIJEV_CHOICE_MODE={s.choice_mode!r}"
         assert s.score_mode in ("listwise", "pointwise"), f"MINIJEV_SCORE_MODE={s.score_mode!r}"
         assert min(s.temp_noul, s.temp_choice, s.temp_score) > 0, "temperatures must be > 0"
+        # Store values for per-(model, primitive, mode) temperature lookup
+        s.__dict__["_values"] = values
         return s
 
-    def temperature(self, qtype: str) -> float:
+    def temperature(self, qtype: str, mode: str = None) -> float:
+        """Return temperature for given question type and mode.
+
+        Looks up per-(model, primitive, mode) temperature if available (W2/W3 Task 2.2),
+        otherwise falls back to generic temp_noul/temp_choice/temp_score.
+
+        Args:
+            qtype: "noul", "choice", or "score"
+            mode: For choice/score: "listwise", "pointwise", "averaged". If None, uses self.choice_mode/score_mode.
+        """
+        if mode is None:
+            mode = self.choice_mode if qtype == "choice" else (self.score_mode if qtype == "score" else None)
+
+        # Try per-(model, primitive, mode) lookup first
+        values = self.__dict__.get("_values", {})
+        if values:
+            # Extract model size key: "0_5B" or "1_5B"
+            model_key = "0_5B" if "0.5B" in self.model else ("1_5B" if "1.5B" in self.model else None)
+
+            if model_key:
+                # Try mode-specific lookup for choice/score
+                if qtype in ("choice", "score") and mode:
+                    key = f"MINIJEV_TEMP_{qtype.upper()}_{mode.upper()}_{model_key}"
+                    if key in values:
+                        return float(values[key])
+
+                # Try primitive-level lookup (noul, or fallback for choice/score)
+                key = f"MINIJEV_TEMP_{qtype.upper()}_{model_key}"
+                if key in values:
+                    return float(values[key])
+
+        # Fall back to generic single-value temps
         return {"noul": self.temp_noul, "choice": self.temp_choice, "score": self.temp_score}[qtype]
 
 
@@ -401,7 +457,9 @@ def ask(engine: Engine, req: dict, mode: str = "packed", settings: Settings | No
     raw, usage = raw_scores(engine, req, mode)
     answers, warnings = {}, []
     for qid, q in req["questions"].items():
-        a = answer(q, raw[qid]["logits"], s.temperature(q["type"]), s.bias_noul if q["type"] == "noul" else 0.0)
+        # Get mode-specific temperature (W2/W3 Task 2.2)
+        mode = q.get("choice_mode") if q["type"] == "choice" else (q.get("score_mode") if q["type"] == "score" else None)
+        a = answer(q, raw[qid]["logits"], s.temperature(q["type"], mode), s.bias_noul if q["type"] == "noul" else 0.0)
         answers[qid] = a if debug else rounded(a)
         low = min(raw[qid]["mass"])
         if low < s.min_label_mass:  # the model wanted to say something other than a label: prompt problem
