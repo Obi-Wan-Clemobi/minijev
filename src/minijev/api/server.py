@@ -293,6 +293,7 @@ def v1_results():
             "permutation": (load(f"permutation{suffix}.json") or {}).get("summary"),
             "jevdocs": (load(f"jevdocs{suffix}.json") or {}).get("summary"),
             "order_bias": load(f"order_bias{suffix}.json"),
+            "template_sensitivity": load(f"template_sensitivity{suffix}.json"),
             "quality": {task: {k: v for k, v in r.items() if k != "rows"}
                         for task, r in ((load(f"quality{suffix}.json") or {}).get("tasks") or {}).items()} or None,
         }
@@ -301,6 +302,13 @@ def v1_results():
                                                         "label_vs_readout_agreement")}
     out["demo"] = load("demo.json")
     return out
+
+
+@app.get("/v1/criteria")
+def v1_criteria():
+    """The contrastive criteria library for vague yes/no questions (W8)."""
+    from ..criteria import LIBRARY
+    return LIBRARY
 
 
 @app.get("/v1/data")

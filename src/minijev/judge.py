@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import math
 import time
-
 from dataclasses import replace
 
 from .engine import Branch, Engine, groups
@@ -23,6 +22,26 @@ def validate(req: dict) -> None:
             assert 2 <= len(q["criteria"]) <= 10, f"{qid}: score needs 2..10 levels"
         elif t != "noul":
             raise ValueError(f"{qid}: unknown type {t!r}")
+    paired = [q["opposite_of"] for q in req["questions"].values() if q.get("opposite_of")]
+    for qid, q in req["questions"].items():
+        other = q.get("opposite_of")
+        if other:
+            assert q["type"] == "noul" and req["questions"].get(other, {}).get("type") == "noul", \
+                f"{qid}: opposite_of must name another noul in the same request"
+            assert other != qid and paired.count(other) == 1 and qid not in paired \
+                and not req["questions"][other].get("opposite_of"), f"{qid}: a question can be in one opposite pair only"
+
+
+def consistent(p_x: float, p_not_x: float) -> tuple[float, float]:
+    """Make an opposite pair sum to 1 (W6, PLAN Task 4.5). The two answers are two estimates of the same log-odds,
+    logit P(X) and -logit P(not X); their mean is the combined estimate. When the pair already sums to 1, nothing
+    changes."""
+    eps = 1e-12
+    lx = math.log(max(p_x, eps) / max(1 - p_x, eps))
+    lnx = math.log(max(p_not_x, eps) / max(1 - p_not_x, eps))
+    z = (lx - lnx) / 2
+    p = 1 / (1 + math.exp(-z)) if z >= 0 else math.exp(z) / (1 + math.exp(z))
+    return p, 1 - p
 
 
 def share_head(engine: Engine, branches: list[Branch], blocks: list[str], head_text: str) -> list[Branch]:
@@ -49,7 +68,7 @@ def branches_for(engine: Engine, qid: str, q: dict, share_question: bool = False
         return share_head(engine, flat, blocks, question + "OPTIONS:\n")
     if flat[0].pointwise:
         items = ([f"{key}: {render_inline(d)}" if d is not None else key for key, d in q["criteria"].items()]
-                 if q["type"] == "choice" else [render_inline(level) for level in q["criteria"]])
+                 if q["type"] == "choice" else score_items(q))
         return share_head(engine, flat, [proposal_block(q, it) for it in items], question)
     return flat
 
@@ -76,10 +95,19 @@ def _branches(engine: Engine, qid: str, q: dict) -> list[Branch]:
         return [Branch(engine.suffix_ids(choice_block(q)), engine.letters[:k], qid)]
     if q.get("score_mode", "pointwise") == "listwise":  # ablation; Jev judges levels separately
         return [Branch(engine.suffix_ids(score_listwise_block(q)), engine.letters[:k], qid)]
-    return [
-        Branch(engine.suffix_ids(proposal_block(q, render_inline(level))), [engine.yes, engine.no], qid, pointwise=True)
-        for level in q["criteria"]
-    ]
+    return [Branch(engine.suffix_ids(proposal_block(q, item)), [engine.yes, engine.no], qid, pointwise=True)
+            for item in score_items(q)]
+
+
+def score_items(q: dict) -> list[str]:
+    """The proposed answer of each pointwise Score level. contrastive: each level also names its neighbours as what
+    it is not, "frustrated (not mildly annoyed; not angry)", because a small model says yes to any plausible level
+    when it sees one level alone (W5, PLAN Task 4.4)."""
+    levels = [render_inline(level) for level in q["criteria"]]
+    if not q.get("contrastive"):
+        return levels
+    return [f"{level} (" + "; ".join(f"not {levels[j]}" for j in (i - 1, i + 1) if 0 <= j < len(levels)) + ")"
+            for i, level in enumerate(levels)]
 
 
 def raw_scores(engine: Engine, req: dict, mode: str = "packed", share_question: bool = False) -> tuple[dict, dict]:
@@ -119,7 +147,7 @@ def with_modes(q: dict, s: Settings) -> dict:
     if q["type"] == "choice":
         return {"choice_mode": s.resolved_choice_mode(), **q}
     if q["type"] == "score":
-        return {"score_mode": s.score_mode, **q}
+        return {"score_mode": s.score_mode, **({"contrastive": True} if s.score_contrastive else {}), **q}
     return q
 
 
@@ -136,13 +164,24 @@ def ask(engine: Engine, req: dict, mode: str = "packed", settings: Settings | No
         readout_mode = q.get("choice_mode") if q["type"] == "choice" else None
         t, b, source = s.calibrator(q["type"], readout_mode)
         applied[qid] = {"temperature": t, "bias": b, "source": source}
-        a = answer(q, raw[qid]["logits"], t, b)
-        answers[qid] = a if debug else rounded(a)
+        answers[qid] = answer(q, raw[qid]["logits"], t, b)
         low = min(raw[qid]["mass"])
         if low < s.min_label_mass:  # the model wanted to say something other than a label: prompt problem
             warnings.append(f"{qid}: only {low:.2f} of next-token mass is on the labels")
+    pairs = {}
+    for qid, q in req["questions"].items():  # opposite pairs: "opposite_of" names the question it negates
+        if q.get("opposite_of"):
+            other = q["opposite_of"]
+            before = answers[other]["noul"] + answers[qid]["noul"]
+            p, p_not = consistent(answers[other]["noul"], answers[qid]["noul"])
+            answers[other] = {**answers[other], "noul": p}
+            answers[qid] = {**answers[qid], "noul": p_not}
+            pairs[qid] = {"opposite_of": other, "sum_before": before}
+    if not debug:
+        answers = {qid: rounded(a) for qid, a in answers.items()}
     resp = {"model": f"minijev-poc ({engine.name})", "answers": answers, "usage": usage}
     if debug:
         prov = s.fitted.get("provenance") if s.fitted else None
-        resp["debug"] = {"raw": raw, "warnings": warnings, "calibration": applied, "calibration_provenance": prov}
+        resp["debug"] = {"raw": raw, "warnings": warnings, "calibration": applied, "calibration_provenance": prov,
+                         "opposite_pairs": pairs}
     return resp

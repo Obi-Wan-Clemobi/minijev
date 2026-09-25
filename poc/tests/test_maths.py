@@ -126,3 +126,41 @@ def test_temperature_and_bias():
     q = {"type": "noul"}
     assert answer(q, [2.0, 0.0], temperature=2.0)["noul"] == pytest.approx(1 / (1 + math.exp(-1)))
     assert answer(q, [0.0, 0.0], bias=1.0)["noul"] == pytest.approx(1 / (1 + math.exp(-1)))
+
+
+def test_contrastive_levels_name_their_neighbours():
+    from minijev.judge import score_items
+    q = {"type": "score", "instructions": "?", "criteria": ["calm", "annoyed", "angry"]}
+    assert score_items(q) == ["calm", "annoyed", "angry"]
+    assert score_items({**q, "contrastive": True}) == [
+        "calm (not annoyed)", "annoyed (not calm; not angry)", "angry (not annoyed)"]
+
+
+def test_opposite_pair_is_made_consistent():
+    import math
+    from minijev.judge import consistent, validate
+    p, q = consistent(0.72, 0.47)  # Jev's refund pair: sums to 1.19
+    assert math.isclose(p + q, 1.0) and 0.5 < p < 0.72
+    assert all(math.isclose(a, b) for a, b in zip(consistent(0.8, 0.2), (0.8, 0.2)))  # already consistent: unchanged
+    ok = {"state": "x", "questions": {"a": {"type": "noul", "instructions": "?"},
+                                      "b": {"type": "noul", "instructions": "?", "opposite_of": "a"}}}
+    validate(ok)
+    for bad in ({"b": {"type": "noul", "instructions": "?", "opposite_of": "b"}},
+                {"b": {"type": "noul", "instructions": "?", "opposite_of": "zzz"}},
+                {"c": {"type": "noul", "instructions": "?", "opposite_of": "a"}}):  # a in two pairs
+        with pytest.raises(AssertionError):
+            validate({"state": "x", "questions": {**ok["questions"], **bad}})
+
+
+def test_bool_settings_parse_words(tmp_path):
+    from minijev import Settings
+    f = tmp_path / "e.env"
+    f.write_text("MINIJEV_SHARE_QUESTION=false\nMINIJEV_SCORE_CONTRASTIVE=true\nMINIJEV_CALIBRATION=none\n")
+    s = Settings.load(f)
+    assert s.share_question is False and s.score_contrastive is True
+
+
+def test_criteria_library_is_contrastive():
+    from minijev.criteria import LIBRARY
+    assert len(LIBRARY) >= 20
+    assert all(e["criteria"]["true"] and e["criteria"]["false"] and e["question"].endswith("?") for e in LIBRARY.values())

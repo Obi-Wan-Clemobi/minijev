@@ -38,7 +38,7 @@ from transformers import DynamicCache
 
 from minijev.calibrate import (cross_fit, cross_fit_multiclass, fit_affine, fit_temperature_multiclass, logit, nll,
                                nll_multi, sigmoid, softmax_list)
-from minijev.engine import MODES, Engine
+from minijev.engine import MODES, Branch, Engine
 from minijev.fixtures import (AG_OPTIONS, AG_QUESTION, GDPR_JEV, GDPR_QUESTIONS, JEV_DOC_CASES,
                               SHOES, SUPPORT_TICKET, fetch, gdpr_state, gdpr_text)
 from minijev.generation import (generate, generate_batched, generate_logprobs,
@@ -1211,9 +1211,289 @@ def heldout(engine: Engine) -> dict:
 
 # ---------------------------------------------------------------------------
 
+# E15: how much the answers depend on the template wording (W7, PLAN Task 4.3). A full grid of 3 wordings for each of
+# 4 template parts = 81 templates. Level 0 of every part is the production template. BoolQ val only: this measures,
+# it chooses nothing, and the test split stays unread.
+TEMPLATE_PARTS = {
+    "system": [SYSTEM, "You are a helpful assistant.", "Read the text below and answer the question about it."],
+    "state_label": ["STATE:", "TEXT:", "Passage:"],
+    "question_label": ["QUESTION:", "Question:", "Q:"],
+    "answer_line": ["Answer with Yes or No.", "Reply with Yes or No only.", "Is the answer Yes or No?"],
+}
+
+
+def template_sensitivity(engine: Engine, n: int = 200) -> dict:
+    import itertools
+
+    import data
+    parts = TEMPLATE_PARTS
+    with data.tuning():  # a PermissionError if anything here read the test split
+        rows = data.load_split("boolq", "val")[:n]
+    sentinel = "\x00SPLIT\x00"
+    heads = []
+    for system in parts["system"]:
+        text = engine.tok.apply_chat_template([{"role": "system", "content": system}, {"role": "user", "content": sentinel}],
+                                              tokenize=False, add_generation_prompt=True)
+        head, tail = text.split(sentinel)
+        assert tail == engine._tail
+        heads.append(head)
+    grid = list(itertools.product(*(range(len(v)) for v in parts.values())))  # (system, state, question, answer)
+    key = {"model": engine.name, "parts": parts, "n": n, "splits_sha256": data.splits_fingerprint()}
+    path = RESULTS / "readouts" / (tag(engine.name).lstrip("-") or "Qwen2.5-0.5B-Instruct") / "template_grid_boolq_val.json"
+    saved = json.loads(path.read_text()) if path.exists() else {}
+    if saved.get("key") == key:
+        z, mass = saved["z"], saved["mass"]
+    else:
+        z = {str(g): [] for g in grid}
+        mass = {str(g): [] for g in grid}
+        tails = list(itertools.product(range(3), range(3)))
+        t0 = time.perf_counter()
+        for i, r in enumerate(rows):
+            q = r["question"][0].upper() + r["question"][1:] + "?"
+            branches = [Branch(engine.suffix_ids(f"{parts['question_label'][qi]} {q}\n{parts['answer_line'][ai]}"),
+                               [engine.yes, engine.no], "q") for qi, ai in tails]
+            for si, head in enumerate(heads):
+                for li, label in enumerate(parts["state_label"]):
+                    prefix = engine.tok.encode(f"{head}{label}\n{r['passage']}\n\n", add_special_tokens=False)
+                    for (qi, ai), row in zip(tails, engine.readouts(prefix, branches, "packed")):
+                        (yes, no), m = class_logits(row, [engine.yes, engine.no])
+                        z[str((si, li, qi, ai))].append(yes - no)
+                        mass[str((si, li, qi, ai))].append(m)
+            if (i + 1) % 25 == 0:
+                print(f"  template grid {i + 1}/{len(rows)}  ({time.perf_counter() - t0:.0f}s)", flush=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"key": key, "z": z, "mass": mass}))
+    # The production template must give the same log-odds as ask() does.
+    base = str((0, 0, 0, 0))
+    q0 = {"type": "noul", "instructions": rows[0]["question"][0].upper() + rows[0]["question"][1:] + "?"}
+    ref = raw_scores(engine, {"state": rows[0]["passage"], "questions": {"q": q0}})[0]["q"]["logits"]
+    assert abs((ref[0] - ref[1]) - z[base][0]) < 1e-3, "grid level 0 is not the production template"
+
+    y = [r["y"] for r in rows]
+    decide = lambda zs: [v > 0 for v in zs]
+    base_dec = decide(z[base])
+    variants = []
+    for g in grid:
+        k = str(g)
+        m = binary_metrics(z[k], y)
+        variants.append({"parts": dict(zip(parts, g)), "accuracy": m["accuracy"], "ece": m["ece"], "nll": m["nll"],
+                         "mean_p_yes": m["mean_p_yes"], "min_mass": min(mass[k]),
+                         "median_mass": statistics.median(mass[k]),
+                         "flip_rate": sum(a != b for a, b in zip(decide(z[k]), base_dec)) / len(y)})
+    accs = [v["accuracy"] for v in variants]
+    base_acc = variants[0]["accuracy"]  # grid[0] is (0, 0, 0, 0)
+    effects = {part: [{"level": j, "text": text,
+                       **{f"mean_{m}": statistics.mean(v[m] for v in variants if v["parts"][part] == j)
+                          for m in ("accuracy", "ece", "flip_rate", "mean_p_yes")}}
+                      for j, text in enumerate(parts[part])] for part in parts}
+    decisions = [decide(z[str(g)]) for g in grid]
+    unstable = sum(len({d[i] for d in decisions}) > 1 for i in range(len(y))) / len(y)
+    return {
+        "design": "full grid, 3 wordings x 4 template parts = 81 templates; level 0 = production template",
+        "data": {"dataset": "boolq", "split": "val", "n": len(y), "test_read": False},
+        "parts": parts,
+        "base": next(v for v in variants if not any(v["parts"].values())),
+        "spread": {"accuracy_min": min(accs), "accuracy_max": max(accs), "accuracy_sd": statistics.pstdev(accs),
+                   "accuracy_ci95_halfwidth_one_template": 1.96 * math.sqrt(base_acc * (1 - base_acc) / len(y)),
+                   "flip_rate_mean": statistics.mean(v["flip_rate"] for v in variants),
+                   "flip_rate_max": max(v["flip_rate"] for v in variants),
+                   "items_that_change_under_some_template": unstable},
+        "effects": effects,
+        "variants": variants,
+    }
+
+
+# E16: contrastive Score levels (W5, PLAN Task 4.4) on SST-5, a labelled 5-level set (docs/DATA.md). Each pointwise
+# level can name its neighbours: "positive (not neutral; not very positive)". Chosen on val, reported on test.
+SST5_QUESTION = "How positive is the sentiment of this movie review?"
+SST5_LEVELS = ["very negative", "negative", "neutral", "positive", "very positive"]
+SCORE_VARIANTS = {"pointwise": {"score_mode": "pointwise"},
+                  "contrastive": {"score_mode": "pointwise", "contrastive": True},
+                  "listwise": {"score_mode": "listwise"}}
+
+
+def ordinal_metrics(probs: list[list[float]], y: list[int]) -> dict:
+    """Exact accuracy (most probable level), adjacent (off by 1) and far (off by 2 or more) error rates, mean absolute
+    error of the expected level, NLL of the true level, and the confusion matrix (rows: true level)."""
+    k = len(probs[0])
+    pred = [max(range(k), key=p.__getitem__) for p in probs]
+    conf = [[0] * k for _ in range(k)]
+    for t, pr in zip(y, pred):
+        conf[t][pr] += 1
+    n = len(y)
+    return {"accuracy": sum(a == b for a, b in zip(pred, y)) / n,
+            "adjacent_error": sum(abs(a - b) == 1 for a, b in zip(pred, y)) / n,
+            "far_error": sum(abs(a - b) >= 2 for a, b in zip(pred, y)) / n,
+            "mae_expected": sum(abs(sum(i * pi for i, pi in enumerate(p)) - t) for p, t in zip(probs, y)) / n,
+            "nll": -sum(math.log(max(p[t], 1e-12)) for p, t in zip(probs, y)) / n,
+            "mean_level_predicted": sum(pred) / n, "confusion": conf}
+
+
+def score_readouts(engine: Engine, split: str) -> list[dict]:
+    """Raw Score logits of every SST-5 item in one split, for each variant. Cached like readout_cache()."""
+    import data
+    q = {"type": "score", "instructions": SST5_QUESTION, "criteria": SST5_LEVELS}
+    key = {"model": engine.name, "prompt_sha1": prompt_fingerprint(engine), "splits_sha256": data.splits_fingerprint("sst5"),
+           "question": q, "variants": SCORE_VARIANTS}
+    path = RESULTS / "readouts" / (tag(engine.name).lstrip("-") or "Qwen2.5-0.5B-Instruct") / f"sst5_{split}.json"
+    rows = data.load_split("sst5", split)
+    if path.exists() and (saved := json.loads(path.read_text()))["key"] == key:
+        return saved["items"]
+    items, t0 = [], time.perf_counter()
+    for i, r in enumerate(rows):
+        raw, _ = raw_scores(engine, {"state": r["text"], "questions": {v: {**q, **extra} for v, extra in SCORE_VARIANTS.items()}},
+                            share_question=True)
+        items.append({"source_index": r["source_index"], "y": r["y"], **{v: raw[v]["logits"] for v in SCORE_VARIANTS},
+                      "mass": {v: min(raw[v]["mass"]) for v in SCORE_VARIANTS}})
+        if (i + 1) % 50 == 0:
+            print(f"  sst5/{split} {i + 1}/{len(rows)}  ({time.perf_counter() - t0:.0f}s)", flush=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"key": key, "items": items}))
+    return items
+
+
+def contrastive_levels(engine: Engine) -> dict:
+    import data
+    with data.tuning():  # choose on val; reading test here would raise
+        val = score_readouts(engine, "val")
+    val_metrics = {v: ordinal_metrics([softmax_list(it[v]) for it in val], [it["y"] for it in val]) for v in SCORE_VARIANTS}
+    chosen = min(("pointwise", "contrastive"), key=lambda v: val_metrics[v]["nll"])
+    test = score_readouts(engine, "test")
+    y = [it["y"] for it in test]
+    test_metrics = {}
+    for v in SCORE_VARIANTS:
+        probs = [softmax_list(it[v]) for it in test]
+        m = ordinal_metrics(probs, y)
+        pairs = list(zip(probs, y))
+        m["accuracy_ci95"] = bootstrap_ci(pairs, lambda s: ordinal_metrics([p for p, _ in s], [t for _, t in s])["accuracy"])
+        m["adjacent_error_ci95"] = bootstrap_ci(pairs, lambda s: ordinal_metrics([p for p, _ in s], [t for _, t in s])["adjacent_error"])
+        m["min_mass"] = min(it["mass"][v] for it in test)
+        test_metrics[v] = m
+    a, b = test_metrics["pointwise"]["adjacent_error"], test_metrics["contrastive"]["adjacent_error"]
+    pred = {v: [max(range(len(SST5_LEVELS)), key=softmax_list(it[v]).__getitem__) for it in test] for v in SCORE_VARIANTS}
+    paired = [(abs(pp - t) == 1, abs(pc - t) == 1) for pp, pc, t in zip(pred["pointwise"], pred["contrastive"], y)]
+    diff_ci = bootstrap_ci(paired, lambda s: (sum(c for _, c in s) - sum(p for p, _ in s)) / len(s))
+    # The documented Jev Score cases (exploratory: 11 cases, not held out): mean absolute gap to Jev's answer.
+    jev = []
+    for label, state, q, expected in JEV_DOC_CASES:
+        if q["type"] != "score":
+            continue
+        raw, _ = raw_scores(engine, {"state": state, "questions": {v: {**q, **SCORE_VARIANTS[v]} for v in ("pointwise", "contrastive")}})
+        got = {v: answer({**q}, raw[v]["logits"])["score"] for v in ("pointwise", "contrastive")}
+        jev.append({"case": label, "state": state, "jev": expected, **got})
+    return {
+        "data": {"dataset": "sst5", "question": SST5_QUESTION, "levels": SST5_LEVELS,
+                 "chosen_on": "val", "reported_on": "test", "n_val": len(val), "n_test": len(test),
+                 "splits_file": "datasets/splits_score_v1.json", "splits_sha256": data.splits_fingerprint("sst5")},
+        "val": {v: {k: m[k] for k in ("accuracy", "adjacent_error", "far_error", "mae_expected", "nll")} for v, m in val_metrics.items()},
+        "chosen": chosen,
+        "test": test_metrics,
+        "adjacent_error_change": (b - a) / a if a else None,  # relative: -0.2 = 20% fewer adjacent errors
+        "adjacent_error_diff_ci95": diff_ci,  # paired bootstrap of contrastive minus pointwise, absolute
+        "jev_doc_cases": {"cases": jev, "note": "exploratory: 11 documented cases, not held out",
+                          **{f"mae_vs_jev_{v}": statistics.mean(abs(c[v] - c["jev"]) for c in jev) for v in ("pointwise", "contrastive")}},
+        "splits_accessed": data.ACCESS,
+    }
+
+
+# E17: opposite Nouls (W6, PLAN Task 4.5). Each BoolQ question is also asked in a negated form; the two answers should
+# sum to 1. consistent() combines them. Val decides whether combining helps; test reports.
+def negated(question: str) -> str:
+    return f"Is the answer to the following question No? {question}"
+
+
+def opposite_readouts(engine: Engine, split: str) -> list[dict]:
+    import data
+    key = {"model": engine.name, "prompt_sha1": prompt_fingerprint(engine), "splits_sha256": data.splits_fingerprint(),
+           "negated": negated("\x00")}
+    path = RESULTS / "readouts" / (tag(engine.name).lstrip("-") or "Qwen2.5-0.5B-Instruct") / f"boolq_opposite_{split}.json"
+    rows = data.load_split("boolq", split)
+    if path.exists() and (saved := json.loads(path.read_text()))["key"] == key:
+        return saved["items"]
+    items, t0 = [], time.perf_counter()
+    for i, r in enumerate(rows):
+        q = r["question"][0].upper() + r["question"][1:] + "?"
+        raw, _ = raw_scores(engine, {"state": r["passage"], "questions": {
+            "x": {"type": "noul", "instructions": q}, "not_x": {"type": "noul", "instructions": negated(q)}}})
+        items.append({"source_index": r["source_index"], "y": r["y"],
+                      "z_x": raw["x"]["logits"][0] - raw["x"]["logits"][1],
+                      "z_not_x": raw["not_x"]["logits"][0] - raw["not_x"]["logits"][1]})
+        if (i + 1) % 100 == 0:
+            print(f"  boolq_opposite/{split} {i + 1}/{len(rows)}  ({time.perf_counter() - t0:.0f}s)", flush=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"key": key, "items": items}))
+    return items
+
+
+def opposite_metrics(items: list[dict]) -> dict:
+    from minijev.judge import consistent
+    y = [it["y"] for it in items]
+    px = [sigmoid(it["z_x"]) for it in items]
+    pn = [sigmoid(it["z_not_x"]) for it in items]
+    combined = [consistent(a, b)[0] for a, b in zip(px, pn)]
+    z = lambda ps: [logit(min(max(p, 1e-9), 1 - 1e-9)) for p in ps]
+    pick = lambda m: {k: m[k] for k in ("accuracy", "ece", "nll", "mean_p_yes")}
+    return {"mean_abs_sum_minus_1": statistics.mean(abs(a + b - 1) for a, b in zip(px, pn)),
+            "median_sum": statistics.median(a + b for a, b in zip(px, pn)),
+            "contradictions": sum((a > 0.5) == (b > 0.5) for a, b in zip(px, pn)) / len(y),
+            "x_alone": pick(binary_metrics(z(px), y)),
+            "negated_alone": pick(binary_metrics(z([1 - b for b in pn]), y)),
+            "combined": pick(binary_metrics(z(combined), y)), "n": len(y)}
+
+
+def opposite_pairs(engine: Engine) -> dict:
+    import data
+    with data.tuning():
+        val = opposite_metrics(opposite_readouts(engine, "val"))
+    use_combined = val["combined"]["nll"] < val["x_alone"]["nll"]
+    test_items = opposite_readouts(engine, "test")
+    test = opposite_metrics(test_items)
+    y = [it["y"] for it in test_items]
+    from minijev.judge import consistent
+    pairs = [(sigmoid(it["z_x"]), consistent(sigmoid(it["z_x"]), sigmoid(it["z_not_x"]))[0], t) for it, t in zip(test_items, y)]
+    test["accuracy_diff_ci95"] = bootstrap_ci(pairs, lambda s: sum((c > 0.5) == bool(t) for _, c, t in s) / len(s)
+                                              - sum((a > 0.5) == bool(t) for a, _, t in s) / len(s))
+    refund = next(c for c in JEV_DOC_CASES if c[0] == "noul: refund")
+    not_refund = next(c for c in JEV_DOC_CASES if c[0] == "noul: not refund")
+    r = ask(engine, {"state": refund[1], "questions": {"refund": refund[2], "not_refund": {**not_refund[2], "opposite_of": "refund"}}},
+            settings=Settings(), debug=True)
+    return {"data": {"dataset": "boolq", "chosen_on": "val", "reported_on": "test", "negated_template": negated("<question>")},
+            "val": val, "combine_on_val": use_combined, "test": test,
+            "jev_refund_pair": {"jev": {"refund": refund[3], "not_refund": not_refund[3], "sum": refund[3] + not_refund[3]},
+                                "minijev_sum_before": r["debug"]["opposite_pairs"]["not_refund"]["sum_before"],
+                                "minijev_after": {k: r["answers"][k]["noul"] for k in ("refund", "not_refund")}},
+            "splits_accessed": data.ACCESS}
+
+
+# E18: contrastive criteria for vague questions (W8, PLAN Task 4.6). The documented Jev Noul cases whose question has
+# a library entry, asked without and with its criteria. Exploratory: 13 cases, not held out, and the library was
+# written after the cases were visible (src/minijev/criteria.py says so).
+CASE_TO_LIBRARY = {"noul: human agent": "wants_human", "noul: urgency": "urgent", "noul: strong python": "strong_python",
+                   "noul: refund": "refund_request", "noul: refund (jaggedness)": "refund_request"}
+
+
+def criteria_ablation(engine: Engine) -> dict:
+    from minijev.criteria import LIBRARY
+    rows = []
+    for label, state, q, jev in JEV_DOC_CASES:
+        if label not in CASE_TO_LIBRARY:
+            continue
+        entry = LIBRARY[CASE_TO_LIBRARY[label]]
+        req = {"state": state, "questions": {"plain": q, "criteria": {**q, "criteria": entry["criteria"]}}}
+        a = ask(engine, req, settings=Settings(), debug=True)["answers"]
+        rows.append({"case": label, "state": state, "jev": jev, "plain": a["plain"]["noul"], "criteria": a["criteria"]["noul"]})
+    summary = {v: {"mean_abs_gap_to_jev": statistics.mean(abs(r[v] - r["jev"]) for r in rows),
+                   "same_side_of_0.5": sum((r[v] > 0.5) == (r["jev"] > 0.5) for r in rows) / len(rows)}
+               for v in ("plain", "criteria")}
+    return {"note": "exploratory: documented Jev cases, not held out; uncalibrated (Settings())", "n": len(rows),
+            "summary": summary, "rows": rows}
+
+
 EXPERIMENTS = {"demo": demo, "tree": tree, "latency": latency, "jevdocs": jevdocs, "permutation": permutation,
                "calibration": calibration, "llm_vs_minijev": llm_vs_minijev,
-               "fanout": lambda engine: {"rows": fan_out(engine, 500)}, "quality": quality, "same_format": same_format, "order_bias": order_bias, "heldout": heldout}
+               "fanout": lambda engine: {"rows": fan_out(engine, 500)}, "quality": quality, "same_format": same_format, "order_bias": order_bias, "heldout": heldout,
+               "template_sensitivity": template_sensitivity, "contrastive_levels": contrastive_levels,
+               "opposite_pairs": opposite_pairs, "criteria_ablation": criteria_ablation}
 
 
 def tag(model: str) -> str:

@@ -25,6 +25,7 @@ export const api = {
   compare: (req: Req, methods: string[]) => call<CompareResponse>("/v1/compare", post({ ...req, methods })),
   sameFormat: (req: Req, settings: Settings) => call<SameFormatResponse>("/v1/same_format", post({ ...req, settings })),
   presets: () => call<Preset[]>("/v1/presets"),
+  criteria: () => call<Record<string, { question: string; criteria: { true: string; false: string } }>>("/v1/criteria"),
   results: () => call<Record<string, any>>("/v1/results"), // eslint-disable-line @typescript-eslint/no-explicit-any
   model: () => call<{ model: string; available: string[] }>("/v1/model"),
   calibration: () => call<{ model: string; mode: string; fitted: Fitted | null; selected_choice_mode: string | null }>("/v1/calibration"),

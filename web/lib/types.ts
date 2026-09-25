@@ -7,6 +7,7 @@ export type Question = {
   criteria?: Record<string, string | null> | string[] | { true?: string; false?: string };
   choice_mode?: "listwise" | "pointwise" | "averaged";
   score_mode?: "pointwise" | "listwise";
+  contrastive?: boolean;
 };
 
 export type Req = { state: unknown; questions: Record<string, Question> };
@@ -21,12 +22,13 @@ export type Settings = {
   bias_noul: number | null;
   choice_mode: "listwise" | "pointwise" | "averaged" | "selected";
   score_mode: "pointwise" | "listwise";
+  score_contrastive: boolean;
   min_label_mass: number;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
   calibration: "fitted", temp_noul: null, temp_choice: null, temp_score: null, bias_noul: null,
-  choice_mode: "selected", score_mode: "pointwise", min_label_mass: 0.5,
+  choice_mode: "selected", score_mode: "pointwise", score_contrastive: false, min_label_mass: 0.5,
 };
 
 // calibration/<model>.json, as /v1/calibration returns it.
