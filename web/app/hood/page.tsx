@@ -120,7 +120,7 @@ function Tree({ tree, k, setK, response, showTemplate, setShowTemplate }: {
                 <span className="px-2 py-1 rounded bg-warn/20 text-warn">g</span>
               </div>
             </div>
-            <p className="text-xs text-muted m-0 pt-2 border-t border-line">7 model passes to write "billing"</p>
+            <p className="text-xs text-muted m-0 pt-2 border-t border-line">7 model passes to write &quot;billing&quot;</p>
           </div>
 
           <div className="rounded-lg border border-accent bg-soft p-4 flex flex-col gap-3">

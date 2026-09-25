@@ -24,7 +24,7 @@ import json
 import math
 import os
 import time
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, field, fields, replace
 from pathlib import Path
 
 import torch
@@ -40,35 +40,34 @@ MODES = ("naive", "kv", "packed")
 SETTINGS_FILE = Path(__file__).with_name("minijev.env")
 
 
-def default_choice_mode(model_name: str) -> str:
-    """Model-size-aware default for choice_mode. Fixes W1 position bias at 1.5B.
-
-    E13 measured: 0.5B benefits from averaged (3% flips vs 20% listwise),
-    1.5B benefits from pointwise (0% flips, 0.908 acc vs 0.840 listwise).
-    """
-    if "0.5B" in model_name:
-        return os.getenv("MINIJEV_CHOICE_MODE_0_5B", "averaged")
-    return os.getenv("MINIJEV_CHOICE_MODE_1_5B", "pointwise")
+CALIBRATION_DIR = Path(__file__).with_name("calibration")
+_FLOAT_OR_FITTED = ("temp_noul", "temp_choice", "temp_score", "bias_noul")
 
 
 @dataclass(frozen=True)
 class Settings:
     """The dials of ask() and Engine. Each field is MINIJEV_<FIELD> in minijev.env or in the environment.
 
-    Precedence: environment variable > minijev.env > the defaults below. The defaults are the
-    uncalibrated behaviour that the experiments measure; experiments always use Settings().
+    Precedence: environment variable > minijev.env > the defaults below. The defaults are the uncalibrated
+    behaviour that the experiments measure; experiments always use Settings(), never the file.
+
+    Calibration: with calibration="fitted", the values come from calibration/<model>.json, which E14 fitted on
+    the train split and chose on the val split (datasets/splits_v2.json). A temperature or bias that is set
+    explicitly overrides the fitted value; None means "use the fitted value" (or 1.0 / 0.0 without calibration).
     """
 
     model: str = MODEL
     threads: int = 6
     attn: str = "eager"  # or "sdpa"
-    temp_noul: float = 1.0  # temperature T: logits are divided by T. T > 1 = less confident
-    temp_choice: float = 1.0
-    temp_score: float = 1.0
-    bias_noul: float = 0.0  # Platt shift b, added to the Noul log-odds after the temperature
-    choice_mode: str = "listwise"  # or "pointwise" (one yes/no branch per option) or "averaged" (every rotation)
+    calibration: str = "none"  # "fitted": use calibration/<model>.json; "none": raw probabilities
+    temp_noul: float | None = None  # temperature T: logits are divided by T. T > 1 = less confident
+    temp_choice: float | None = None
+    temp_score: float | None = None
+    bias_noul: float | None = None  # Platt shift b, added to the Noul log-odds after the temperature
+    choice_mode: str = "listwise"  # listwise | pointwise | averaged | selected (the mode chosen on val)
     score_mode: str = "pointwise"  # or "listwise": all levels in one prompt (ablation)
     min_label_mass: float = 0.5  # warn when less next-token probability than this is on the labels
+    fitted: dict = field(default_factory=dict, compare=False, repr=False)  # the loaded calibration file
 
     @classmethod
     def load(cls, path: Path = SETTINGS_FILE) -> "Settings":
@@ -80,63 +79,62 @@ class Settings:
                     k, v = line.split("=", 1)
                     values[k.strip()] = v.strip().strip("\"'")
         values.update({k: v for k, v in os.environ.items() if k.startswith("MINIJEV_")})
-        known = {"MINIJEV_" + f.name.upper(): f for f in fields(cls)}
-        # Allow model-specific and mode-specific temperature settings (for Task 2.2)
-        allowed = {
-            "MINIJEV_CHOICE_MODE_0_5B", "MINIJEV_CHOICE_MODE_1_5B",
-            "MINIJEV_TEMP_NOUL_0_5B", "MINIJEV_TEMP_NOUL_1_5B",
-            "MINIJEV_TEMP_CHOICE_LISTWISE_0_5B", "MINIJEV_TEMP_CHOICE_LISTWISE_1_5B",
-            "MINIJEV_TEMP_CHOICE_POINTWISE_0_5B", "MINIJEV_TEMP_CHOICE_POINTWISE_1_5B",
-            "MINIJEV_TEMP_CHOICE_AVERAGED_0_5B", "MINIJEV_TEMP_CHOICE_AVERAGED_1_5B",
-            "MINIJEV_TEMP_SCORE_0_5B", "MINIJEV_TEMP_SCORE_1_5B",
-        }
-        unknown = sorted(set(values) - set(known) - allowed)
+        known = {"MINIJEV_" + f.name.upper(): f for f in fields(cls) if f.name != "fitted"}
+        unknown = sorted(set(values) - set(known) - {"MINIJEV_INSECURE_SSL"})
         if unknown:
             raise ValueError(f"unknown settings {unknown}; known: {sorted(known)}")
-        s = cls(**{f.name: type(f.default)(values[k]) for k, f in known.items() if k in values})
-        # Apply model-aware choice_mode default if not explicitly set via MINIJEV_CHOICE_MODE
-        if "MINIJEV_CHOICE_MODE" not in values:
-            s = cls(**{**{f.name: getattr(s, f.name) for f in fields(s)}, "choice_mode": default_choice_mode(s.model)})
-        assert s.choice_mode in ("listwise", "pointwise", "averaged"), f"MINIJEV_CHOICE_MODE={s.choice_mode!r}"
-        assert s.score_mode in ("listwise", "pointwise"), f"MINIJEV_SCORE_MODE={s.score_mode!r}"
-        assert min(s.temp_noul, s.temp_choice, s.temp_score) > 0, "temperatures must be > 0"
-        # Store values for per-(model, primitive, mode) temperature lookup
-        s.__dict__["_values"] = values
-        return s
+        kw = {}
+        for k, f in known.items():
+            if k not in values:
+                continue
+            v = values[k]
+            if f.name in _FLOAT_OR_FITTED:
+                kw[f.name] = None if v.lower() in ("", "fitted", "none") else float(v)
+            else:
+                kw[f.name] = type(f.default)(v)
+        return cls(**kw).with_calibration()
 
-    def temperature(self, qtype: str, mode: str = None) -> float:
-        """Return temperature for given question type and mode.
+    def with_calibration(self) -> "Settings":
+        """Load calibration/<model>.json when calibration="fitted"; check every dial."""
+        assert self.calibration in ("none", "fitted"), f"MINIJEV_CALIBRATION={self.calibration!r}"
+        assert self.choice_mode in ("listwise", "pointwise", "averaged", "selected"), f"MINIJEV_CHOICE_MODE={self.choice_mode!r}"
+        assert self.score_mode in ("listwise", "pointwise"), f"MINIJEV_SCORE_MODE={self.score_mode!r}"
+        assert all(t is None or t > 0 for t in (self.temp_noul, self.temp_choice, self.temp_score)), "temperatures must be > 0"
+        fitted = {}
+        if self.calibration == "fitted":
+            p = CALIBRATION_DIR / f"{self.model.split('/')[-1]}.json"
+            if p.exists():
+                fitted = json.loads(p.read_text())
+        return replace(self, fitted=fitted)
 
-        Looks up per-(model, primitive, mode) temperature if available (W2/W3 Task 2.2),
-        otherwise falls back to generic temp_noul/temp_choice/temp_score.
+    def resolved_choice_mode(self) -> str:
+        if self.choice_mode == "selected":
+            return (self.fitted.get("choice") or {}).get("selected_mode", "listwise")
+        return self.choice_mode
 
-        Args:
-            qtype: "noul", "choice", or "score"
-            mode: For choice/score: "listwise", "pointwise", "averaged". If None, uses self.choice_mode/score_mode.
-        """
-        if mode is None:
-            mode = self.choice_mode if qtype == "choice" else (self.score_mode if qtype == "score" else None)
+    def calibrator(self, qtype: str, mode: str | None = None) -> tuple[float, float, str]:
+        """(temperature, bias, source) for one question. source: "manual", "fitted" or "none"."""
+        f = self.fitted
+        if qtype == "noul":
+            if self.temp_noul is not None or self.bias_noul is not None:
+                return (self.temp_noul or 1.0, self.bias_noul or 0.0, "manual")
+            if f.get("noul"):
+                n = f["noul"]
+                if n["selected"] == "platt":
+                    return 1 / n["platt"]["a"], n["platt"]["b"], "fitted"
+                return n["temperature"], 0.0, "fitted"
+            return 1.0, 0.0, "none"
+        if qtype == "choice":
+            if self.temp_choice is not None:
+                return self.temp_choice, 0.0, "manual"
+            t = ((f.get("choice") or {}).get("temperature") or {}).get(mode or self.resolved_choice_mode())
+            return (t, 0.0, "fitted") if t else (1.0, 0.0, "none")
+        if self.temp_score is not None:
+            return self.temp_score, 0.0, "manual"
+        return 1.0, 0.0, "none"  # no labelled ordinal data yet: Scores are never fitted
 
-        # Try per-(model, primitive, mode) lookup first
-        values = self.__dict__.get("_values", {})
-        if values:
-            # Extract model size key: "0_5B" or "1_5B"
-            model_key = "0_5B" if "0.5B" in self.model else ("1_5B" if "1.5B" in self.model else None)
-
-            if model_key:
-                # Try mode-specific lookup for choice/score
-                if qtype in ("choice", "score") and mode:
-                    key = f"MINIJEV_TEMP_{qtype.upper()}_{mode.upper()}_{model_key}"
-                    if key in values:
-                        return float(values[key])
-
-                # Try primitive-level lookup (noul, or fallback for choice/score)
-                key = f"MINIJEV_TEMP_{qtype.upper()}_{model_key}"
-                if key in values:
-                    return float(values[key])
-
-        # Fall back to generic single-value temps
-        return {"noul": self.temp_noul, "choice": self.temp_choice, "score": self.temp_score}[qtype]
+    def temperature(self, qtype: str, mode: str | None = None) -> float:
+        return self.calibrator(qtype, mode)[0]
 
 
 def render(value) -> str:
@@ -441,7 +439,7 @@ def rounded(x):
 def with_modes(q: dict, s: Settings) -> dict:
     """Fill in the readout mode from the settings when the question does not set it."""
     if q["type"] == "choice":
-        return {"choice_mode": s.choice_mode, **q}
+        return {"choice_mode": s.resolved_choice_mode(), **q}
     if q["type"] == "score":
         return {"score_mode": s.score_mode, **q}
     return q
@@ -455,16 +453,18 @@ def ask(engine: Engine, req: dict, mode: str = "packed", settings: Settings | No
     s = settings or Settings.load()
     req = {**req, "questions": {qid: with_modes(q, s) for qid, q in req["questions"].items()}}
     raw, usage = raw_scores(engine, req, mode)
-    answers, warnings = {}, []
+    answers, warnings, applied = {}, [], {}
     for qid, q in req["questions"].items():
-        # Get mode-specific temperature (W2/W3 Task 2.2)
-        mode = q.get("choice_mode") if q["type"] == "choice" else (q.get("score_mode") if q["type"] == "score" else None)
-        a = answer(q, raw[qid]["logits"], s.temperature(q["type"], mode), s.bias_noul if q["type"] == "noul" else 0.0)
+        readout_mode = q.get("choice_mode") if q["type"] == "choice" else None
+        t, b, source = s.calibrator(q["type"], readout_mode)
+        applied[qid] = {"temperature": t, "bias": b, "source": source}
+        a = answer(q, raw[qid]["logits"], t, b)
         answers[qid] = a if debug else rounded(a)
         low = min(raw[qid]["mass"])
         if low < s.min_label_mass:  # the model wanted to say something other than a label: prompt problem
             warnings.append(f"{qid}: only {low:.2f} of next-token mass is on the labels")
     resp = {"model": f"minijev-poc ({engine.name})", "answers": answers, "usage": usage}
     if debug:
-        resp["debug"] = {"raw": raw, "warnings": warnings}
+        prov = s.fitted.get("provenance") if s.fitted else None
+        resp["debug"] = {"raw": raw, "warnings": warnings, "calibration": applied, "calibration_provenance": prov}
     return resp

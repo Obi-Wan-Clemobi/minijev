@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { API } from "@/lib/api";
-import { rescore, type ChoiceAnswer, type NoulAnswer, type ScoreAnswer } from "@/lib/scoring";
+import { calibrator, rescore, type ChoiceAnswer, type NoulAnswer, type ScoreAnswer } from "@/lib/scoring";
 import { useStore } from "@/lib/store";
 import { ChoiceBars, NoulMeter, Ring, ScoreColumns } from "./Viz";
 import { Icon } from "./Icon";
@@ -13,12 +13,12 @@ const r2 = (x: unknown): unknown =>
     ? Array.isArray(x) ? x.map(r2) : Object.fromEntries(Object.entries(x).map(([k, v]) => [k, k === "legend" ? v : r2(v)])) : x;
 
 export function Response() {
-  const { response, settings, running, error, req, stale } = useStore();
-  const calibrated = settings.temp_noul !== 1 || settings.temp_choice !== 1 || settings.temp_score !== 1 || settings.bias_noul !== 0;
+  const { response, settings, running, error, req, stale, fitted } = useStore();
+  const calibrated = response !== null && Object.values(response.questions).some((q) => calibrator(q, settings, fitted).source !== "none");
   const [tab, setTab] = useState<(typeof TABS)[number]>("Answers");
-  const answers = useMemo(() => response && rescore(response.questions, response.debug.raw, settings), [response, settings]);
+  const answers = useMemo(() => response && rescore(response.questions, response.debug.raw, settings, fitted), [response, settings, fitted]);
   const raw = useMemo(() => response && rescore(response.questions, response.debug.raw,
-    { ...settings, temp_noul: 1, temp_choice: 1, temp_score: 1, bias_noul: 0 }), [response, settings]);
+    { ...settings, calibration: "none", temp_noul: null, temp_choice: null, temp_score: null, bias_noul: null }), [response, settings]);
   const lowMass = response ? Object.entries(response.debug.raw).filter(([, r]) => Math.min(...r.mass) < settings.min_label_mass) : [];
   const minMass = response ? Math.min(...Object.values(response.debug.raw).flatMap((r) => r.mass)) : 1;
 

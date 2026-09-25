@@ -14,9 +14,9 @@ average gap between stated confidence and accuracy.
 
 | # | Weakness | Area | Severity | Status |
 |---|---|---|---|---|
-| W1 | The option order changes listwise answers | Method | High | Fixed at 1.5B (pointwise default); 0.5B uses averaged |
-| W2 | Raw probabilities are overconfident | Calibration | High | Partly: fixed for Noul, open for Choice and Score |
-| W3 | Calibration exists only for Noul, and does not transfer | Calibration | High | Open |
+| W1 | The option order changes listwise answers | Method | High | Partly: the default is the order-robust mode chosen on val (E14); listwise still available |
+| W2 | Raw probabilities are overconfident | Calibration | High | Partly: fitted for Noul and Choice on train (E14); Score open |
+| W3 | Calibration does not transfer beyond its data, and Score has none | Calibration | High | Open |
 | W4 | The 0.5B model is at chance on BoolQ | Model | High | Use 1.5B or larger; open |
 | W5 | Pointwise items on small models say "yes" to the plausible item | Method | Medium | Open |
 | W6 | Opposite questions are not consistent | Method | Medium | Not measured |
@@ -28,9 +28,9 @@ average gap between stated confidence and accuracy.
 | W12 | The packed pass computes the hidden attention blocks | Speed | Low (CPU), Medium (GPU) | Open |
 | W13 | No state cache across requests; one request at a time | Speed | Medium | Open |
 | W14 | Pointwise Scores repeat the question for every level | Speed | Low | Open |
-| W15 | Small samples, and tests that are not held out | Measurement | Medium | Partly: intervals added |
+| W15 | Small samples, and tests that are not held out | Measurement | Medium | Partly: held-out test of 300 / 400 (E14); E1–E13 stay exploratory |
 | W16 | Timing noise on one laptop | Measurement | Low | Partly: medians, rotation |
-| W17 | Datasets are not pinned | Reproducibility | Low | Open |
+| W17 | Datasets are not pinned | Reproducibility | Low | Fixed: frozen splits with per-row SHA-256, checked on every load |
 | W18 | No cloud-model baseline | Measurement | Medium | Open (needs an API key) |
 | W19 | The app is a POC: no packaging, no persistence, Docker untested | Engineering | Low | Open |
 
@@ -153,18 +153,22 @@ average gap between stated confidence and accuracy.
 ## Measurement
 
 ### W15. Small samples, and tests that are not held out
-- **Evidence:** agreement with Jev rests on 8–15 cases per type; E11 uses 200 and 120 items. Intervals are now
-  reported; the documented cases were visible while we chose the template (W7).
-- **Candidate fix:** larger labelled sets; a held-out split fixed before any template change.
+- **Evidence:** agreement with Jev rests on 8–15 cases per type. E1–E13 fitted and reported on overlapping items, and
+  the prompt was chosen while the data was visible (W7).
+- **Fix, in part:** frozen train / val / test splits (docs/DATA.md). E14 fits on train, chooses on val and reports on
+  test: 300 BoolQ questions and 400 AG News articles, so accuracy intervals are about ±0.05 and ±0.035.
+- **Still open:** the E1–E13 results remain exploratory; re-running them on the splits would make them defensible.
 
 ### W16. Timing noise on one laptop
 - **Evidence (Measured):** runs vary by about ±10–20% (WALKTHROUGH.md §6.3). Medians of 3 runs in rotating order
   reduce, but do not remove, the effect.
 
 ### W17. Datasets are not pinned
-- **What:** BoolQ and AG News come from the Hugging Face datasets-server API, which has no revision pin. The GDPR
-  article is pinned.
-- **Candidate fix:** store a checksum of the downloaded rows; fail loudly when they change.
+- **What:** the datasets came from the Hugging Face datasets-server API, which has no revision pin, so the rows could
+  change between runs without anyone noticing.
+- **Fix (Measured):** `poc/datasets/splits_v2.json` freezes every sampled item by its source index and the SHA-256 of
+  its row, and records the SHA-256 of each source file. `data.load_split()` re-checks every row and stops on a change;
+  `data.py check` verifies all claims of docs/DATA.md. Downloads check TLS certificates.
 
 ### W18. No cloud-model baseline
 - **What:** every comparison uses the same small model. We do not know how a frontier model compares on the same

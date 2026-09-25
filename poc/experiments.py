@@ -28,6 +28,7 @@ import argparse
 import hashlib
 import json
 import math
+import os
 import random
 import re
 import ssl
@@ -211,10 +212,13 @@ def fetch(url: str, path: Path) -> Path:
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
         req = urllib.request.Request(url, headers={"User-Agent": "minijev-poc/0.1"})
-        # Disable SSL verification for corporate proxies
-        ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
+        # Certificates are checked. Behind a proxy that re-signs TLS, point SSL_CERT_FILE at its CA bundle.
+        # MINIJEV_INSECURE_SSL=1 turns the check off; a download made that way could be tampered with.
+        ssl_context = ssl.create_default_context(cafile=os.environ.get("SSL_CERT_FILE"))
+        if os.environ.get("MINIJEV_INSECURE_SSL") == "1":
+            print(f"WARNING: certificate checks are off (MINIJEV_INSECURE_SSL=1) for {url}", flush=True)
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
         with urllib.request.urlopen(req, timeout=60, context=ssl_context) as r:
             path.write_bytes(r.read())
     return path
@@ -1666,10 +1670,134 @@ def order_bias(engine: Engine, n: int = 300, orders_per_item: int = 4, seed: int
 
 
 # ---------------------------------------------------------------------------
+# E14: held-out calibration and evaluation on frozen splits (poc/data.py, datasets/splits_v2.json).
+# train: fit temperatures. val: choose the Choice mode and the Noul calibrator. test: report only.
+
+CALIBRATION = HERE / "calibration"
+CHOICE_MODES = ("listwise", "averaged", "pointwise")
+
+
+def readout_cache(engine: Engine, dataset: str, split: str) -> list[dict]:
+    """Raw readout logits for one split, cached. A readout never uses the labels, so computing it for val and test
+    is not tuning on them. The cache is keyed by model, prompt fingerprint and splits file."""
+    import data
+    key = {"model": engine.name, "prompt_sha1": prompt_fingerprint(engine), "choice_block_sha1":
+           hashlib.sha1(choice_block({"instructions": "?", "criteria": AG_OPTIONS}).encode()).hexdigest()[:12],
+           "splits_sha256": data.splits_fingerprint()}
+    path = RESULTS / "readouts" / f"{tag(engine.name).lstrip('-') or 'Qwen2.5-0.5B-Instruct'}" / f"{dataset}_{split}.json"
+    rows = data.load_split(dataset, split)
+    if path.exists():
+        saved = json.loads(path.read_text())
+        if saved["key"] == key:
+            return saved["items"]
+    items, t0 = [], time.perf_counter()
+    for i, r in enumerate(rows):
+        if dataset == "boolq":
+            q = {"type": "noul", "instructions": r["question"][0].upper() + r["question"][1:] + "?"}
+            raw, _ = raw_scores(engine, {"state": r["passage"], "questions": {"q": q}})
+            items.append({"source_index": r["source_index"], "y": r["y"], "z": raw["q"]["logits"][0] - raw["q"]["logits"][1]})
+        else:
+            q = {"type": "choice", "instructions": AG_QUESTION, "criteria": AG_OPTIONS}
+            raw, _ = raw_scores(engine, {"state": r["text"], "questions": {m: {**q, "choice_mode": m} for m in CHOICE_MODES}})
+            items.append({"source_index": r["source_index"], "y": r["y"], **{m: raw[m]["logits"] for m in CHOICE_MODES},
+                          "mass": min(min(raw[m]["mass"]) for m in CHOICE_MODES)})
+        if (i + 1) % 100 == 0:
+            print(f"  {dataset}/{split} {i + 1}/{len(rows)}  ({time.perf_counter() - t0:.0f}s)", flush=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"key": key, "items": items}))
+    return items
+
+
+def nll_multi(logits: list[list[float]], y: list[int], t: float = 1.0) -> float:
+    total = 0.0
+    for z, yi in zip(logits, y):
+        m = max(v / t for v in z)
+        total -= z[yi] / t - m - math.log(sum(math.exp(v / t - m) for v in z))
+    return total / len(y)
+
+
+def heldout(engine: Engine) -> dict:
+    """E14. Fit on train, select on val, report on test. Writes calibration/<model>.json with its provenance."""
+    import data
+    data.ACCESS.clear()
+    R = {(d, s): readout_cache(engine, d, s) for d in ("boolq", "ag_news") for s in ("train", "val", "test")}
+
+    # ---- fit on train
+    bq = R[("boolq", "train")]
+    zt, yt = [it["z"] for it in bq], [it["y"] for it in bq]
+    a_t, _ = fit_affine(zt, yt, slope_only=True)
+    a_p, b_p = fit_affine(zt, yt, slope_only=False)
+    ag = R[("ag_news", "train")]
+    choice_t = {m: fit_temperature_multiclass([it[m] for it in ag], [it["y"] for it in ag]) for m in CHOICE_MODES}
+
+    # ---- select on val (lowest negative log-likelihood: a proper scoring rule)
+    bv = R[("boolq", "val")]
+    zv, yv = [it["z"] for it in bv], [it["y"] for it in bv]
+    noul_val = {"temperature": nll(zv, yv, a_t, 0.0), "platt": nll(zv, yv, a_p, b_p)}
+    noul_pick = min(noul_val, key=noul_val.get)
+    av = R[("ag_news", "val")]
+    choice_val = {m: nll_multi([it[m] for it in av], [it["y"] for it in av], choice_t[m]) for m in CHOICE_MODES}
+    choice_pick = min(choice_val, key=choice_val.get)
+
+    # ---- report on test
+    bt = R[("boolq", "test")]
+    zs, ys = [it["z"] for it in bt], [it["y"] for it in bt]
+    noul_test = {
+        "raw": binary_entry(zs, ys, [0.0] * len(ys), 0),
+        "temperature": binary_entry([a_t * v for v in zs], ys, [0.0] * len(ys), 0),
+        "platt": binary_entry([a_p * v + b_p for v in zs], ys, [0.0] * len(ys), 0),
+    }
+    for m in noul_test.values():
+        for k in ("mean_s", "mean_s_ci95", "output_tokens", "parse_failures", "has_probs"):
+            m.pop(k, None)
+    at = R[("ag_news", "test")]
+    yat = [it["y"] for it in at]
+    choice_test = {}
+    for m in CHOICE_MODES:
+        raw_p = [softmax_list(it[m]) for it in at]
+        cal_p = [softmax_list([v / choice_t[m] for v in it[m]]) for it in at]
+        choice_test[m] = {"raw": with_ci(raw_p, yat), "calibrated": with_ci(cal_p, yat),
+                          "nll_raw": nll_multi([it[m] for it in at], yat), "nll_calibrated": nll_multi([it[m] for it in at], yat, choice_t[m])}
+
+    tagname = engine.name.split("/")[-1]
+    cal = {
+        "model": engine.name, "created": time.strftime("%Y-%m-%d"),
+        "provenance": {"splits_file": "datasets/splits_v2.json", "splits_sha256": data.splits_fingerprint(),
+                       "fitted_on": {"noul": {"dataset": "boolq", "split": "train", "n": len(bq)},
+                                     "choice": {"dataset": "ag_news", "split": "train", "n": len(ag)}},
+                       "selected_on": {"split": "val", "rule": "lowest negative log-likelihood"},
+                       "prompt_sha1": prompt_fingerprint(engine), "experiment": "E14 heldout"},
+        "noul": {"temperature": 1 / a_t, "platt": {"a": a_p, "b": b_p}, "selected": noul_pick},
+        "choice": {"temperature": choice_t, "selected_mode": choice_pick},
+        "score": None,  # no labelled ordinal data yet: Score answers are uncalibrated
+    }
+    CALIBRATION.mkdir(exist_ok=True)
+    (CALIBRATION / f"{tagname}.json").write_text(json.dumps(cal, indent=1))
+
+    print(f"\n{engine.name}: fitted on train, selected on val, reported on test")
+    print(f"Noul (BoolQ): T = {1 / a_t:.2f}; Platt a = {a_p:.3f}, b = {b_p:.3f}; val picks {noul_pick}")
+    for k, m in noul_test.items():
+        print(f"  test {k:12s} acc {m['accuracy']:.3f} [{m['accuracy_ci95'][0]:.2f},{m['accuracy_ci95'][1]:.2f}]  "
+              f"ECE {m['ece']:.3f} [{m['ece_ci95'][0]:.2f},{m['ece_ci95'][1]:.2f}]  NLL {m['nll']:.3f}")
+    print(f"Choice (AG News): T = " + ", ".join(f"{m} {t:.2f}" for m, t in choice_t.items()) + f"; val picks {choice_pick}")
+    for m, r in choice_test.items():
+        c, rw = r["calibrated"], r["raw"]
+        print(f"  test {m:10s} acc {c['accuracy']:.3f} [{c['accuracy_ci95'][0]:.2f},{c['accuracy_ci95'][1]:.2f}]  "
+              f"ECE raw {rw['ece']:.3f} -> {c['ece']:.3f} [{c['ece_ci95'][0]:.2f},{c['ece_ci95'][1]:.2f}]  "
+              f"NLL {r['nll_raw']:.3f} -> {r['nll_calibrated']:.3f}")
+    return {"calibration": cal, "val": {"noul_nll": noul_val, "choice_nll": choice_val},
+            "test": {"noul": noul_test, "choice": choice_test},
+            "base_rates": {"boolq_test_yes": sum(ys) / len(ys), "ag_news_test_per_topic": len(yat) // 4},
+            "splits_accessed": list(data.ACCESS),
+            "use_of_splits": {"train": "fit temperatures", "val": "choose Noul calibrator and Choice mode",
+                              "test": "report only; no value was chosen from it"}}
+
+
+# ---------------------------------------------------------------------------
 
 EXPERIMENTS = {"demo": demo, "tree": tree, "latency": latency, "jevdocs": jevdocs, "permutation": permutation,
                "calibration": calibration, "llm_vs_minijev": llm_vs_minijev,
-               "fanout": lambda engine: {"rows": fan_out(engine, 500)}, "quality": quality, "same_format": same_format, "order_bias": order_bias}
+               "fanout": lambda engine: {"rows": fan_out(engine, 500)}, "quality": quality, "same_format": same_format, "order_bias": order_bias, "heldout": heldout}
 
 
 def tag(model: str) -> str:

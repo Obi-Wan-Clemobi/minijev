@@ -1,28 +1,23 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useStore } from "@/lib/store";
 import { Icon } from "./Icon";
 import { Tip } from "./Tip";
 
-const LINKS = [["/", "Playground"], ["/compare", "Compare"], ["/hood", "Under the hood"], ["/findings", "Findings"], ["/weaknesses", "Weaknesses"]];
+const LINKS = [["/", "Playground"], ["/compare", "Compare"], ["/hood", "Under the hood"], ["/findings", "Findings"], ["/data", "Data"], ["/weaknesses", "Weaknesses"]];
+
+function subscribeTheme(cb: () => void) {
+  window.addEventListener("mj-theme", cb);
+  return () => window.removeEventListener("mj-theme", cb);
+}
 
 export function Nav() {
   const path = usePathname();
   const { model, models, switchModel, switching } = useStore();
-  // Use useState with effect to avoid hydration mismatch - server and client start with same value
-  const [dark, setDark] = useState(true);  // Default matches layout.tsx
-
-  useEffect(() => {
-    // Set initial state from DOM after mount
-    setDark(document.documentElement.classList.contains("dark"));
-
-    // Listen for theme changes
-    const handler = () => setDark(document.documentElement.classList.contains("dark"));
-    window.addEventListener("mj-theme", handler);
-    return () => window.removeEventListener("mj-theme", handler);
-  }, []);
+  // The server renders "dark" (the default in layout.tsx); React hydrates with that, then reads the real class.
+  const dark = useSyncExternalStore(subscribeTheme, () => document.documentElement.classList.contains("dark"), () => true);
 
   const toggle = () => {
     const next = !dark;

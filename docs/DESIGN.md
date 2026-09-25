@@ -484,6 +484,8 @@ diagram (PNG) · latency p50/p95.
   model, and written with the format enforced (structured output). Measure time, written tokens, and usable answers.
 - **E13 Option-order flaw.** Ask each labelled Choice in several option orders. Measure how often the answer changes,
   and the accuracy and ECE, for listwise, debiased, all-orders-averaged, and pointwise readouts.
+- **E14 Held-out calibration.** On frozen splits (docs/DATA.md): fit every temperature on train, choose the Noul
+  calibrator and the Choice mode on val, report accuracy and ECE on test. Writes `poc/calibration/<model>.json`.
 
 **Status in the POC** (RESEARCH.md §7.3, WALKTHROUGH.md):
 
@@ -499,6 +501,7 @@ diagram (PNG) · latency p50/p95.
 | E11 | Done at 0.5B and 1.5B (RESEARCH.md §7.3 R8) |
 | E12 | Done at 0.5B and 1.5B (RESEARCH.md §7.3 R9) |
 | E13 | Done at 0.5B and 1.5B (RESEARCH.md §7.3 R10) |
+| E14 | Held-out calibration on frozen splits (docs/DATA.md); fitted on train, chosen on val, reported on test |
 | E2, E5, E6 | Open |
 
 ---

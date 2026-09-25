@@ -86,7 +86,8 @@ def test_settings_file_env_and_defaults(tmp_path, monkeypatch):
     f.write_text("MINIJEV_TEMP_NOUL=2.5   # comment\nMINIJEV_CHOICE_MODE=pointwise\n")
     monkeypatch.setenv("MINIJEV_TEMP_SCORE", "3")
     s = Settings.load(f)
-    assert (s.temp_noul, s.temp_score, s.temp_choice, s.choice_mode) == (2.5, 3.0, 1.0, "pointwise")
+    assert (s.temp_noul, s.temp_score, s.temp_choice, s.choice_mode) == (2.5, 3.0, None, "pointwise")
+    assert s.calibrator("choice") == (1.0, 0.0, "none")  # unset and uncalibrated: raw
     monkeypatch.setenv("MINIJEV_TEMP_NOUL", "4")  # the environment wins over the file
     assert Settings.load(f).temp_noul == 4.0
     monkeypatch.setenv("MINIJEV_TEMPNOUL", "4")
@@ -94,12 +95,32 @@ def test_settings_file_env_and_defaults(tmp_path, monkeypatch):
         Settings.load(f)
 
 
-def test_shipped_env_file_equals_the_defaults(monkeypatch):
+def test_shipped_env_file_uses_fitted_calibration(monkeypatch):
     from minijev_poc import SETTINGS_FILE, Settings
     for k in [k for k in __import__("os").environ if k.startswith("MINIJEV_")]:
         monkeypatch.delenv(k)
-    assert Settings.load(SETTINGS_FILE) == Settings()
+    s = Settings.load(SETTINGS_FILE)
+    assert s.calibration == "fitted" and s.choice_mode == "selected"
+    assert (s.temp_noul, s.bias_noul, s.temp_choice, s.temp_score) == (None, None, None, None)  # no hand-typed values
 
+
+def test_fitted_calibration_is_used_and_overridable(tmp_path, monkeypatch):
+    import json
+    import minijev_poc
+    from minijev_poc import Settings
+    (tmp_path / "Qwen2.5-0.5B-Instruct.json").write_text(json.dumps({
+        "provenance": {"fitted_on": "train"},
+        "noul": {"temperature": 2.0, "platt": {"a": 0.5, "b": 0.3}, "selected": "platt"},
+        "choice": {"temperature": {"listwise": 3.0, "pointwise": 1.5, "averaged": 2.5}, "selected_mode": "pointwise"}}))
+    monkeypatch.setattr(minijev_poc, "CALIBRATION_DIR", tmp_path)
+    s = Settings(calibration="fitted", choice_mode="selected").with_calibration()
+    assert s.calibrator("noul") == (2.0, 0.3, "fitted")  # Platt: T = 1/a, b
+    assert s.resolved_choice_mode() == "pointwise"
+    assert s.calibrator("choice") == (1.5, 0.0, "fitted")
+    assert s.calibrator("choice", "listwise") == (3.0, 0.0, "fitted")
+    assert Settings(calibration="fitted", temp_choice=4.0).with_calibration().calibrator("choice") == (4.0, 0.0, "manual")
+    assert Settings(calibration="none").with_calibration().calibrator("noul") == (1.0, 0.0, "none")
+    assert s.calibrator("score") == (1.0, 0.0, "none")  # Scores are never fitted
 
 def test_temperature_and_bias():
     q = {"type": "noul"}

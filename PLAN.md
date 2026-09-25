@@ -178,122 +178,32 @@
 ## Phase 2: Quick Wins (Week 3)
 **Goal:** Deploy zero-effort or low-effort fixes that are already validated.
 
-### Task 2.1: Make Pointwise Choice Default at 1.5B (W1)
-**Owner:** TBD | **Effort:** 0.5 days | **Priority:** High
+### Task 2.1: Choose the Choice Mode on Held-Out Data (W1)
+**Status:** Done (E14)
 
-**Goal:** Eliminate position bias at 1.5B (0% flips measured in E13).
-
-**Implementation:**
-1. Read current choice_mode logic in `poc/minijev_poc.py`
-2. Modify `poc/minijev.env`:
-   ```bash
-   # Position bias fix (W1): pointwise eliminates order effects at 1.5B
-   # E13: pointwise = 0.908 acc / 0.073 ECE / 0% flips
-   #      listwise = 0.840 acc / 0.143 ECE / 8% flips
-   MINIJEV_CHOICE_MODE_0_5B=averaged  # 0.5B: averaged best (3% flips)
-   MINIJEV_CHOICE_MODE_1_5B=pointwise # 1.5B: pointwise best (0% flips)
-   ```
-3. Implement model-size-aware default:
-   ```python
-   def default_choice_mode(model_name: str) -> str:
-       if "0.5B" in model_name:
-           return os.getenv("MINIJEV_CHOICE_MODE_0_5B", "averaged")
-       return os.getenv("MINIJEV_CHOICE_MODE_1_5B", "pointwise")
-   ```
-4. Update `docs/WEAKNESSES.md`:
-   ```markdown
-   | W1 | ... | Status |
-   |---|---|---|
-   | W1 | ... | Fixed at 1.5B (pointwise default) |
-   ```
-5. Update web UI recommendation text
-
-**Acceptance:**
-- 1.5B defaults to pointwise, 0.5B to averaged
-- Environment variables allow override
-- WEAKNESSES.md updated to "Fixed at 1.5B"
-- Web UI shows recommendation
-
-**Files to modify:**
-- `poc/minijev.env`
-- `poc/minijev_poc.py` (choice_mode default logic)
-- `docs/WEAKNESSES.md`
-- `web/components/RequestEditor.tsx` (add recommendation text)
+The default Choice mode is `MINIJEV_CHOICE_MODE=selected`: for each model, E14 (`experiments.py heldout`) compares
+listwise, averaged and pointwise on the **val** split (AG News, 200 articles) by negative log-likelihood, and stores the
+winner in `poc/calibration/<model>.json`. E13 showed that averaged and pointwise remove most order flips; the val split,
+not a rule of thumb, decides between them. Any mode can still be set per question or with `MINIJEV_CHOICE_MODE`.
 
 ---
 
-### Task 2.2: Commit Calibration Temperatures (W2/W3)
-**Owner:** TBD | **Effort:** 1 day | **Priority:** High
+### Task 2.2: Fitted Calibration Temperatures (W2/W3)
+**Status:** Done (E14) · details: docs/TASK_2_2_CALIBRATION_TEMPS.md
 
-**Goal:** Apply fitted temperatures by default (ECE 0.161→0.053 for Noul).
-
-**Implementation:**
-1. Check current temperature fitting code in `poc/experiments.py` (E11)
-2. Extract fitted temperatures from E11 results:
-   ```
-   Noul: T=2.72 (0.5B), T=1.93 (1.5B)
-   Choice (listwise): T=TBD (need to run fit_temperature_multiclass on AG News)
-   Choice (pointwise): T=TBD
-   Choice (averaged): T=TBD
-   Score: T=TBD (need ordinal dataset)
-   ```
-3. Run missing calibration fits:
-   ```bash
-   python experiments.py fit-choice-temps
-   ```
-4. Commit to `poc/minijev.env`:
-   ```bash
-   # Calibration temperatures (W2/W3) - fitted on held-out sets
-   MINIJEV_TEMP_NOUL_0_5B=2.72
-   MINIJEV_TEMP_NOUL_1_5B=1.93
-   MINIJEV_TEMP_CHOICE_LISTWISE_1_5B=1.85  # from AG News held-out
-   MINIJEV_TEMP_CHOICE_POINTWISE_1_5B=1.65
-   MINIJEV_TEMP_CHOICE_AVERAGED_0_5B=2.10
-   # MINIJEV_TEMP_SCORE_* = TODO (need Yelp-5 or SST-5 labeled data)
-   ```
-5. Update calibration loading to use per-(primitive, mode, model) temps
-6. Add calibration status to web UI
-
-**Acceptance:**
-- Fitted temps committed for Noul + Choice (all modes)
-- Loads automatically based on model + primitive + mode
-- Web UI shows active temperature per primitive
-- E11 re-run confirms ECE improvements hold
-
-**Files to modify:**
-- `poc/minijev.env`
-- `poc/minijev_poc.py` (temperature loading logic)
-- `poc/experiments.py` (add fit-choice-temps command)
-- `web/components/Calibration.tsx` (show per-primitive temps)
+Every temperature is fitted on the **train** split of `poc/datasets/splits_v2.json`, chosen on **val**, and reported on
+**test** (docs/DATA.md). Noul: temperature and Platt on BoolQ. Choice: one temperature per mode on AG News. Score: not
+fitted (no labelled ordinal data). The values live in `poc/calibration/<model>.json` with their provenance; nothing is
+estimated or typed by hand. `MINIJEV_CALIBRATION=fitted` applies them; a number in `minijev.env` overrides one primitive.
 
 ---
 
-### Task 2.3: Update Web UI with Calibration Controls (W2/W3)
-**Owner:** TBD | **Effort:** 1 day | **Priority:** Medium
+### Task 2.3: Calibration Controls in the Web UI (W2/W3)
+**Status:** Done
 
-**Goal:** Surface calibration settings and quality metrics in playground.
-
-**Implementation:**
-1. Extend existing `web/components/Calibration.tsx`:
-   - Add per-primitive temperature display
-   - Add per-mode temperature (listwise/pointwise/averaged)
-   - Add "Reset to fitted defaults" button
-   - Add calibration profile selector (conservative/balanced/aggressive)
-2. Add calibration quality indicators:
-   - Show fitted ECE for current (primitive, mode, model)
-   - Flag if using unfitted combination
-   - Link to E11 results
-3. Add tooltips explaining temperature meaning
-
-**Acceptance:**
-- UI shows current temp per primitive
-- Can override per-mode temps
-- Reset button restores fitted defaults
-- Profile selector multiplies by 0.8/1.0/1.2
-
-**Files to modify:**
-- `web/components/Calibration.tsx`
-- `web/lib/api.ts` (pass temps in settings)
+The Calibration panel reads `/v1/calibration`: it shows where the values came from, a fitted/manual/raw badge per dial,
+Reset to the fitted value, and the choice between "fitted on the train split" and raw. The Data page shows the data,
+the live checks and the held-out results. Still open: a reliability diagram per primitive from the E14 test split.
 
 ---
 
@@ -901,13 +811,13 @@ cd web && npm test && npm run lint
 
 | Task | Owner | Status | Started | Completed | Notes |
 |------|-------|--------|---------|-----------|-------|
-| 1.1 Pin Datasets | - | Not Started | - | - | - |
+| 1.1 Pin Datasets | - | Done | 2026-09-24 | 2026-09-24 | datasets/splits_v2.json: per-row SHA-256, frozen; `data.py check` |
 | 1.2 Pre-Register Template | - | Not Started | - | - | - |
 | 1.3 Improve Timing | - | Not Started | - | - | - |
-| 1.4 Expand Samples | - | Not Started | - | - | - |
-| 2.1 Pointwise Default | - | Not Started | - | - | - |
-| 2.2 Commit Temps | - | Not Started | - | - | - |
-| 2.3 Update Web UI | - | Not Started | - | - | - |
+| 1.4 Expand Samples | - | Done | 2026-09-24 | 2026-09-24 | Held-out test: 300 BoolQ, 400 AG News (docs/DATA.md) |
+| 2.1 Mode chosen on val | - | Done | 2026-09-24 | 2026-09-24 | E14 |
+| 2.2 Fitted Temps | - | Done | 2026-09-24 | 2026-09-24 | E14; calibration/<model>.json |
+| 2.3 Update Web UI | - | Done | 2026-09-24 | 2026-09-24 | Calibration panel, Data page |
 | 3.1 Package Structure | - | Not Started | - | - | **Blocks Phase 4** |
 | 4.1 Two-Level Tree | - | Not Started | - | - | - |
 | 4.2 State Cache | - | Not Started | - | - | - |

@@ -3,7 +3,7 @@
 // localStorage, so Compare and Under the hood always show the request from the Playground.
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { api } from "./api";
-import type { AskResponse, Preset, Question, Req, Settings } from "./types";
+import type { AskResponse, Fitted, Preset, Question, Req, Settings } from "./types";
 import { DEFAULT_SETTINGS } from "./types";
 
 // opts: a Choice's options as ordered [name, description] rows. The editor edits these, so a name that
@@ -54,6 +54,7 @@ type Store = {
   stateText: string; setStateText: (s: string) => void;
   items: QItem[]; setItems: (f: (items: QItem[]) => QItem[]) => void;
   settings: Settings; setSettings: (f: (s: Settings) => Settings) => void;
+  fitted: Fitted | null; // calibration/<model>.json for the loaded model, or null
   mode: string; setMode: (m: string) => void;
   presets: Preset[]; presetId: string; loadPreset: (p: Preset) => void;
   response: AskResponse | null; running: boolean; error: string | null;
@@ -70,6 +71,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [stateText, setStateText] = useState(SUPPORT.state as string);
   const [items, setItemsRaw] = useState<QItem[]>(() => fromQuestions(SUPPORT.questions));
   const [settings, setSettingsRaw] = useState<Settings>(DEFAULT_SETTINGS);
+  const [fitted, setFitted] = useState<Fitted | null>(null);
   const [mode, setMode] = useState("packed");
   const [presets, setPresets] = useState<Preset[]>([]);
   const [presetId, setPresetId] = useState("support");
@@ -89,7 +91,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (saved) {
         // Restoring the saved request after hydration is the point of this effect; the server render has no storage.
         // eslint-disable-next-line react-hooks/set-state-in-effect
-        setStateText(saved.stateText); setItemsRaw(saved.items); setSettingsRaw({ ...DEFAULT_SETTINGS, ...saved.settings });
+        setStateText(saved.stateText); setItemsRaw(saved.items); // Settings saved before fitted calibration existed held hand-typed numbers: start those from the defaults.
+        setSettingsRaw(saved.settings && "calibration" in saved.settings ? { ...DEFAULT_SETTINGS, ...saved.settings } : DEFAULT_SETTINGS);
         setPresetId(saved.presetId ?? ""); setMode(saved.mode ?? "packed");
       }
     } catch { /* storage unavailable: start from the default request */ }
@@ -112,9 +115,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     try { localStorage.setItem("mj-request", JSON.stringify({ stateText, items, settings, presetId, mode })); } catch { /* ignore */ }
   }, [loaded, stateText, items, settings, presetId, mode]);
 
+  useEffect(() => {  // the fitted calibration belongs to the loaded model: fetch it again after a switch
+    if (!model) return;
+    api.calibration().then((c) => setFitted(c.fitted)).catch(() => setFitted(null));
+  }, [model]);
+
   const req = useMemo(() => toReq(stateText, items), [stateText, items]);
   // Everything that changes what the model computes. The temperatures and the bias are not in it: they act instantly.
-  const runKey = JSON.stringify({ req, mode, c: settings.choice_mode, s: settings.score_mode, model });
+  const runKey = JSON.stringify({ req, mode, c: settings.choice_mode, s: settings.score_mode, cal: settings.calibration, model });
 
   const run = useCallback(async () => {
     setRunning(true); setError(null);
@@ -127,7 +135,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const store: Store = {
     stateText, setStateText: (s) => { setStateText(s); setPresetId(""); setUndo(null); },
     items, setItems: (f) => { setItemsRaw(f); setPresetId(""); setUndo(null); },
-    settings, setSettings: setSettingsRaw,
+    settings, setSettings: setSettingsRaw, fitted,
     mode, setMode,
     presets, presetId,
     loadPreset: (p) => {

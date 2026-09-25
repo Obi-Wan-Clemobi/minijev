@@ -16,6 +16,7 @@ The API address comes from `NEXT_PUBLIC_API_URL` (default `http://localhost:8000
 | Compare | Everything uses the same model; only the way of getting the answer changes. 1: your request answered in minijev's JSON format, read out vs written freely vs written with the format enforced. 2: quality on questions with known answers (E11). 3: other ways to ask several questions, and the recorded 13-question speed results. |
 | Under the hood | The prefix tree, the attention mask to scale, and the tokens of each branch with their position ids. |
 | Findings | Charts from `poc/results/*.json`, including the option-order flaw and its fixes (E13). |
+| Data | The data card (`docs/DATA.md`), every `data.py check` claim re-run on load, the split balance, and the held-out results (E14). |
 | Weaknesses | The register in `docs/WEAKNESSES.md` as expandable rows with filters. The page reads the file on every load, so an edit shows at once. |
 
 Checks: `npm test` compares `lib/scoring.ts` with the Python `answer()` on 60 fixture cases

@@ -64,9 +64,13 @@ export const HELP = {
     "Moving a scale level does matter, because the order is the scale." ] },
 
   // ---- calibration
-  calPresets: { t: "Calibration presets", e: "instant", d: [
-    "Settings that we measured on 400 yes/no questions with known answers, so that \"80% sure\" really means right 80% of the time.",
-    "They apply to yes/no (Noul) questions and belong to one model each. Raw = no calibration." ] },
+  calPresets: { t: "Fitted or raw", e: "instant", d: [
+    "Fitted: temperatures learned on the TRAIN split of our frozen data (500 yes/no questions, 600 news articles), so that \"80% sure\" is right about 80% of the time. The val split chose between methods; the test split only reports.",
+    "Raw: the model's own probabilities, no calibration.",
+    "The fitted values belong to one model; switching the model loads its own file." ] },
+  calProvenance: { t: "Where these numbers come from", e: "display", d: [
+    "calibration/<model>.json, written by experiments.py heldout (E14). It records the dataset, the split and its size, and a checksum of the frozen splits file.",
+    "docs/DATA.md and the Data page describe the data, and data.py check proves the claims from the files." ] },
   tempNoul: { t: "Temperature · yes/no", e: "instant", d: [
     "Makes the yes/no answers more or less sure of themselves.",
     "Above 1: answers move toward 0.5 (less sure). Below 1: they move toward 0 or 1 (more sure). A yes never turns into a no.",
@@ -82,7 +86,7 @@ export const HELP = {
   tempScore: { t: "Temperature · scale", e: "instant", d: [
     "Makes scale answers more or less sure of themselves.",
     "Above 1: the bars even out, so the score moves toward the middle of the scale and the confidence drops. The tallest bar stays the tallest." ] },
-  reset: { t: "Reset", e: "instant", d: ["Put this dial back to its default (no calibration)."] },
+  reset: { t: "Reset", e: "instant", d: ["Put this dial back to the fitted value (or to raw, when calibration is off)."] },
   defaultChoiceMode: { t: "Default for multiple choice", e: "run", d: [
     "How multiple-choice questions are asked when the question itself says \"asked: default\".",
     "listwise: one step, but the option order can change the answer. averaged: every order, averaged; fixes that for one branch per option. pointwise: each option judged alone."] },
@@ -205,6 +209,14 @@ export const HELP = {
   orderCost: { t: "Cost", e: "display", d: [
     "How many branches (mini-questions) one multiple-choice question needs. The text is still read only once, so extra branches cost only the question's own tokens.",
     "Debiased needs 1 branch at run time, but it needs a one-time measurement of the model's letter liking first." ] },
+
+  // ---- data
+  dataClaims: { t: "Verified claims", e: "display", d: [
+    "Each line is one claim of the data card, checked against the files when this page loaded: checksums, split sizes, no overlap between splits, label balance.",
+    "The same checks run in a terminal with: cd poc && uv run python data.py check." ] },
+  dataHeldout: { t: "Held-out results", e: "display", d: [
+    "The only numbers to use when you defend a claim. The temperatures were fitted on the train split, the method was chosen on the val split, and the test split was used once, to report.",
+    "The lines around each number are 95% uncertainty intervals. Grey rows are the Choice modes that val did not choose." ] },
 
   // ---- hood
   hoodReadout: { t: "What is a readout?", e: "display", d: [

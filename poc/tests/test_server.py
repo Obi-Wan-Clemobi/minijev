@@ -18,8 +18,8 @@ REQ = {
                  "criteria": ["calm", "mildly annoyed", "frustrated", "angry"]},
     },
 }
-DEFAULTS = {f: getattr(Settings(), f) for f in ("temp_noul", "temp_choice", "temp_score", "bias_noul",
-                                                  "choice_mode", "score_mode")}
+DEFAULTS = {**{f: getattr(Settings(), f) for f in ("temp_noul", "temp_choice", "temp_score", "bias_noul",
+                                                     "choice_mode", "score_mode")}, "calibration": "none"}
 
 
 @pytest.fixture(scope="module")
@@ -81,3 +81,8 @@ def test_same_format_returns_both_sides(client):
     assert "Reply with only a JSON object" in r["prompt"]
     assert r["structured"]["usable"] == len(REQ["questions"])  # an enforced format is always readable
     assert r["structured"]["answers"]["team"]["choice"] in REQ["questions"]["team"]["criteria"]
+
+
+def test_calibration_endpoint(client):
+    r = client.get("/v1/calibration").json()
+    assert r["model"] == MODEL and r["mode"] in ("fitted", "none")

@@ -29,8 +29,8 @@ third-party measurements), **Inferred** (our reasoning). **Measured** means a re
   - When the same model must return minijev's exact JSON, reading it out is 7–40× faster than writing it, and a
     small model often breaks the format when it writes (§6.8).
   - See §6.
-- **Quality:** a written one-word answer is as accurate as the readout, but written probabilities are the least
-  honest and the slowest (§6.7).
+- **Quality:** a written one-word answer is as accurate as the readout, but written probabilities are usually the
+  least honest and always the slowest (§6.7).
 - **The option order can change a listwise answer** (20% of articles at 0.5B, 8% at 1.5B). Asking all orders and
   averaging, or judging each option alone, removes it (§6.10). docs/WEAKNESSES.md lists every open weakness.
 
@@ -710,38 +710,42 @@ the same questions in four ways (experiment E11, `poc/results/quality*.json`):
 3. **Writes the answer:** the model writes "Yes" or "Sports"; code reads the word back. There is no probability.
 4. **Writes a probability:** the model writes how sure it is: "0.8" for a yes/no question, a JSON object for a topic.
 
-The question sets: 200 BoolQ yes/no questions (62% of the answers are "yes") and 120 AG News articles (4 topics).
+The question sets: BoolQ yes/no questions (62% of the answers are "yes"), n = 500 at 0.5B and 200 at 1.5B, and AG News
+articles (4 topics), n = 300 at 0.5B and 120 at 1.5B. The two models were run on different samples, so compare the
+ways of asking within one model, not the models. **E11 is exploratory:** it was run before the frozen splits of
+docs/DATA.md, and it fits and reports on the same items. The held-out numbers are in §6.11.
 ECE (expected calibration error) is the average gap between stated confidence and actual accuracy; 0 is perfect.
 
-**Yes/no questions (BoolQ, n = 200)**
+**Yes/no questions (BoolQ; n = 500 at 0.5B, 200 at 1.5B)**
 
 | Way of asking | 0.5B accuracy | 0.5B ECE | 1.5B accuracy | 1.5B ECE | Time per question (0.5B / 1.5B) |
 |---|---:|---:|---:|---:|---:|
-| Reads out | 0.630 [0.565–0.695] | 0.218 | 0.820 [0.765–0.870] | 0.106 | 0.53 / 1.59 s |
-| Reads out, calibrated | 0.630 | **0.045** | 0.820 | **0.066** | same |
-| Writes the answer | 0.630 | — | 0.820 | — | 0.76 / 2.11 s |
-| Writes a probability | 0.635 | 0.288 | 0.740 [0.675–0.800] | 0.170 | 1.23 / 3.34 s |
+| Reads out | 0.652 [0.610–0.692] | 0.186 | 0.820 [0.765–0.870] | 0.106 | 0.30 / 1.59 s |
+| Reads out, calibrated | 0.652 | **0.047** | 0.820 | **0.066** | same |
+| Writes the answer | 0.652 | — | 0.820 | — | 0.48 / 2.11 s |
+| Writes a probability | 0.594 [0.552–0.634] | 0.334 | 0.740 [0.675–0.800] | 0.170 | 0.77 / 3.34 s |
 
-**Topics (AG News, n = 120)**
+**Topics (AG News; n = 300 at 0.5B, 120 at 1.5B)**
 
 | Way of asking | 0.5B accuracy | 0.5B ECE | 1.5B accuracy | 1.5B ECE | Time per question (0.5B / 1.5B) |
 |---|---:|---:|---:|---:|---:|
-| Reads out | 0.883 [0.825–0.942] | 0.100 | 0.833 [0.767–0.900] | 0.149 | 0.46 / 1.41 s |
-| Reads out, calibrated | 0.883 | **0.076** | 0.833 | **0.052** | same |
-| Writes the answer | 0.908 [0.858–0.958] | — | 0.883 [0.825–0.942] | — | 0.73 / 1.78 s |
-| Writes a probability | 0.892 | 0.160 | 0.875 | 0.103 | 3.06 / 17.26 s |
+| Reads out | 0.860 [0.820–0.900] | 0.105 | 0.833 [0.767–0.900] | 0.149 | 0.21 / 1.41 s |
+| Reads out, calibrated | 0.860 | **0.049** | 0.833 | **0.052** | same |
+| Writes the answer | 0.863 [0.823–0.900] | — | 0.883 [0.825–0.942] | — | 0.37 / 1.78 s |
+| Writes a probability | 0.847 | 0.103 | 0.875 | 0.103 | 1.74 / 17.26 s |
 
 The results show these points:
 - **A written one-word answer and the readout are equally right.** On BoolQ they agree to three decimals at both
-  sizes. On AG News the written answer is a little higher, but the intervals overlap. The reason (Inferred): a
+  sizes. On AG News the intervals overlap. The reason (Inferred): a
   one-word answer is the first token of the same distribution that the readout reads.
-- **Written probabilities are the least honest.** They have the highest ECE in all four cases. At 1.5B on BoolQ they
-  are also less accurate (0.740 against 0.820, intervals that do not overlap). They are the slowest: 17 s per question
-  at 1.5B on AG News, for 39 written tokens.
-- **The calibrated readout is the most honest,** with ECE 0.045–0.076. Calibration never changes an answer, so its
+- **Written probabilities are usually the least honest.** They have the highest ECE in three of the four cases; at
+  0.5B on AG News they equal the raw readout (0.103 against 0.105), and the calibrated readout beats both (0.049).
+  On BoolQ they are also less accurate (0.594 against 0.652 at 0.5B; 0.740 against 0.820 at 1.5B). They are the
+  slowest: 17 s per question at 1.5B on AG News, for 39 written tokens.
+- **The calibrated readout is the most honest,** with ECE 0.047–0.066. Calibration never changes an answer, so its
   accuracy equals the raw readout.
-- **The 0.5B model is not better than chance on BoolQ.** 0.630 is inside the interval around the 0.62 base rate.
-- **1.5B is not better than 0.5B on AG News with the readout** (0.833 against 0.883; the intervals overlap).
+- **The 0.5B model is barely better than always answering "yes" on BoolQ.** The 0.62 base rate is just inside the
+  interval of 0.652 [0.610–0.692].
 
 The Compare page shows these tables, with the intervals, as section 2.
 

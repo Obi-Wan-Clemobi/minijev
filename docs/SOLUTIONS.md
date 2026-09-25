@@ -102,7 +102,7 @@ Solutions ranked by impact × feasibility, with evidence level:
 - Per-primitive temperature sliders (extend existing Calibration.tsx dials)
 - Per-mode temperature override (when choice_mode != default)
 - Reset to fitted defaults button
-- Calibration profile selector (conservative/balanced/aggressive = T*0.8, T*1.0, T*1.2)
+- Fitted-or-raw choice, with the provenance of the fitted values (no multiplier profiles: a multiplied temperature is no longer the fitted one)
 
 **Visualizations:**
 - Reliability diagram per primitive (binned confidence vs empirical accuracy)

@@ -1,7 +1,7 @@
 // A port of minijev_poc.py: softmax, answer(), choice_confidence(), score_confidence().
 // The page re-scores the returned raw logits with it, so temperature changes need no model run.
 // tests/scoring.test.ts checks it against fixtures that the Python code wrote.
-import type { Question, Raw, Settings } from "./types";
+import type { Fitted, Question, Raw, Settings } from "./types";
 
 export function softmax(z: number[], t = 1): number[] {
   const m = Math.max(...z);
@@ -64,8 +64,26 @@ export function answer(q: Question, logits: number[], temperature = 1, bias = 0)
   };
 }
 
-export function rescore(questions: Record<string, Question>, raw: Raw, s: Settings): Record<string, Answer> {
-  const temp = { noul: s.temp_noul, choice: s.temp_choice, score: s.temp_score };
-  return Object.fromEntries(Object.entries(questions).map(([id, q]) =>
-    [id, answer(q, raw[id].logits, temp[q.type], q.type === "noul" ? s.bias_noul : 0)]));
+// Mirrors Settings.calibrator() in poc/minijev_poc.py: an explicit dial wins; else the fitted value; else raw.
+export function calibrator(q: Question, s: Settings, fitted: Fitted | null): { t: number; b: number; source: "manual" | "fitted" | "none" } {
+  const f = s.calibration === "fitted" ? fitted : null;
+  if (q.type === "noul") {
+    if (s.temp_noul !== null || s.bias_noul !== null) return { t: s.temp_noul ?? 1, b: s.bias_noul ?? 0, source: "manual" };
+    if (f) return f.noul.selected === "platt" ? { t: 1 / f.noul.platt.a, b: f.noul.platt.b, source: "fitted" } : { t: f.noul.temperature, b: 0, source: "fitted" };
+    return { t: 1, b: 0, source: "none" };
+  }
+  if (q.type === "choice") {
+    if (s.temp_choice !== null) return { t: s.temp_choice, b: 0, source: "manual" };
+    const t = f?.choice.temperature[q.choice_mode ?? f.choice.selected_mode];
+    return t ? { t, b: 0, source: "fitted" } : { t: 1, b: 0, source: "none" };
+  }
+  if (s.temp_score !== null) return { t: s.temp_score, b: 0, source: "manual" };
+  return { t: 1, b: 0, source: "none" }; // no labelled scale data yet: Scores are never fitted
+}
+
+export function rescore(questions: Record<string, Question>, raw: Raw, s: Settings, fitted: Fitted | null = null): Record<string, Answer> {
+  return Object.fromEntries(Object.entries(questions).map(([id, q]) => {
+    const c = calibrator(q, s, fitted);
+    return [id, answer(q, raw[id].logits, c.t, c.b)];
+  }));
 }

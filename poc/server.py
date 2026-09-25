@@ -66,11 +66,14 @@ class ModelReq(BaseModel):
 
 def settings_for(overrides: dict) -> Settings:
     base = Settings.load()
-    known = {f.name for f in dataclasses.fields(Settings)}
+    known = {f.name for f in dataclasses.fields(Settings)} - {"fitted"}
     bad = sorted(set(overrides) - known)
     if bad:
         raise HTTPException(400, f"unknown settings {bad}; known: {sorted(known)}")
-    return dataclasses.replace(base, **overrides)
+    try:
+        return dataclasses.replace(base, **overrides).with_calibration()
+    except AssertionError as e:
+        raise HTTPException(400, str(e))
 
 
 def checked(req: Req, s: Settings) -> dict:
@@ -295,6 +298,29 @@ def v1_results():
                                                         "label_vs_readout_agreement")}
     out["demo"] = load("demo.json")
     return out
+
+
+@app.get("/v1/data")
+def v1_data():
+    """The data card's facts, computed from the files now, and every claim of data.py check with its result."""
+    import data
+    claims: list = []
+    ok = data.check(claims, quiet=True)
+    heldout = {}
+    for tag_, suffix in (("0.5B", ""), ("1.5B", "-Qwen2.5-1.5B-Instruct")):
+        p = RESULTS / f"heldout{suffix}.json"
+        if p.exists():
+            r = json.loads(p.read_text())
+            heldout[tag_] = {k: r[k] for k in ("calibration", "val", "test", "splits_accessed", "use_of_splits", "base_rates")}
+    return {"summary": data.summary(), "claims": claims, "all_pass": ok, "heldout": heldout}
+
+
+@app.get("/v1/calibration")
+def v1_calibration():
+    """The fitted calibration for the loaded model, with its provenance, or null when none is fitted."""
+    s = dataclasses.replace(Settings.load(), model=engine().name).with_calibration()
+    return {"model": engine().name, "mode": s.calibration, "fitted": s.fitted or None,
+            "selected_choice_mode": s.resolved_choice_mode() if s.fitted else None}
 
 
 @app.get("/v1/model")

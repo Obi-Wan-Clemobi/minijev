@@ -101,13 +101,15 @@ $ # (after manually corrupting manifest)
 ValueError: Dataset boolq checksum mismatch: 1/3270 rows differ...
 ```
 
-## SSL Workaround
-Added SSL context workaround to `fetch()` function to support corporate proxy environments:
-```python
-ssl_context = ssl.create_default_context()
-ssl_context.check_hostname = False
-ssl_context.verify_mode = ssl.CERT_NONE
-```
+## TLS
+`fetch()` checks TLS certificates. Behind a proxy that re-signs TLS, set `SSL_CERT_FILE` to the proxy's CA bundle.
+`MINIJEV_INSECURE_SSL=1` turns the check off and prints a warning for every download: a download made that way could
+be tampered with, and the checksums would then pin the tampered rows.
+
+## Frozen splits (v2)
+The manifest pins the source rows. `poc/datasets/splits_v2.json` goes further: it freezes the train / val / test
+samples, each item with its source index and row SHA-256, and `poc/data.py` enforces it. docs/DATA.md is the data card;
+`uv run python data.py check` verifies it. `poc/datasets/splits.json` (v1) is not read by any code.
 
 ## Impact
 - **Dataset drift eliminated**: Any change to upstream HuggingFace datasets will be caught immediately

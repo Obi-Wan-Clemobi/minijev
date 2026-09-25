@@ -722,10 +722,12 @@ with logprobs", which is the same computation as a readout.
 
 **R8. Quality on labelled data (E11).** The same model answers 200 BoolQ and 120 AG News questions in four ways:
 the readout, the calibrated readout, a written answer, and a written probability. Full tables: WALKTHROUGH.md §6.7.
-- A written one-word answer and the readout are equally accurate (BoolQ: 0.630 at 0.5B and 0.820 at 1.5B for both).
-- Written probabilities have the highest ECE in all four cases (0.103–0.288) and are the slowest (up to 17 s per
+- A written one-word answer and the readout are equally accurate (BoolQ: 0.652 at 0.5B and 0.820 at 1.5B for both).
+- Written probabilities have the highest ECE in three of four cases (0.103–0.334) and are the slowest (up to 17 s per
   question at 1.5B). At 1.5B on BoolQ they are also less accurate: 0.740 [0.675–0.800] against 0.820 [0.765–0.870].
-- The calibrated readout has the lowest ECE (0.045–0.076) at the same accuracy as the raw readout.
+- The calibrated readout has the lowest ECE (0.047–0.066) at the same accuracy as the raw readout.
+- E11 is exploratory: fitted and reported on the same items, and 0.5B and 1.5B used different sample sizes. R11
+  gives held-out numbers.
 - For Jev (Inferred): the readout gives the model's own probabilities at no extra cost. Asking a model to write
   probabilities gives worse ones, so a readout is the better base for calibrated decisions.
 

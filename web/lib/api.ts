@@ -1,4 +1,4 @@
-import type { AskResponse, Preset, Req, Settings } from "./types";
+import type { AskResponse, Fitted, Preset, Req, Settings } from "./types";
 
 export const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -27,6 +27,7 @@ export const api = {
   presets: () => call<Preset[]>("/v1/presets"),
   results: () => call<Record<string, any>>("/v1/results"), // eslint-disable-line @typescript-eslint/no-explicit-any
   model: () => call<{ model: string; available: string[] }>("/v1/model"),
+  calibration: () => call<{ model: string; mode: string; fitted: Fitted | null; selected_choice_mode: string | null }>("/v1/calibration"),
   setModel: (name: string) => call<{ model: string }>("/v1/model", post({ name })),
 };
 
