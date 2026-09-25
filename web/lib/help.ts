@@ -206,7 +206,7 @@ export const HELP = {
   scoreContrastive: { t: "Levels that name their neighbours", e: "run", d: [
     "In pointwise mode each level is asked on its own: \"Is 'frustrated' right? Yes or No.\" A small model says yes to any level that sounds plausible.",
     "With this on, each level also says what it is not: \"frustrated (not mildly annoyed; not angry)\". The model then has to separate it from the levels next to it.",
-    "The Findings page shows whether this helps, measured on 300 labelled test sentences." ] },
+    "It is off by default: on 300 labelled test sentences (SST-5) it did not reduce the mix-ups between neighbouring levels. The Weaknesses page (W5) has the numbers." ] },
   templateGrid: { t: "Does the wording matter?", e: "display", d: [
     "The prompt around your question has four parts: the system line, the label before the state, the label before the question, and the answer line. We wrote 3 wordings of each part and tried all 81 combinations.",
     "Each cell is one combination, on the same 200 yes/no questions (BoolQ val). The number is the accuracy; the colour goes from the worst to the best cell. The outlined cell is the template minijev uses.",

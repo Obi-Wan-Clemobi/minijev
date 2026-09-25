@@ -18,10 +18,10 @@ average gap between stated confidence and accuracy.
 | W2 | Raw probabilities are overconfident | Calibration | High | Partly: fitted for Noul and Choice on train (E14); Score open |
 | W3 | Calibration does not transfer beyond its data, and Score has none | Calibration | High | Open |
 | W4 | The 0.5B model is at chance on BoolQ | Model | High | Use 1.5B or larger; open |
-| W5 | Pointwise items on small models say "yes" to the plausible item | Method | Medium | Open |
+| W5 | Pointwise items on small models say "yes" to the plausible item | Method | Medium | Open; contrastive levels tried and rejected (E16) |
 | W6 | Opposite questions are not consistent | Method | Medium | Measured (E17); opt-in pair step |
 | W7 | Answers depend on the prompt wording | Method | Medium | Measured (E15); template frozen |
-| W8 | Literal reading of vague questions | Model | Medium | Partly: Noul `criteria` |
+| W8 | Literal reading of vague questions | Model | Medium | Partly: Noul `criteria` and a library; mixed (E18) |
 | W9 | Contextual calibration over-corrects | Calibration | Low | Avoided (opt-in) |
 | W10 | More than 25 options is not supported | Method | Low | Open |
 | W11 | Long states lose details | Model | Medium | Measured to 8k (E19) |
@@ -64,7 +64,16 @@ average gap between stated confidence and accuracy.
   anything plausible, so neighbouring levels get similar scores.
 - **Evidence (Measured):** at 0.5B, pointwise Score rated every bug report "workaround exists", from a misaligned icon
   to a full outage. 1.5B separated them (RESEARCH.md §7.3 R5).
-- **Candidate fix:** contrastive level descriptions ("… but not …"); a larger model; training on pointwise data.
+- **Evidence (Measured, E16, SST-5 test, n = 300, 5 levels, 60 per level):** pointwise Score accuracy is 0.217 at
+  0.5B and 0.477 at 1.5B (chance 0.20). At 0.5B most sentences get "positive". Neither model ever picks "neutral".
+- **Tried, and rejected (Measured, E16):** contrastive levels ("positive (not neutral; not very positive)"). A
+  temperature was fitted per variant on train; val chose between them.
+  - 0.5B: no difference after calibration (test NLL 1.558 against 1.562; uniform guessing gives 1.609).
+  - 1.5B: worse. Accuracy falls from 0.477 to 0.267, and errors of 2 or more levels rise from 0.10 to 0.30. Val
+    chose plain pointwise.
+  - Adjacent-level errors did not fall at either size (0.373 → 0.393 and 0.423 → 0.430).
+  - `MINIJEV_SCORE_CONTRASTIVE` stays off; it remains for experiments.
+- **Still open:** a larger model; training on pointwise data; a fitted Score temperature (SST-5 train is ready).
 - **What Jev may do (Inferred):** train the pointwise judgement directly (RLCD, RESEARCH.md §3.5), so that "yes" is
   calibrated for each item.
 
@@ -143,7 +152,13 @@ average gap between stated confidence and accuracy.
 ### W8. Literal reading of vague questions
 - **Evidence (Measured):** both sizes counted "used Python occasionally" as *strong in Python* (0.90–0.93; Jev 0.14),
   and "charged twice, can someone look into this?" as *not* a refund request (RESEARCH.md §7.3 R5).
-- **Candidate fix:** Noul `criteria` ("Yes means …") make the question precise; a larger model.
+- **Fix, opt-in:** Noul `criteria` ("Yes means …", "No means …") make the question precise. A library of 20
+  common judgements (`src/minijev/criteria.py`) fills them from the question editor.
+- **Evidence (Measured, E18, exploratory: 13 documented Jev cases, not held out):**
+  - 0.5B: the criteria fix the literal reading ("used Python occasionally": 0.93 → 0.44; Jev 0.14). But they push
+    most other answers toward "no", so the mean gap to Jev grows (0.24 → 0.31).
+  - 1.5B: the gap shrinks (0.26 → 0.22), but the Python case stays literal (0.90 → 0.89).
+  - So criteria help or hurt depending on the model and the case. Test them on labelled data before relying on them.
 - **What Jev may do:** it lists literal reading as a known weakness (Stated, row 25).
 
 ### W11. Long states lose details

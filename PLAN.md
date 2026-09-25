@@ -822,7 +822,7 @@ cd web && npm test && npm run lint
 | 4.1 Two-Level Tree | - | Done | 2026-09-25 | 2026-09-25 | Score branches −21.6% tokens (GDPR); logits within 2e-5; W14 |
 | 4.2 State Cache | - | Done | 2026-09-25 | 2026-09-25 | LRU of state key/values; 1.2–2.9× per hit (W13); hit rate depends on the client |
 | 4.3 Template Sensitivity | - | Done | 2026-09-25 | 2026-09-25 | E15: 81 templates on BoolQ val; heatmap on Findings (W7) |
-| 4.4 Contrastive Levels | - | Not Started | - | - | - |
+| 4.4 Contrastive Levels | - | Done (rejected) | 2026-09-25 | 2026-09-25 | E16 on SST-5: no fewer adjacent errors; worse at 1.5B; stays off (W5) |
 | 4.5 Complementary Norm | - | Done | 2026-09-25 | 2026-09-25 | E17; explicit `opposite_of` (no automatic detection); opt-in: at 0.5B it lowers accuracy (W6) |
 | 4.6 Contrastive Criteria | - | Done | 2026-09-25 | 2026-09-25 | Library of 20; picker in the editor; E18 mixed at 0.5B (W8) |
 | 5.1 ClaudeJudge Baseline | - | Blocked | - | - | **Requires `ANTHROPIC_API_KEY`**; not set on this machine |

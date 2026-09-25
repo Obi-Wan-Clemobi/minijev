@@ -774,6 +774,16 @@ without the fact stays at 0.04 or less. A near-miss question (wrong date, name o
 to 0.37–0.57 at 8k. For Jev (Inferred): its "context rot" warning fits this: the topic survives in long states, the
 details do not.
 
+**R15. Contrastive Score levels (E16).** SST-5 (5 sentiment levels; train 300, val 200, test 300). Each variant got a
+temperature fitted on train; val chose. Contrastive levels did not reduce adjacent-level errors at either size, and at
+1.5B they lowered test accuracy from 0.477 to 0.267. Plain pointwise at 1.5B reaches 0.477 [0.42–0.54] against 0.20
+chance; listwise reaches 0.493. For Jev (Inferred): judging levels one at a time needs a model trained for it; a
+prompt change does not give it.
+
+**R16. Criteria for vague questions (E18).** 13 documented Jev Nouls, exploratory. Criteria fixed the literal reading
+at 0.5B but made other answers too low; at 1.5B they reduced the mean gap to Jev (0.26 → 0.22) without fixing the
+literal case. The effect depends on the model and the question.
+
 **What the POC does not show:**
 - Jev's accuracy, which comes from its model and training.
 - Jev's speed, which comes from its hardware.

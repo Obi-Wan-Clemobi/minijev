@@ -878,15 +878,13 @@ The results show these points:
 
 ## 7. Next steps
 
-1. **Package the POC** (Phase 2). Move `poc/` into `src/minijev` with a pydantic API and a CLI.
-2. **Make calibration sets for Choice and Score.** Check whether a temperature fitted on one dataset transfers to
-   another. Put the fitted values in `poc/minijev.env`.
-3. **Add a two-stage Choice** for more than 25 options, as Jev does.
-4. **Test distillation** (RESEARCH.md §3.9). Fine-tune the 1.5B model with LoRA on soft labels from averaged Claude
-   samples. Add option-shuffle augmentation. Measure agreement, ECE, and the `permutation` result against the base
-   model.
-5. **Add the Claude baseline (E2).** Set `ANTHROPIC_API_KEY` and run TypeSafe's adapter on the same data. This gives
-   the cloud-LLM comparison that this walkthrough does not include.
+1. **Fit a Score temperature.** SST-5 train (300) is frozen and unused; fit on it, choose on val, report on test.
+2. **Build the agent-routing data** under the rules of docs/DATA.md §9: redact session logs first, freeze the
+   splits before any model sees them.
+3. **Test distillation** (RESEARCH.md §3.9). Fine-tune the 1.5B model with LoRA on soft labels, with option-shuffle
+   augmentation. This needs a GPU (PLAN.md 6.2).
+4. **Add the Claude baseline (E2).** Set `ANTHROPIC_API_KEY` and run TypeSafe's adapter on the same held-out data.
+5. **Add a two-stage Choice** for more than 25 options, when a labelled dataset with that many options exists.
 6. **With a Jev API key, run the cheap tests** in RESEARCH.md §8:
    - A shuffle of the options shows whether Jev judges options together or one at a time.
    - The step in latency shows where the two-stage Choice starts.

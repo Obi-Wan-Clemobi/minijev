@@ -1,0 +1,352 @@
+{
+  "data": {
+    "dataset": "sst5",
+    "question": "How positive is the sentiment of this movie review?",
+    "levels": [
+      "very negative",
+      "negative",
+      "neutral",
+      "positive",
+      "very positive"
+    ],
+    "fitted_on": "train",
+    "chosen_on": "val",
+    "reported_on": "test",
+    "n_train": 300,
+    "n_val": 200,
+    "n_test": 300,
+    "splits_file": "datasets/splits_score_v1.json",
+    "splits_sha256": "77f7a12c45a1ebeb"
+  },
+  "temperature": {
+    "pointwise": 4.216575377946612,
+    "contrastive": 3.207097080178802,
+    "listwise": 3.8742780910717345
+  },
+  "val": {
+    "pointwise": {
+      "accuracy": 0.47,
+      "adjacent_error": 0.41,
+      "far_error": 0.12,
+      "mae_expected": 0.7308287687128862,
+      "nll": 1.7937484870773386
+    },
+    "contrastive": {
+      "accuracy": 0.38,
+      "adjacent_error": 0.325,
+      "far_error": 0.295,
+      "mae_expected": 0.8977839363062707,
+      "nll": 1.6040370920614244
+    },
+    "listwise": {
+      "accuracy": 0.43,
+      "adjacent_error": 0.495,
+      "far_error": 0.075,
+      "mae_expected": 0.6480277419108184,
+      "nll": 2.3391015346716943
+    }
+  },
+  "val_calibrated_nll": {
+    "pointwise": 1.229245792917821,
+    "contrastive": 1.4298041772837997,
+    "listwise": 1.2570229506130817
+  },
+  "chosen": "pointwise",
+  "chosen_by": "lowest val NLL after a temperature fitted on train",
+  "test": {
+    "pointwise": {
+      "accuracy": 0.4766666666666667,
+      "adjacent_error": 0.42333333333333334,
+      "far_error": 0.1,
+      "mae_expected": 0.687918475182821,
+      "nll": 1.9176121246893092,
+      "mean_level_predicted": 2.0766666666666667,
+      "confusion": [
+        [
+          25,
+          30,
+          0,
+          4,
+          1
+        ],
+        [
+          13,
+          38,
+          1,
+          7,
+          1
+        ],
+        [
+          4,
+          27,
+          0,
+          23,
+          6
+        ],
+        [
+          3,
+          3,
+          0,
+          42,
+          12
+        ],
+        [
+          1,
+          0,
+          0,
+          21,
+          38
+        ]
+      ],
+      "accuracy_ci95": [
+        0.42333333333333334,
+        0.5366666666666666
+      ],
+      "adjacent_error_ci95": [
+        0.36666666666666664,
+        0.4766666666666667
+      ],
+      "min_mass": 0.9998051428911774,
+      "calibrated": {
+        "accuracy": 0.4766666666666667,
+        "adjacent_error": 0.42333333333333334,
+        "far_error": 0.1,
+        "mae_expected": 0.6494819114755388,
+        "nll": 1.2384896196864812,
+        "mean_level_predicted": 2.0766666666666667
+      }
+    },
+    "contrastive": {
+      "accuracy": 0.26666666666666666,
+      "adjacent_error": 0.43,
+      "far_error": 0.30333333333333334,
+      "mae_expected": 0.9326751860273697,
+      "nll": 1.8563003314602138,
+      "mean_level_predicted": 1.7533333333333334,
+      "confusion": [
+        [
+          0,
+          44,
+          16,
+          0,
+          0
+        ],
+        [
+          0,
+          35,
+          23,
+          0,
+          2
+        ],
+        [
+          0,
+          38,
+          17,
+          0,
+          5
+        ],
+        [
+          0,
+          36,
+          2,
+          2,
+          20
+        ],
+        [
+          0,
+          31,
+          1,
+          2,
+          26
+        ]
+      ],
+      "accuracy_ci95": [
+        0.21666666666666667,
+        0.31666666666666665
+      ],
+      "adjacent_error_ci95": [
+        0.37333333333333335,
+        0.48333333333333334
+      ],
+      "min_mass": 0.996737482859104,
+      "calibrated": {
+        "accuracy": 0.26666666666666666,
+        "adjacent_error": 0.43,
+        "far_error": 0.30333333333333334,
+        "mae_expected": 1.026402423196554,
+        "nll": 1.5063281107189783,
+        "mean_level_predicted": 1.7533333333333334
+      }
+    },
+    "listwise": {
+      "accuracy": 0.49333333333333335,
+      "adjacent_error": 0.44666666666666666,
+      "far_error": 0.06,
+      "mae_expected": 0.5794650722728372,
+      "nll": 2.1422727671672557,
+      "mean_level_predicted": 1.97,
+      "confusion": [
+        [
+          17,
+          38,
+          1,
+          4,
+          0
+        ],
+        [
+          2,
+          52,
+          1,
+          5,
+          0
+        ],
+        [
+          0,
+          30,
+          10,
+          19,
+          1
+        ],
+        [
+          1,
+          4,
+          1,
+          54,
+          0
+        ],
+        [
+          0,
+          2,
+          0,
+          43,
+          15
+        ]
+      ],
+      "accuracy_ci95": [
+        0.43666666666666665,
+        0.55
+      ],
+      "adjacent_error_ci95": [
+        0.39,
+        0.5033333333333333
+      ],
+      "min_mass": 0.9979216714829955,
+      "calibrated": {
+        "accuracy": 0.49333333333333335,
+        "adjacent_error": 0.44666666666666666,
+        "far_error": 0.06,
+        "mae_expected": 0.7261987979624411,
+        "nll": 1.1860042366071326,
+        "mean_level_predicted": 1.97
+      }
+    }
+  },
+  "adjacent_error_change": 0.01574803149606296,
+  "adjacent_error_diff_ci95": [
+    -0.06,
+    0.07666666666666666
+  ],
+  "jev_doc_cases": {
+    "cases": [
+      {
+        "case": "score: severity",
+        "state": "The export button is misaligned by a few pixels on the settings page.",
+        "jev": 0.0,
+        "pointwise": 0.35470979051477486,
+        "contrastive": 0.09971398784156423
+      },
+      {
+        "case": "score: severity",
+        "state": "The PDF export button does nothing when clicked. I can still export to CSV and convert it myself, but that takes ages.",
+        "jev": 1.0,
+        "pointwise": 1.082529756185385,
+        "contrastive": 0.32661685071367974
+      },
+      {
+        "case": "score: severity",
+        "state": "Export to PDF fails with a spinner that never finishes. Some of our team say CSV export still works for them, others say it fails too.",
+        "jev": 1.11,
+        "pointwise": 1.467959658987958,
+        "contrastive": 0.4674248911381307
+      },
+      {
+        "case": "score: severity",
+        "state": "The export button crashes the settings page in Safari. It works in Chrome, but a few of our customers only use Safari.",
+        "jev": 1.43,
+        "pointwise": 1.2023934283937328,
+        "contrastive": 0.360104996022497
+      },
+      {
+        "case": "score: severity",
+        "state": "Nobody on our team can log in since this morning. We get a 500 error on every attempt.",
+        "jev": 2.0,
+        "pointwise": 1.993635620972712,
+        "contrastive": 1.4254797510625656
+      },
+      {
+        "case": "score: severity, numbers-only levels",
+        "state": "The export button is misaligned by a few pixels on the settings page.",
+        "jev": 0.55,
+        "pointwise": 1.508310584800091,
+        "contrastive": 1.3267849688504705
+      },
+      {
+        "case": "score: python experience",
+        "state": "My experience is in Java and Go. I have not used Python.",
+        "jev": 0.0,
+        "pointwise": 0.017751976815900926,
+        "contrastive": 1.8859870401882985
+      },
+      {
+        "case": "score: python experience",
+        "state": "I have used Python occasionally for small scripts alongside my main Java work.",
+        "jev": 1.0,
+        "pointwise": 1.575894362302358,
+        "contrastive": 1.386403999085533
+      },
+      {
+        "case": "score: python experience",
+        "state": "I used Python every day for two years in my last job, mostly data pipelines.",
+        "jev": 2.05,
+        "pointwise": 1.9902371175463187,
+        "contrastive": 1.6392616113099827
+      },
+      {
+        "case": "score: python experience",
+        "state": "I have written Python daily for eight years, including maintaining a large Django codebase.",
+        "jev": 2.89,
+        "pointwise": 2.5321608620469815,
+        "contrastive": 1.2554518104023311
+      },
+      {
+        "case": "score: frustration",
+        "state": "Help! My payouts have been failing for 3 days.",
+        "jev": 1.05,
+        "pointwise": 1.1680211485090353,
+        "contrastive": 1.0000608903196084
+      }
+    ],
+    "note": "exploratory: 11 documented cases, not held out",
+    "mae_vs_jev_pointwise": 0.28334093174143254,
+    "mae_vs_jev_contrastive": 0.7458626540906428
+  },
+  "splits_accessed": [
+    {
+      "dataset": "sst5",
+      "split": "train",
+      "n": 300
+    },
+    {
+      "dataset": "sst5",
+      "split": "val",
+      "n": 200
+    },
+    {
+      "dataset": "sst5",
+      "split": "test",
+      "n": 300
+    }
+  ],
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "seconds_total": 3783.0745906200027
+}

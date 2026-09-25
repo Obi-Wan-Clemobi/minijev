@@ -1,0 +1,109 @@
+{
+  "note": "exploratory: documented Jev cases, not held out; uncalibrated (Settings())",
+  "n": 13,
+  "summary": {
+    "plain": {
+      "mean_abs_gap_to_jev": 0.2596527017303735,
+      "same_side_of_0.5": 0.7692307692307693
+    },
+    "criteria": {
+      "mean_abs_gap_to_jev": 0.22086561802374438,
+      "same_side_of_0.5": 0.7692307692307693
+    }
+  },
+  "rows": [
+    {
+      "case": "noul: human agent",
+      "state": "Thanks, that fixed it!",
+      "jev": 0.02,
+      "plain": 0.027017382037825798,
+      "criteria": 0.11922487250943625
+    },
+    {
+      "case": "noul: human agent",
+      "state": "How do I reset my password?",
+      "jev": 0.07,
+      "plain": 0.008516536707562895,
+      "criteria": 0.017246046092841555
+    },
+    {
+      "case": "noul: human agent",
+      "state": "I need this sorted today, whatever it takes.",
+      "jev": 0.26,
+      "plain": 0.04292025171084882,
+      "criteria": 0.25477500286074567
+    },
+    {
+      "case": "noul: human agent",
+      "state": "Are you a bot?",
+      "jev": 0.4,
+      "plain": 0.04053831516983766,
+      "criteria": 0.09844823161880104
+    },
+    {
+      "case": "noul: human agent",
+      "state": "Is there any way to speak to someone about my invoice?",
+      "jev": 0.84,
+      "plain": 0.14571345072018646,
+      "criteria": 0.34291753859027047
+    },
+    {
+      "case": "noul: human agent",
+      "state": "I have asked three times now. Can I please just talk to a real person?",
+      "jev": 0.99,
+      "plain": 0.9971936893077205,
+      "criteria": 0.9958879118524842
+    },
+    {
+      "case": "noul: urgency",
+      "state": "Help! My payouts have been failing for 3 days.",
+      "jev": 0.95,
+      "plain": 0.9948708901181101,
+      "criteria": 0.9964827861234924
+    },
+    {
+      "case": "noul: strong python",
+      "state": "My experience is in Java and Go. I have not used Python.",
+      "jev": 0.03,
+      "plain": 0.00030519608343597794,
+      "criteria": 8.508483056898936e-05
+    },
+    {
+      "case": "noul: strong python",
+      "state": "I have used Python occasionally for small scripts alongside my main Java work.",
+      "jev": 0.14,
+      "plain": 0.897826813427474,
+      "criteria": 0.8879424178580362
+    },
+    {
+      "case": "noul: strong python",
+      "state": "I used Python every day for two years in my last job, mostly data pipelines.",
+      "jev": 0.81,
+      "plain": 0.9965121475893369,
+      "criteria": 0.9985549613392398
+    },
+    {
+      "case": "noul: strong python",
+      "state": "I have written Python daily for eight years, including maintaining a large Django codebase.",
+      "jev": 0.92,
+      "plain": 0.9976110874469046,
+      "criteria": 0.9993861395812911
+    },
+    {
+      "case": "noul: refund (jaggedness)",
+      "state": "I'm not happy with the fit. What are my options here?",
+      "jev": 0.22,
+      "plain": 0.004141878015048421,
+      "criteria": 0.04802838357656983
+    },
+    {
+      "case": "noul: refund",
+      "state": "I was charged twice for the same order. Can someone look into this?",
+      "jev": 0.72,
+      "plain": 0.0034112590255959718,
+      "criteria": 0.07472576738550518
+    }
+  ],
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "seconds_total": 16.97372674201324
+}
