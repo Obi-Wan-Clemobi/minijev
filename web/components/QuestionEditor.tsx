@@ -1,5 +1,6 @@
 "use client";
-import { useId } from "react";
+import { useEffect, useId, useState } from "react";
+import { api } from "@/lib/api";
 import type { QItem } from "@/lib/store";
 import type { QType, Question } from "@/lib/types";
 import { levelText } from "@/lib/scoring";
@@ -15,6 +16,18 @@ const optionsOf = (q: Question): [string, string][] =>
   q.type === "choice" ? Object.entries(q.criteria as Record<string, string | null>).map(([k, d]) => [k, d ?? ""]) : [];
 const levelsOf = (q: Question): string[] => (q.type === "score" ? (q.criteria as unknown[]).map(levelText) : []);
 const toOptions = (rows: [string, string][]) => Object.fromEntries(rows.map(([k, d]) => [k, d.trim() ? d : null]));
+
+// The criteria library (GET /v1/criteria), fetched once and shared by every editor.
+type Library = Awaited<ReturnType<typeof api.criteria>>;
+let libraryRequest: Promise<Library> | null = null;
+function useLibrary(): Library | null {
+  const [lib, setLib] = useState<Library | null>(null);
+  useEffect(() => {
+    libraryRequest ??= api.criteria().catch(() => ({}) as Library);
+    libraryRequest.then(setLib);
+  }, []);
+  return lib;
+}
 
 const rowsOf = (it: QItem): [string, string][] => it.opts ?? optionsOf(it.q);
 
@@ -119,6 +132,7 @@ export function QuestionCard({ item, index, count, issues, onChange, onRemove, o
         onChange={(e) => set({ instructions: e.target.value })}
         className="w-full resize-y min-h-9 px-2.5 py-2 rounded-md border border-line bg-card text-sm outline-none focus:border-fg" />
 
+      {q.type === "noul" && <LibraryPicker onPick={(e) => set({ instructions: q.instructions.trim() ? q.instructions : e.question, criteria: e.criteria })} />}
       {q.type === "noul" && (
         <div className="grid grid-cols-2 gap-2 relative">
           <Tip k="noulMeans" className="absolute right-0 -top-1" />
@@ -199,4 +213,19 @@ export function blankQuestion(type: QType): Question {
   if (type === "noul") return { type, instructions: "" };
   if (type === "choice") return { type, instructions: "", criteria: { option_1: null, option_2: null } };
   return { type, instructions: "", criteria: ["low", "medium", "high"] };
+}
+
+function LibraryPicker({ onPick }: { onPick: (e: Library[string]) => void }) {
+  const lib = useLibrary();
+  if (!lib || !Object.keys(lib).length) return null;
+  return (
+    <label className="flex items-center gap-2 text-xs text-muted">
+      <span className="flex items-center gap-1">Criteria from the library <Tip k="criteriaLibrary" /></span>
+      <select value="" onChange={(e) => e.target.value && onPick(lib[e.target.value])}
+        className="h-8 px-2 rounded-md border border-line bg-card text-xs flex-1 min-w-0">
+        <option value="">choose a judgement…</option>
+        {Object.entries(lib).map(([k, e]) => <option key={k} value={k}>{e.question}</option>)}
+      </select>
+    </label>
+  );
 }

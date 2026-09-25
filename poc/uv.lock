@@ -262,11 +262,36 @@ wheels = [
 ]
 
 [[package]]
+name = "minijev"
+version = "0.1.0"
+source = { editable = "../" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "numpy" },
+    { name = "torch", version = "2.2.2", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "platform_machine == 'aarch64' and platform_python_implementation == 'CPython' and sys_platform == 'linux'" },
+    { name = "torch", version = "2.2.2", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux'" },
+    { name = "torch", version = "2.2.2+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (platform_python_implementation != 'CPython' and sys_platform == 'linux')" },
+    { name = "transformers" },
+    { name = "uvicorn" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.115" },
+    { name = "numpy", specifier = "<2" },
+    { name = "torch", marker = "sys_platform != 'linux'", specifier = "==2.2.2" },
+    { name = "torch", marker = "sys_platform == 'linux'", specifier = "==2.2.2", index = "https://download.pytorch.org/whl/cpu" },
+    { name = "transformers", specifier = "==4.49.0" },
+    { name = "uvicorn", specifier = ">=0.30" },
+]
+
+[[package]]
 name = "minijev-poc"
 version = "0.0.1"
 source = { virtual = "." }
 dependencies = [
     { name = "fastapi" },
+    { name = "minijev" },
     { name = "numpy" },
     { name = "torch", version = "2.2.2", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "platform_machine == 'aarch64' and platform_python_implementation == 'CPython' and sys_platform == 'linux'" },
     { name = "torch", version = "2.2.2", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux'" },
@@ -284,6 +309,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "minijev", editable = "../" },
     { name = "numpy", specifier = "<2" },
     { name = "torch", marker = "sys_platform != 'linux'", specifier = "==2.2.2" },
     { name = "torch", marker = "sys_platform == 'linux'", specifier = "==2.2.2", index = "https://download.pytorch.org/whl/cpu" },

@@ -199,6 +199,18 @@ export const HELP = {
   qScatter: { t: "Speed vs accuracy", e: "display", d: ["Each dot is one way of asking, for one model. Up = more often right. Left = faster. The best place is the top left."] },
 
   // ---- order flaw (E13)
+  criteriaLibrary: { t: "Criteria library", e: "run", d: [
+    "A vague question like \"Is the candidate strong in Python?\" is read literally by a small model: any Python at all can count as yes.",
+    "Each library entry says what Yes means and what No means, so the model compares the text with two concrete descriptions. Picking one fills the two boxes below; you can edit them.",
+    "It fills the question too, when the question box is empty." ] },
+  scoreContrastive: { t: "Levels that name their neighbours", e: "run", d: [
+    "In pointwise mode each level is asked on its own: \"Is 'frustrated' right? Yes or No.\" A small model says yes to any level that sounds plausible.",
+    "With this on, each level also says what it is not: \"frustrated (not mildly annoyed; not angry)\". The model then has to separate it from the levels next to it.",
+    "The Findings page shows whether this helps, measured on 300 labelled test sentences." ] },
+  templateGrid: { t: "Does the wording matter?", e: "display", d: [
+    "The prompt around your question has four parts: the system line, the label before the state, the label before the question, and the answer line. We wrote 3 wordings of each part and tried all 81 combinations.",
+    "Each cell is one combination, on the same 200 yes/no questions (BoolQ val). The number is the accuracy; the colour goes from the worst to the best cell. The outlined cell is the template minijev uses.",
+    "\"Flips\" is the share of questions whose yes/no answer changes against minijev's template. If the spread is smaller than one template's error bar, the wording does not change accuracy much, but it still changes single answers." ] },
   orderFlaw: { t: "The order flaw", e: "display", d: [
     "When a multiple-choice question lists its options as A, B, C, D, a small model partly answers by letter, not by content: it likes some letters more than others.",
     "So the same question, with the same options in another order, can get a different answer. This section measures how often that happens, and tests three fixes." ] },

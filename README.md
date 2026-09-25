@@ -9,7 +9,9 @@ small transformer. We built minijev to understand the mechanism. It is not a cop
 - **[docs/RESEARCH.md](docs/RESEARCH.md)** gives what is known about Jev, with sources and evidence levels.
 - **[docs/DATA.md](docs/DATA.md)** is the data card: sources, licences, frozen splits, what each split is for, and how to verify it (`cd poc && uv run python data.py check`).
 - **[docs/WEAKNESSES.md](docs/WEAKNESSES.md)** lists every known weakness, with evidence, a candidate fix, and what Jev may do.
-- **[poc/](poc/)** is a working proof of concept: `cd poc && uv sync && uv run python experiments.py demo`
+- **[src/minijev/](src/minijev/)** is the package: the engine, the prompts, the readout, calibration, the generation
+  baselines, the HTTP API, and a CLI (`cd poc && uv run minijev ask "text" "question?"`, `uv run minijev serve`).
+- **[poc/](poc/)** holds the experiments and the data: `cd poc && uv sync && uv run python experiments.py demo`
   - Calibration temperatures and other dials: `poc/minijev.env` (DESIGN.md §6).
   - Tests: `cd poc && uv run pytest`.
 - **[web/](web/)** is a local web playground for the POC: a question editor, live calibration dials, a readout-vs-generation
@@ -27,7 +29,7 @@ local web playground. The code is not packaged yet.
    (http://localhost:10350). If you do not have Tilt, install it with `brew install tilt-dev/tap/tilt`.
 3. Open http://localhost:3000.
 
-Without Tilt, run `cd poc && uv run uvicorn server:app --port 8000` and `cd web && npm run dev` in two terminals.
+Without Tilt, run `cd poc && uv run minijev serve --port 8000` and `cd web && npm run dev` in two terminals.
 `docker compose up --build` runs both parts in Docker; this path is not tested yet. Change the calibration dials and
 the model in `poc/minijev.env`.
 

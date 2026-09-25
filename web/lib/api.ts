@@ -7,7 +7,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     r = await fetch(API + path, { ...init, headers: { "content-type": "application/json", ...init?.headers } });
   } catch {
-    throw new Error(`Cannot reach the minijev API at ${API}. Start it: cd poc && uv run uvicorn server:app --port 8000`);
+    throw new Error(`Cannot reach the minijev API at ${API}. Start it: cd poc && uv run minijev serve --port 8000`);
   }
   if (!r.ok) {
     const body = await r.json().catch(() => ({}));
@@ -25,6 +25,7 @@ export const api = {
   compare: (req: Req, methods: string[]) => call<CompareResponse>("/v1/compare", post({ ...req, methods })),
   sameFormat: (req: Req, settings: Settings) => call<SameFormatResponse>("/v1/same_format", post({ ...req, settings })),
   presets: () => call<Preset[]>("/v1/presets"),
+  criteria: () => call<Record<string, { question: string; criteria: { true: string; false: string } }>>("/v1/criteria"),
   results: () => call<Record<string, any>>("/v1/results"), // eslint-disable-line @typescript-eslint/no-explicit-any
   model: () => call<{ model: string; available: string[] }>("/v1/model"),
   calibration: () => call<{ model: string; mode: string; fitted: Fitted | null; selected_choice_mode: string | null }>("/v1/calibration"),
@@ -32,10 +33,15 @@ export const api = {
 };
 
 export type TreeBranch = {
-  question: string; label: string; type: string; pointwise: boolean;
+  question: string; label: string; type: string; pointwise: boolean; head: number | null;
   length: number; start: number; positions: [number, number]; tokens: string[];
 };
-export type TreeResponse = { prefix: { length: number; tokens: string[]; state_span: [number, number] }; branches: TreeBranch[]; total: number; max_position: number };
+// A head is the question text that the items of one pointwise question share (the two-level tree, Task 4.1).
+export type TreeHead = { question: string; length: number; start: number; positions: [number, number]; tokens: string[] };
+export type TreeResponse = {
+  prefix: { length: number; tokens: string[]; state_span: [number, number] };
+  heads: TreeHead[]; branches: TreeBranch[]; total: number; max_position: number;
+};
 
 export type MethodResult = {
   seconds: number; output_tokens: number; answers: Record<string, string | null>;

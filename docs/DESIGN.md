@@ -542,8 +542,18 @@ minijev/
   eval/         metrics.py, run.py, plots.py
   pipeline/     loop.py, rubrics/
   tests/
-  poc/          proof of concept, exists today: minijev_poc.py (prompts, engine, primitives, ask()),
-                experiments.py, results/*.json. It becomes engine/, prompt/, primitives/ above.
+  poc/          experiments.py, data.py (frozen splits), results/*.json, calibration/, minijev.env.
+                minijev_poc.py and server.py re-export the package for old imports.
+```
+
+What exists today (`src/minijev/`): `prompt.py` (system line, labels, templates, fingerprint), `settings.py` (dials and
+fitted calibration), `engine.py` (model, naive / kv / packed), `judge.py` (branches, readout, `ask()`),
+`primitives.py` (softmax, `answer()`, confidence), `calibrate.py` (temperature and Platt fits), `generation.py`
+(generation baselines, structured output), `fixtures.py` (example requests, TLS-checked download), `api/` (FastAPI
+server and request schemas), `cli.py` (`minijev ask`, `minijev serve`). The planned `judges/`, `train/`, `eval/` and
+`pipeline/` do not exist yet.
+
+```text
   docs/DESIGN.md, docs/RESEARCH.md (evidence), docs/WALKTHROUGH.md (what was done, explained)
 ```
 

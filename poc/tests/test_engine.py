@@ -5,7 +5,7 @@ import torch
 from transformers import DynamicCache
 
 from experiments import GDPR_QUESTIONS, as_choice, generate_batched, generate_logprobs
-from minijev_poc import MODEL, MODES, Engine, choice_block, raw_scores
+from minijev import MODEL, MODES, Engine, choice_block, raw_scores
 
 pytestmark = pytest.mark.model
 
@@ -86,3 +86,56 @@ def test_averaged_choice_ignores_the_option_order(engine):
         probs.append({k: torch.tensor(v).exp().item() for k, v in zip(order, z)})
     for p in probs[1:]:
         assert max(abs(p[k] - probs[0][k]) for k in keys) < 1e-4
+
+
+SHARED = {**QUESTIONS,
+          "team_pw": {**QUESTIONS["team"], "choice_mode": "pointwise"},
+          "team_avg": {**QUESTIONS["team"], "choice_mode": "averaged"}}
+
+
+@pytest.mark.parametrize("mode", MODES)
+def test_shared_question_head_keeps_the_logits(engine, mode):
+    # Task 4.1: the two-level tree (state -> question -> item) gives the same logits as one flat branch per item.
+    req = {"state": STATE, "questions": SHARED}
+    flat, flat_usage = raw_scores(engine, req, mode)
+    tree, tree_usage = raw_scores(engine, req, mode, share_question=True)
+    assert gap(flat, tree) < 1e-3
+    assert tree_usage["input_tokens"] < flat_usage["input_tokens"]
+
+
+def test_pack_tree_mask(engine):
+    # prefix 2, one head of 2 with two children (1 and 2 tokens), then a flat branch of 1 token.
+    ids_len = 2 + 2 + 1 + 2 + 1
+    pos, mask, last = engine.pack_tree(2, [(2, [1, 2]), (0, [1])])
+    m = mask.reshape(ids_len, ids_len)
+    see = lambda i, j: bool(m[i, j] == 0) if m.dtype.is_floating_point else bool(m[i, j])
+    assert see(4, 2) and see(4, 3) and see(5, 3) and see(6, 3)   # children see their head
+    assert not see(5, 4) and not see(4, 5)                       # siblings do not see each other
+    assert not see(7, 2) and see(7, 0)                           # the flat branch sees the state, not the head
+    assert pos[0].tolist() == [0, 1, 2, 3, 4, 4, 5, 2] and last.tolist() == [4, 6, 7]
+
+
+@pytest.mark.parametrize("mode", ["kv", "packed"])
+def test_state_cache_keeps_the_logits(engine, mode):
+    # Task 4.2: a state from the cache gives the same logits as a state prefilled again.
+    from minijev.engine import StateCache
+    req = {"state": STATE, "questions": SHARED}
+    plain = raw_scores(engine, req, mode, share_question=True)[0]
+    engine.state_cache = StateCache(4)
+    try:
+        first = raw_scores(engine, req, mode, share_question=True)[0]   # miss: prefill and store
+        second = raw_scores(engine, req, mode, share_question=True)[0]  # hit: no prefill
+        stats = engine.state_cache.stats()
+    finally:
+        engine.state_cache = StateCache(0)
+    assert gap(plain, first) < 1e-3 and gap(plain, second) < 1e-3
+    assert (stats["hits"], stats["misses"], stats["entries"]) == (1, 1, 1)
+
+
+def test_state_cache_evicts_the_oldest():
+    from minijev.engine import StateCache
+    c = StateCache(2)
+    for k in [(1,), (2,), (1,), (3,)]:  # (1,) is used again, so (2,) is the oldest when (3,) arrives
+        if c.get(k) is None:
+            c.put(k, "kv")
+    assert list(c.entries) == [(1,), (3,)] and c.hits == 1

@@ -542,9 +542,10 @@ uv run pytest                             # 21 tests, ~20 s; -m "not model" skip
 `ask()` reads its dials from `poc/minijev.env`: temperatures, the Platt shift, readout modes, and the model
 (DESIGN.md §6). The experiments ignore that file and always use the uncalibrated defaults.
 
-The code has two files:
-- `minijev_poc.py` (~300 lines): prompt pieces, the three tree evaluators, primitives, and `ask()`.
-- `experiments.py`: one function per experiment.
+The code:
+- `src/minijev/`: the package (prompt pieces, the three tree evaluators, primitives, `ask()`, calibration, the
+  generation baselines, the API and the CLI). `poc/minijev_poc.py` re-exports it for old imports.
+- `poc/experiments.py`: one function per experiment.
 - `tests/`: pytest cases. `uv run pytest` runs all of them (~20 s). `uv run pytest -m "not model"` skips the cases
   that load the 0.5B model.
 

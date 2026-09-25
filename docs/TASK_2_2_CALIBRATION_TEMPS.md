@@ -24,7 +24,7 @@ and the date.
   fitted file of the loaded model, and the Choice mode that val chose.
 - `MINIJEV_TEMP_NOUL`, `MINIJEV_BIAS_NOUL`, `MINIJEV_TEMP_CHOICE` and `MINIJEV_TEMP_SCORE` stay `fitted` unless you type a
   number, which then overrides the fitted value for that primitive.
-- `Settings.calibrator(qtype, mode)` in `poc/minijev_poc.py` returns the temperature, the bias, and the source
+- `Settings.calibrator(qtype, mode)` in `src/minijev/settings.py` returns the temperature, the bias, and the source
   (`manual`, `fitted` or `none`). The web page uses the same rule (`calibrator()` in `web/lib/scoring.ts`); a test on each
   side checks the same cases.
 - The experiments use `Settings()`, which is uncalibrated, so the measured results never depend on this file.

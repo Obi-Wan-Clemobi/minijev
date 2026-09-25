@@ -3,8 +3,8 @@
 import pytest
 from fastapi.testclient import TestClient
 
-import server
-from minijev_poc import MODEL, Engine, Settings, ask
+import minijev.api.server as server
+from minijev import MODEL, Engine, Settings, ask
 
 pytestmark = pytest.mark.model
 
@@ -47,8 +47,13 @@ def test_settings_change_the_answer_not_the_logits(client):
 def test_tree_layout_adds_up(client):
     t = client.post("/v1/tree", json={**REQ, "settings": DEFAULTS}).json()
     assert len(t["branches"]) == 1 + 1 + 4  # Noul, listwise Choice, 4 Score levels
-    assert t["total"] == t["prefix"]["length"] + sum(b["length"] for b in t["branches"])
-    assert all(b["positions"][0] == t["prefix"]["length"] for b in t["branches"])  # positions restart
+    n = t["prefix"]["length"]
+    assert t["total"] == n + sum(h["length"] for h in t["heads"]) + sum(b["length"] for b in t["branches"])
+    for b in t["branches"]:  # positions restart after the state, or after the shared question head
+        assert b["positions"][0] == n + (t["heads"][b["head"]]["length"] if b["head"] is not None else 0)
+    assert [h["question"] for h in t["heads"]] == ["tone"]  # the 4 Score levels share the question text
+    flat = client.post("/v1/tree", json={**REQ, "settings": {**DEFAULTS, "share_question": False}}).json()
+    assert flat["heads"] == [] and flat["total"] > t["total"]
     lo, hi = t["prefix"]["state_span"]
     assert "".join(t["prefix"]["tokens"][lo:hi]).rstrip() == REQ["state"]  # BPE can merge the last character with the blank line
     assert client.post("/v1/ask", json={**REQ, "settings": DEFAULTS}).json()["usage"]["input_tokens"] == t["total"]
@@ -86,3 +91,13 @@ def test_same_format_returns_both_sides(client):
 def test_calibration_endpoint(client):
     r = client.get("/v1/calibration").json()
     assert r["model"] == MODEL and r["mode"] in ("fitted", "none")
+
+
+def test_health_reports_the_state_cache(client):
+    before = client.get("/v1/health").json()["state_cache"]
+    for _ in range(2):
+        client.post("/v1/ask", json={**REQ, "settings": DEFAULTS})
+    after = client.get("/v1/health").json()["state_cache"]
+    if after["enabled"]:  # MINIJEV_STATE_CACHE > 0 in minijev.env
+        assert after["hits"] >= before["hits"] + 1
+    assert set(after) == {"enabled", "size", "entries", "hits", "misses", "hit_rate", "tokens_saved"}

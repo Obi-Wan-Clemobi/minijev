@@ -122,7 +122,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const req = useMemo(() => toReq(stateText, items), [stateText, items]);
   // Everything that changes what the model computes. The temperatures and the bias are not in it: they act instantly.
-  const runKey = JSON.stringify({ req, mode, c: settings.choice_mode, s: settings.score_mode, cal: settings.calibration, model });
+  const runKey = JSON.stringify({ req, mode, c: settings.choice_mode, s: settings.score_mode, sc: settings.score_contrastive, cal: settings.calibration, model });
 
   const run = useCallback(async () => {
     setRunning(true); setError(null);

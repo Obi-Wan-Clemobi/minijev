@@ -6,7 +6,7 @@ import pytest
 import torch
 
 from experiments import bootstrap_ci, parse_probs_lenient
-from minijev_poc import Engine, answer, choice_confidence, score_confidence, softmax
+from minijev import Engine, answer, choice_confidence, score_confidence, softmax
 
 
 def test_choice_confidence_endpoints():
@@ -81,7 +81,7 @@ def test_bootstrap_ci_brackets_the_mean():
 
 
 def test_settings_file_env_and_defaults(tmp_path, monkeypatch):
-    from minijev_poc import Settings
+    from minijev import Settings
     f = tmp_path / "x.env"
     f.write_text("MINIJEV_TEMP_NOUL=2.5   # comment\nMINIJEV_CHOICE_MODE=pointwise\n")
     monkeypatch.setenv("MINIJEV_TEMP_SCORE", "3")
@@ -96,7 +96,7 @@ def test_settings_file_env_and_defaults(tmp_path, monkeypatch):
 
 
 def test_shipped_env_file_uses_fitted_calibration(monkeypatch):
-    from minijev_poc import SETTINGS_FILE, Settings
+    from minijev import SETTINGS_FILE, Settings
     for k in [k for k in __import__("os").environ if k.startswith("MINIJEV_")]:
         monkeypatch.delenv(k)
     s = Settings.load(SETTINGS_FILE)
@@ -106,13 +106,13 @@ def test_shipped_env_file_uses_fitted_calibration(monkeypatch):
 
 def test_fitted_calibration_is_used_and_overridable(tmp_path, monkeypatch):
     import json
-    import minijev_poc
-    from minijev_poc import Settings
+    import minijev.settings
+    from minijev import Settings
     (tmp_path / "Qwen2.5-0.5B-Instruct.json").write_text(json.dumps({
         "provenance": {"fitted_on": "train"},
         "noul": {"temperature": 2.0, "platt": {"a": 0.5, "b": 0.3}, "selected": "platt"},
         "choice": {"temperature": {"listwise": 3.0, "pointwise": 1.5, "averaged": 2.5}, "selected_mode": "pointwise"}}))
-    monkeypatch.setattr(minijev_poc, "CALIBRATION_DIR", tmp_path)
+    monkeypatch.setattr(minijev.settings, "CALIBRATION_DIR", tmp_path)
     s = Settings(calibration="fitted", choice_mode="selected").with_calibration()
     assert s.calibrator("noul") == (2.0, 0.3, "fitted")  # Platt: T = 1/a, b
     assert s.resolved_choice_mode() == "pointwise"
@@ -126,3 +126,41 @@ def test_temperature_and_bias():
     q = {"type": "noul"}
     assert answer(q, [2.0, 0.0], temperature=2.0)["noul"] == pytest.approx(1 / (1 + math.exp(-1)))
     assert answer(q, [0.0, 0.0], bias=1.0)["noul"] == pytest.approx(1 / (1 + math.exp(-1)))
+
+
+def test_contrastive_levels_name_their_neighbours():
+    from minijev.judge import score_items
+    q = {"type": "score", "instructions": "?", "criteria": ["calm", "annoyed", "angry"]}
+    assert score_items(q) == ["calm", "annoyed", "angry"]
+    assert score_items({**q, "contrastive": True}) == [
+        "calm (not annoyed)", "annoyed (not calm; not angry)", "angry (not annoyed)"]
+
+
+def test_opposite_pair_is_made_consistent():
+    import math
+    from minijev.judge import consistent, validate
+    p, q = consistent(0.72, 0.47)  # Jev's refund pair: sums to 1.19
+    assert math.isclose(p + q, 1.0) and 0.5 < p < 0.72
+    assert all(math.isclose(a, b) for a, b in zip(consistent(0.8, 0.2), (0.8, 0.2)))  # already consistent: unchanged
+    ok = {"state": "x", "questions": {"a": {"type": "noul", "instructions": "?"},
+                                      "b": {"type": "noul", "instructions": "?", "opposite_of": "a"}}}
+    validate(ok)
+    for bad in ({"b": {"type": "noul", "instructions": "?", "opposite_of": "b"}},
+                {"b": {"type": "noul", "instructions": "?", "opposite_of": "zzz"}},
+                {"c": {"type": "noul", "instructions": "?", "opposite_of": "a"}}):  # a in two pairs
+        with pytest.raises(AssertionError):
+            validate({"state": "x", "questions": {**ok["questions"], **bad}})
+
+
+def test_bool_settings_parse_words(tmp_path):
+    from minijev import Settings
+    f = tmp_path / "e.env"
+    f.write_text("MINIJEV_SHARE_QUESTION=false\nMINIJEV_SCORE_CONTRASTIVE=true\nMINIJEV_CALIBRATION=none\n")
+    s = Settings.load(f)
+    assert s.share_question is False and s.score_contrastive is True
+
+
+def test_criteria_library_is_contrastive():
+    from minijev.criteria import LIBRARY
+    assert len(LIBRARY) >= 20
+    assert all(e["criteria"]["true"] and e["criteria"]["false"] and e["question"].endswith("?") for e in LIBRARY.values())

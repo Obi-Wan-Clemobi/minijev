@@ -112,6 +112,11 @@ export function Calibration() {
             className="h-8 px-2 rounded-md border border-line bg-card font-mono text-xs"><option>pointwise</option><option>listwise</option></select>
         </label>
       </div>
+      <label className="flex items-center gap-2 text-[13px]">
+        <input type="checkbox" checked={settings.score_contrastive} disabled={settings.score_mode !== "pointwise"}
+          onChange={(e) => set({ score_contrastive: e.target.checked })} className="accent-[var(--accent)]" />
+        <span className="flex items-center gap-1">Scale levels name their neighbours <Tip k="scoreContrastive" /></span>
+      </label>
       <label className="flex items-center gap-2 pt-3 border-t border-line text-[13px]">
         <span className="flex items-center gap-1">Warn below label mass <Tip k="labelMass" /></span>
         <input type="number" min={0} max={1} step={0.05} value={settings.min_label_mass}
@@ -120,7 +125,7 @@ export function Calibration() {
       </label>
       <div className="flex items-start gap-1">
         <p className="text-xs text-muted font-mono break-all flex-1">
-          poc/minijev.env: MINIJEV_CALIBRATION={settings.calibration} MINIJEV_TEMP_NOUL={settings.temp_noul ?? "fitted"} MINIJEV_BIAS_NOUL={settings.bias_noul ?? "fitted"} MINIJEV_TEMP_CHOICE={settings.temp_choice ?? "fitted"} MINIJEV_TEMP_SCORE={settings.temp_score ?? "fitted"} MINIJEV_CHOICE_MODE={settings.choice_mode} MINIJEV_SCORE_MODE={settings.score_mode}
+          poc/minijev.env: MINIJEV_CALIBRATION={settings.calibration} MINIJEV_TEMP_NOUL={settings.temp_noul ?? "fitted"} MINIJEV_BIAS_NOUL={settings.bias_noul ?? "fitted"} MINIJEV_TEMP_CHOICE={settings.temp_choice ?? "fitted"} MINIJEV_TEMP_SCORE={settings.temp_score ?? "fitted"} MINIJEV_CHOICE_MODE={settings.choice_mode} MINIJEV_SCORE_MODE={settings.score_mode} MINIJEV_SCORE_CONTRASTIVE={String(settings.score_contrastive)}
         </p>
         <Tip k="envLine" />
       </div>

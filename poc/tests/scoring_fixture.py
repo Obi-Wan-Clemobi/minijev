@@ -7,7 +7,7 @@ import json
 import random
 from pathlib import Path
 
-from minijev_poc import answer
+from minijev import answer
 
 rng = random.Random(0)
 cases = []

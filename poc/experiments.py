@@ -28,20 +28,26 @@ import argparse
 import hashlib
 import json
 import math
-import os
 import random
-import re
-import ssl
 import statistics
 import time
-import urllib.request
 from pathlib import Path
 
 import torch
 from transformers import DynamicCache
 
-from minijev_poc import (CONTENT_FREE_STATE, MODEL, MODES, SYSTEM, Engine, Settings, answer, ask, choice_block,
-                         class_logits, noul_block, raw_scores, render_inline)
+from minijev.calibrate import (cross_fit, cross_fit_multiclass, fit_affine, fit_temperature_multiclass, logit, nll,
+                               nll_multi, sigmoid, softmax_list)
+from minijev.engine import MODES, Branch, Engine
+from minijev.fixtures import (AG_OPTIONS, AG_QUESTION, GDPR_JEV, GDPR_QUESTIONS, JEV_DOC_CASES,
+                              SHOES, SUPPORT_TICKET, fetch, gdpr_state, gdpr_text)
+from minijev.generation import (generate, generate_batched, generate_logprobs,
+                                match_option, number, options_text, parse_json,
+                                parse_probs_lenient, same_format_run, verbal_probability)
+from minijev.judge import ask, raw_scores
+from minijev.primitives import answer, class_logits
+from minijev.prompt import CONTENT_FREE_STATE, SYSTEM, choice_block, noul_block
+from minijev.settings import MODEL, Settings
 
 HERE = Path(__file__).parent
 DATA, RESULTS = HERE / "data", HERE / "results"
@@ -164,80 +170,6 @@ def update_manifest() -> None:
 # ---------------------------------------------------------------------------
 # Shared fixtures
 
-GDPR_REVISION = 1363040264  # the revision pinned by TypeSafe's parallel-questions cookbook
-GDPR_QUESTIONS = {  # verbatim from https://docs.typesafe.ai/cookbooks/parallel_questions
-    "breach_72h": {"type": "noul", "instructions": "Must a personal data breach be reported to the supervisory authority within 72 hours?"},
-    "applies_non_eu": {"type": "noul", "instructions": "Does the regulation apply to organisations established outside the EU that offer goods or services to people in the EU?"},
-    "dpo_all_orgs": {"type": "noul", "instructions": "Must every organisation appoint a Data Protection Officer, regardless of what data it processes?"},
-    "pre_ticked_consent": {"type": "noul", "instructions": "Can valid consent be obtained through pre-ticked boxes or inactivity?"},
-    "right_erasure": {"type": "noul", "instructions": "Does the regulation grant individuals a right to erasure of their personal data?"},
-    "data_portability": {"type": "noul", "instructions": "Does the regulation include a right to data portability?"},
-    "us_federal_law": {"type": "noul", "instructions": "Is the GDPR a United States federal law?"},
-    "criminal_penalties": {"type": "noul", "instructions": "Does the GDPR itself impose criminal penalties such as imprisonment?"},
-    "instrument_type": {"type": "choice", "instructions": "What kind of EU legal instrument is the GDPR?", "criteria": {
-        "Regulation": "Directly binding law in all member states, no national implementation needed.",
-        "Directive": "Sets goals that member states implement through national law.",
-        "Treaty": "An international treaty between states.",
-        "Recommendation": "Non-binding guidance."}},
-    "max_fine": {"type": "choice", "instructions": "What is the maximum administrative fine for the most serious infringements?", "criteria": {
-        "TwentyM_or_4pct": "Up to EUR 20 million or 4% of annual worldwide turnover, whichever is greater.",
-        "TenM_or_2pct": "Up to EUR 10 million or 2% of annual worldwide turnover, whichever is greater.",
-        "FixedCap": "A fixed amount not tied to turnover.",
-        "NoFines": "The GDPR provides no administrative fines."}},
-    "individual_rights": {"type": "score", "instructions": "How strong are the rights the GDPR grants to individuals over their data?", "criteria": [
-        "None: individuals get no rights over their data.",
-        "Weak: a right to be informed, but little control.",
-        "Moderate: access and correction rights, but limited means to act on them.",
-        "Strong: access, erasure, portability, and objection rights, with enforcement behind them."]},
-    "penalty_severity": {"type": "score", "instructions": "How severe are the penalties the GDPR provides for non-compliance?", "criteria": [
-        "None: no penalties of any kind.",
-        "Symbolic: small fixed fines unlikely to change behavior.",
-        "Substantial: fines large enough to matter to most companies.",
-        "Severe: fines scaled to global revenue, material even to the largest companies."]},
-    "compliance_burden": {"type": "score", "instructions": "How heavy is the compliance burden the GDPR places on organisations?", "criteria": [
-        "Negligible: no meaningful obligations.",
-        "Light: a few notices and disclosures.",
-        "Moderate: documented processes and some dedicated roles for larger processors.",
-        "Heavy: records, impact assessments, officers, and breach procedures for many organisations.",
-        "Extreme: obligations so demanding that ordinary organisations cannot fully comply."]},
-}
-# Jev's batched means from the same cookbook (jev-1.12, full ~54k-character article).
-GDPR_JEV = {"breach_72h": 0.804, "applies_non_eu": 0.990, "dpo_all_orgs": 0.030, "pre_ticked_consent": 0.040,
-            "right_erasure": 0.990, "data_portability": 0.990, "us_federal_law": 0.010, "criminal_penalties": 0.108,
-            "instrument_type": 1.000, "max_fine": 1.000, "individual_rights": 1.000, "penalty_severity": 1.000,
-            "compliance_burden": 0.750}
-
-
-def fetch(url: str, path: Path) -> Path:
-    if not path.exists():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        req = urllib.request.Request(url, headers={"User-Agent": "minijev-poc/0.1"})
-        # Certificates are checked. Behind a proxy that re-signs TLS, point SSL_CERT_FILE at its CA bundle.
-        # MINIJEV_INSECURE_SSL=1 turns the check off; a download made that way could be tampered with.
-        ssl_context = ssl.create_default_context(cafile=os.environ.get("SSL_CERT_FILE"))
-        if os.environ.get("MINIJEV_INSECURE_SSL") == "1":
-            print(f"WARNING: certificate checks are off (MINIJEV_INSECURE_SSL=1) for {url}", flush=True)
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-        with urllib.request.urlopen(req, timeout=60, context=ssl_context) as r:
-            path.write_bytes(r.read())
-    return path
-
-
-def gdpr_text() -> str:
-    url = ("https://en.wikipedia.org/w/api.php?action=query&format=json"
-           f"&prop=extracts&explaintext=1&revids={GDPR_REVISION}")
-    pages = json.loads(fetch(url, DATA / f"gdpr_{GDPR_REVISION}.json").read_text())["query"]["pages"]
-    return next(iter(pages.values()))["extract"]
-
-
-def gdpr_state(engine: Engine, n_tokens: int | None) -> dict:
-    """The cookbook's state shape, with the article cut to its first n_tokens (CPU budget)."""
-    text = gdpr_text()
-    if n_tokens is not None:
-        text = engine.tok.decode(engine.tok.encode(text, add_special_tokens=False)[:n_tokens])
-    return {"article": {"source": f"https://en.wikipedia.org/?oldid={GDPR_REVISION}", "text": text}}
-
 
 def tracked(q: dict, a: dict) -> float:
     """The one number the cookbook tracks per answer."""
@@ -348,61 +280,6 @@ def latency(engine: Engine, lengths=(250, 1000), counts=(1, 4, 13), repeats: int
             "rotation_pattern": "each mode runs every round; the mode order shifts each round (ABC, BCA, CAB, ...)"}
 
 
-# Jev's published answers for documented inputs (docs.typesafe.ai, jev-1.13.0).
-HUMAN = "Is the customer asking for a human agent?"
-SEVERITY = ["Cosmetic; no impact to functionality", "Broken or degraded feature, but workaround exists",
-            "Blocking issue; no workaround exists"]
-PY_LEVELS = ["No experience", "Some familiarity", "Regular use in a job", "Deep expertise"]
-SHOES = "Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?"
-JEV_DOC_CASES = [
-    # (label, state, question, Jev's tracked answer)
-    ("noul: human agent", "Thanks, that fixed it!", {"type": "noul", "instructions": HUMAN}, 0.02),
-    ("noul: human agent", "How do I reset my password?", {"type": "noul", "instructions": HUMAN}, 0.07),
-    ("noul: human agent", "I need this sorted today, whatever it takes.", {"type": "noul", "instructions": HUMAN}, 0.26),
-    ("noul: human agent", "Are you a bot?", {"type": "noul", "instructions": HUMAN}, 0.40),
-    ("noul: human agent", "Is there any way to speak to someone about my invoice?", {"type": "noul", "instructions": HUMAN}, 0.84),
-    ("noul: human agent", "I have asked three times now. Can I please just talk to a real person?", {"type": "noul", "instructions": HUMAN}, 0.99),
-    ("noul: repeat contact", "I have asked three times now. Can I please just talk to a real person?",
-     {"type": "noul", "instructions": "Has the customer contacted support about this before?",
-      "criteria": {"true": "Mentions a prior attempt, ticket, or that they have asked before", "false": "No sign of any previous contact"}}, 0.93),
-    ("noul: urgency", "Help! My payouts have been failing for 3 days.", {"type": "noul", "instructions": "Does this convey urgency?"}, 0.95),
-    ("noul: strong python", "My experience is in Java and Go. I have not used Python.", {"type": "noul", "instructions": "Is the candidate strong in Python?"}, 0.03),
-    ("noul: strong python", "I have used Python occasionally for small scripts alongside my main Java work.", {"type": "noul", "instructions": "Is the candidate strong in Python?"}, 0.14),
-    ("noul: strong python", "I used Python every day for two years in my last job, mostly data pipelines.", {"type": "noul", "instructions": "Is the candidate strong in Python?"}, 0.81),
-    ("noul: strong python", "I have written Python daily for eight years, including maintaining a large Django codebase.", {"type": "noul", "instructions": "Is the candidate strong in Python?"}, 0.92),
-    ("noul: refund (jaggedness)", "I'm not happy with the fit. What are my options here?", {"type": "noul", "instructions": "Is the customer asking for a refund?"}, 0.22),
-    ("noul: refund", "I was charged twice for the same order. Can someone look into this?", {"type": "noul", "instructions": "Is the customer asking for a refund?"}, 0.72),
-    ("noul: not refund", "I was charged twice for the same order. Can someone look into this?", {"type": "noul", "instructions": "Is the customer asking for something other than a refund?"}, 0.47),
-    ("score: severity", "The export button is misaligned by a few pixels on the settings page.", {"type": "score", "instructions": "How severe is the reported issue?", "criteria": SEVERITY}, 0.0),
-    ("score: severity", "The PDF export button does nothing when clicked. I can still export to CSV and convert it myself, but that takes ages.", {"type": "score", "instructions": "How severe is the reported issue?", "criteria": SEVERITY}, 1.0),
-    ("score: severity", "Export to PDF fails with a spinner that never finishes. Some of our team say CSV export still works for them, others say it fails too.", {"type": "score", "instructions": "How severe is the reported issue?", "criteria": SEVERITY}, 1.11),
-    ("score: severity", "The export button crashes the settings page in Safari. It works in Chrome, but a few of our customers only use Safari.", {"type": "score", "instructions": "How severe is the reported issue?", "criteria": SEVERITY}, 1.43),
-    ("score: severity", "Nobody on our team can log in since this morning. We get a 500 error on every attempt.", {"type": "score", "instructions": "How severe is the reported issue?", "criteria": SEVERITY}, 2.0),
-    ("score: severity, numbers-only levels", "The export button is misaligned by a few pixels on the settings page.", {"type": "score", "instructions": "Rate severity from 0 to 2, where 2 is worst", "criteria": ["0", "1", "2"]}, 0.55),
-    ("score: python experience", "My experience is in Java and Go. I have not used Python.", {"type": "score", "instructions": "How much Python experience does the candidate have?", "criteria": PY_LEVELS}, 0.0),
-    ("score: python experience", "I have used Python occasionally for small scripts alongside my main Java work.", {"type": "score", "instructions": "How much Python experience does the candidate have?", "criteria": PY_LEVELS}, 1.0),
-    ("score: python experience", "I used Python every day for two years in my last job, mostly data pipelines.", {"type": "score", "instructions": "How much Python experience does the candidate have?", "criteria": PY_LEVELS}, 2.05),
-    ("score: python experience", "I have written Python daily for eight years, including maintaining a large Django codebase.", {"type": "score", "instructions": "How much Python experience does the candidate have?", "criteria": PY_LEVELS}, 2.89),
-    ("score: frustration", "Help! My payouts have been failing for 3 days.", {"type": "score", "instructions": "How frustrated is the customer?", "criteria": ["Calm", "Frustrated", "Very angry"]}, 1.05),
-    ("choice: department", "My running shoes arrived in the wrong size. Can I swap them for a size 10?", {"type": "choice", "instructions": "Which team should handle this?", "criteria": {
-        "returns": "Exchanges, wrong or damaged items", "shipping": "Delivery status, delays, lost packages", "billing": "Charges, invoices, payment problems"}}, "returns"),
-    ("choice: department", "Help! My payouts have been failing for 3 days.", {"type": "choice", "instructions": "Which team should handle this?", "criteria": {
-        "billing": "Payments, invoicing, refunds", "technical": "Bugs, outages, integrations", "sales": "Pricing, upgrades, new accounts"}}, "billing"),
-    ("choice: department", SHOES, {"type": "choice", "instructions": "Which team should handle this?", "criteria": {
-        "returns": "Exchanges, wrong or damaged items", "shipping": "Delivery status, delays, lost packages", "billing": "Charges, invoices, payment problems"}}, "returns"),
-    ("choice: return reason", SHOES, {"type": "choice", "instructions": "If the customer wants to return something, why?", "criteria": {
-        "wrong_size": "The item doesn't fit", "wrong_item": "A different product was delivered", "damaged": "The item arrived broken or faulty",
-        "changed_mind": "The item is fine, the customer no longer wants it", "other": "A return reason that fits none of the above"}}, "wrong_size"),
-    ("choice: shipping issue", SHOES, {"type": "choice", "instructions": "If this is a shipping problem, which kind is it?", "criteria": {
-        "not_delivered": "The package never arrived", "delayed": "The package is late but still on its way", "wrong_address": "The package went to the wrong place",
-        "damaged_in_transit": "The package arrived damaged", "other": "A shipping problem that fits none of the above"}}, "delayed"),
-    ("choice: resolution", SHOES, {"type": "choice", "instructions": "What does the customer want to happen?", "criteria": {
-        "exchange": "Swap the item for a different one", "refund": "Money back", "replacement": "The same item sent again", "information": "Just an answer, no action needed"}}, "refund"),
-    ("choice: tone", SHOES, {"type": "choice", "instructions": "What is the customer's tone?", "criteria": {"calm": None, "frustrated": None, "angry": None}}, "frustrated"),
-    ("choice: yes/no refund (jaggedness)", "I'm not happy with the fit. What are my options here?", {"type": "choice", "instructions": "Is the customer asking for a refund?", "criteria": {"yes": None, "no": None}}, "no"),
-]
-
-
 def jevdocs(engine: Engine) -> dict:
     """Our answers on Jev's documented inputs, raw and with contextual calibration (cc).
 
@@ -492,14 +369,6 @@ def permutation(engine: Engine) -> dict:
 #
 # Same model, same weights, same CPU: the only difference is generation vs readout.
 
-AG_OPTIONS = {  # AG News topics as a Choice, in label order 0..3
-    "World": "World news, politics and international affairs",
-    "Sports": "Sports",
-    "Business": "Business, companies and the economy",
-    "Technology": "Science and technology",
-}
-AG_QUESTION = "What is the topic of this news article?"
-
 
 def ag_news(n: int, seed: int = 0, verify: bool = True) -> list[dict]:
     """A seeded stratified sample of AG News test items, taken from four places in the 7,600-row split.
@@ -514,79 +383,6 @@ def ag_news(n: int, seed: int = 0, verify: bool = True) -> list[dict]:
     if verify and MANIFEST_PATH.exists():
         _verify_dataset_checksums("ag_news", rows)
     return stratified_sample(rows, n, "label", seed)
-
-
-def options_text(criteria: dict) -> str:
-    return "\n".join(f"- {k}: {d}" if d is not None else f"- {k}" for k, d in criteria.items())
-
-
-def generate(engine: Engine, user: str, max_new_tokens: int) -> dict:
-    """A chat completion: greedy decoding with a KV cache, as any LLM API would do it."""
-    ids = engine.tok.apply_chat_template([{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}],
-                                         add_generation_prompt=True)
-    x = torch.tensor([ids])
-    t0 = time.perf_counter()
-    with torch.inference_mode():
-        out = engine.model.generate(x, attention_mask=torch.ones_like(x), max_new_tokens=max_new_tokens,
-                                    do_sample=False, temperature=None, top_p=None, top_k=None,
-                                    repetition_penalty=1.0, pad_token_id=engine.tok.eos_token_id)
-    seconds = time.perf_counter() - t0
-    new = out[0, len(ids):]
-    return {"text": engine.tok.decode(new, skip_special_tokens=True), "prompt_tokens": len(ids),
-            "new_tokens": len(new), "seconds": seconds}
-
-
-@torch.inference_mode()
-def generate_logprobs(engine: Engine, ids: list[int], cache: DynamicCache | None = None) -> torch.Tensor:
-    """What an LLM API with logprobs returns: generate one token, keep the next-token log-probs.
-
-    This is the same computation as a readout. With a cache that holds a prefix of ids, only the
-    rest of ids is prefilled.
-    """
-    x = torch.tensor([ids])
-    out = engine.model.generate(x, attention_mask=torch.ones_like(x), past_key_values=cache, max_new_tokens=1,
-                                do_sample=False, temperature=None, top_p=None, top_k=None, repetition_penalty=1.0,
-                                output_logits=True, return_dict_in_generate=True,
-                                pad_token_id=engine.tok.eos_token_id)
-    return torch.log_softmax(out.logits[0][0].float(), dim=-1)
-
-
-@torch.inference_mode()
-def generate_batched(engine: Engine, prefix: list[int], suffixes: list[list[int]], max_new_tokens: int) -> list[list[int]]:
-    """Greedy generation for all suffixes at once, as a serving stack batches concurrent requests.
-
-    The prefix is prefilled once and its KV cache is copied to every row. Each suffix is
-    left-padded (between the prefix and the suffix), and the pads are masked out. Each decode
-    step then produces one token for every row with one load of the weights.
-    """
-    rows, p, width = len(suffixes), len(prefix), max(map(len, suffixes))
-    cache = DynamicCache()
-    engine.model(torch.tensor([prefix]), past_key_values=cache, use_cache=True, logits_to_keep=1)
-    cache.batch_repeat_interleave(rows)
-    pad = engine.tok.eos_token_id
-    x = torch.tensor([[pad] * (width - len(s)) + s for s in suffixes])
-    real = torch.tensor([[0] * (width - len(s)) + [1] * len(s) for s in suffixes])
-    mask = torch.cat([torch.ones(rows, p, dtype=torch.long), real], dim=1)
-    pos = (p + real.cumsum(1) - 1).clamp(min=p)
-    out = engine.model(x, attention_mask=mask, position_ids=pos, past_key_values=cache, use_cache=True,
-                       logits_to_keep=1)
-    stop = set(engine.model.generation_config.eos_token_id or []) | {engine.tok.eos_token_id}
-    new: list[list[int]] = [[] for _ in suffixes]
-    done = [False] * rows
-    nxt_pos = pos[:, -1:] + 1
-    for _ in range(max_new_tokens):
-        nxt = out.logits[:, -1].argmax(-1)
-        for i, t in enumerate(nxt.tolist()):
-            if not done[i]:
-                new[i].append(t)
-                done[i] = t in stop
-        if all(done):
-            break
-        mask = torch.cat([mask, torch.ones(rows, 1, dtype=torch.long)], dim=1)
-        out = engine.model(nxt[:, None], attention_mask=mask, position_ids=nxt_pos, past_key_values=cache,
-                           use_cache=True)
-        nxt_pos = nxt_pos + 1
-    return new
 
 
 @torch.inference_mode()
@@ -636,74 +432,6 @@ def decode_cost(engine: Engine, context: int = 600, steps: int = 20, repeats: in
             "decode_over_prefill": decode_median / prefill_median,
             "all_ms_per_prefill_token": ms_prefill,
             "all_ms_per_decode_token": ms_decode}
-
-
-def match_option(text: str, keys: list[str]) -> str | None:
-    """Parse a written answer back into an option key. None = unparseable."""
-    t = text.strip().strip("\"'`*.").lower()
-    for k in keys:
-        if t == k.lower():
-            return k
-    for k in sorted(keys, key=len, reverse=True):
-        if t.startswith(k.lower()):
-            return k
-    return None
-
-
-def number(value) -> float:
-    """A written probability ("0.7", 0.7, "70%") as a float; anything else counts as 0."""
-    try:
-        return float(str(value).strip().rstrip("%")) / (100 if str(value).strip().endswith("%") else 1)
-    except ValueError:
-        return 0.0
-
-
-def parse_json(text: str) -> dict | None:
-    start, end = text.find("{"), text.rfind("}")
-    try:
-        value = json.loads(text[start:end + 1]) if start >= 0 < end else None
-    except ValueError:
-        return None
-    return value if isinstance(value, dict) else None
-
-
-def option_key(name: str, keys: list[str]) -> str | None:
-    """Like match_option, but also accepts a truncated key ("Sport" for "Sports")."""
-    hit = match_option(name, keys)
-    if hit is None:
-        t = name.strip().lower()
-        hit = next((k for k in keys if len(t) >= 3 and k.lower().startswith(t)), None)
-    return hit
-
-
-def parse_probs_lenient(text: str, keys: list[str]) -> list[float] | None:
-    """Written probabilities → a distribution over keys. None = nothing usable.
-
-    Accepts the requested shape {"World": 0.1, ...} with loose key spelling, and the shape the
-    0.5B model usually writes instead: {"topic": "Business", "probability": 0.7}. Mass that the
-    reply does not assign is spread evenly over the options it does not name.
-    """
-    obj = parse_json(text)
-    pairs: list[tuple[str, object]] = list(obj.items()) if obj else []
-    if not obj:  # broken JSON: fall back to "key": value pairs
-        pairs = [(k, v) for k, v in re.findall(r'"([^"]+)"\s*:\s*"?([^",}]+)"?', text)]
-    got: dict[str, float] = {}
-    named_p = next((number(v) for k, v in pairs if k.lower() in ("probability", "confidence")), None)
-    for k, v in pairs:
-        key = option_key(k, keys)
-        if key is not None and not isinstance(v, (dict, list)):
-            got[key] = max(got.get(key, 0.0), max(0.0, number(v)))
-        elif k.lower() in ("topic", "answer", "choice", "option", "state") and isinstance(v, str):
-            key = option_key(v, keys)
-            if key is not None and key not in got:
-                got[key] = named_p if named_p is not None else 1.0
-    if not got or sum(got.values()) <= 0:
-        return None
-    rest = [k for k in keys if k not in got]
-    spare = max(0.0, 1 - sum(got.values()))
-    probs = [got.get(k, spare / len(rest) if rest else 0.0) for k in keys]
-    s = sum(probs)
-    return [p / s for p in probs]
 
 
 def bootstrap_ci(values: list, stat, n_boot: int = 2000, seed: int = 0) -> list[float]:
@@ -1054,57 +782,6 @@ def binary_metrics(z: list[float], y: list[int]) -> dict:
     }
 
 
-def sigmoid(t: float) -> float:
-    return 1 / (1 + math.exp(-t)) if t >= 0 else math.exp(t) / (1 + math.exp(t))
-
-
-def softplus(t: float) -> float:
-    return t + math.log1p(math.exp(-t)) if t > 0 else math.log1p(math.exp(t))
-
-
-def nll(z: list[float], y: list[int], a: float, b: float) -> float:
-    return sum(softplus(-(a * zi + b)) if yi else softplus(a * zi + b) for zi, yi in zip(z, y)) / len(z)
-
-
-def fit_affine(z: list[float], y: list[int], slope_only: bool) -> tuple[float, float]:
-    """Minimize NLL of sigmoid(a*z + b) (Platt) or sigmoid(z / T) with T = 1/a (temperature).
-
-    Newton steps with backtracking: saturated sigmoids have almost no curvature, so a full
-    Newton step can overshoot wildly. Only accept a step that lowers the NLL.
-    """
-    a, b = 1.0, 0.0
-    for _ in range(100):
-        ga = gb = haa = hab = hbb = 0.0
-        for zi, yi in zip(z, y):
-            s = sigmoid(a * zi + b)
-            r, w = s - yi, s * (1 - s)
-            ga, gb = ga + r * zi, gb + r
-            haa, hab, hbb = haa + w * zi * zi, hab + w * zi, hbb + w
-        if slope_only:
-            da, db = ga / (haa + 1e-9), 0.0
-        else:
-            det = haa * hbb - hab * hab + 1e-9
-            da, db = (hbb * ga - hab * gb) / det, (haa * gb - hab * ga) / det
-        current, step = nll(z, y, a, b), 1.0
-        while step > 1e-6 and nll(z, y, a - step * da, b - step * db) > current:
-            step /= 2
-        if step <= 1e-6:
-            break
-        a, b = a - step * da, b - step * db
-    return a, b
-
-
-def cross_fit(z: list[float], y: list[int], slope_only: bool) -> list[float]:
-    """Two-fold: fit on one half, apply to the other. Returns out-of-fold calibrated log-odds."""
-    half = len(z) // 2
-    out = [0.0] * len(z)
-    for fit_idx, apply_idx in ((range(half, len(z)), range(half)), (range(half), range(half, len(z)))):
-        a, b = fit_affine([z[i] for i in fit_idx], [y[i] for i in fit_idx], slope_only)
-        for i in apply_idx:
-            out[i] = a * z[i] + b
-    return out
-
-
 def prompt_fingerprint(engine: Engine) -> str:
     """A hash of every fixed prompt piece: system line, chat template split, and the Noul block."""
     probe = noul_block({"instructions": "\x00"})
@@ -1165,52 +842,6 @@ def calibration(engine: Engine, n: int = 400) -> dict:
 
 # ---------------------------------------------------------------------------
 # E11: quality on labelled data. The same model answers the same questions in four ways.
-
-
-def logit(p: float, eps: float = 1e-6) -> float:
-    p = min(max(p, eps), 1 - eps)
-    return math.log(p / (1 - p))
-
-
-def verbal_probability(text: str) -> float | None:
-    """A written probability ("0.8", "80%", "Probability: 0.8") as a float in [0, 1]. None = unparseable."""
-    m = re.search(r"(\d+(?:\.\d+)?)\s*(%?)", text)
-    if not m:
-        return None
-    v = float(m.group(1)) / (100 if m.group(2) or float(m.group(1)) > 1 else 1)
-    return v if 0 <= v <= 1 else None
-
-
-def fit_temperature_multiclass(logits: list[list[float]], labels: list[int]) -> float:
-    """T that minimizes the NLL of softmax(z / T), by golden-section search on log T."""
-    def nll_t(log_t: float) -> float:
-        t = math.exp(log_t)
-        total = 0.0
-        for z, y in zip(logits, labels):
-            m = max(v / t for v in z)
-            total -= z[y] / t - m - math.log(sum(math.exp(v / t - m) for v in z))
-        return total / len(labels)
-    a, b, g = -2.0, 3.0, (math.sqrt(5) - 1) / 2
-    for _ in range(60):
-        c, d = b - g * (b - a), a + g * (b - a)
-        a, b = (a, d) if nll_t(c) < nll_t(d) else (c, b)
-    return math.exp((a + b) / 2)
-
-
-def cross_fit_multiclass(logits: list[list[float]], labels: list[int]) -> list[list[float]]:
-    """Two-fold temperature scaling: fit T on one half, apply it to the other. Out-of-fold probabilities."""
-    half, out = len(logits) // 2, [None] * len(logits)
-    for fit_idx, apply_idx in ((range(half, len(logits)), range(half)), (range(half), range(half, len(logits)))):
-        t = fit_temperature_multiclass([logits[i] for i in fit_idx], [labels[i] for i in fit_idx])
-        for i in apply_idx:
-            out[i] = [v / t for v in logits[i]]
-    return [softmax_list(z) for z in out]
-
-
-def softmax_list(z: list[float]) -> list[float]:
-    m = max(z)
-    e = [math.exp(v - m) for v in z]
-    return [v / sum(e) for v in e]
 
 
 def binary_entry(z: list[float], y: list[int], seconds: list[float], out_tokens: float, fails: int = 0,
@@ -1329,220 +960,6 @@ def quality(engine: Engine, n_boolq: int = 500, n_ag: int = 300) -> dict:
             print(f"{name:24s} {m['accuracy']:6.3f} [{ci[0]:.3f},{ci[1]:.3f}] {ece} {m['parse_failures']:6d} "
                   f"{m['mean_s']:6.2f} {m['output_tokens']:8.1f}")
     return {"tasks": out}
-
-
-def same_format_prompt(doc: str, qs: dict) -> tuple[str, dict]:
-    """The prompt that asks the model to write minijev's response itself, and the JSON shape it must follow."""
-    lines, shape = [f"STATE:\n{doc}", "", "Answer every question below about the STATE.", ""], {}
-    for qid, q in qs.items():
-        text = render_inline(q["instructions"])
-        if q["type"] == "noul":
-            crit = q.get("criteria") or {}
-            lines.append(f"{qid} (yes/no): {text}")
-            for side, word in (("true", "Yes"), ("false", "No")):
-                if crit.get(side):
-                    lines.append(f"  {word} means: {render_inline(crit[side])}")
-            shape[qid] = {"noul": 0.0}
-        elif q["type"] == "choice":
-            lines.append(f"{qid} (pick one option): {text}")
-            lines += [f"  - {k}" + (f": {render_inline(d)}" if d is not None else "") for k, d in q["criteria"].items()]
-            shape[qid] = {"choice": "<option name>", "probabilities": {k: 0.0 for k in q["criteria"]}}
-        else:
-            lines.append(f"{qid} (scale, lowest first): {text}")
-            lines += [f"  {i}: {render_inline(level)}" for i, level in enumerate(q["criteria"])]
-            shape[qid] = {"score": 0.0, "probabilities": {str(i): 0.0 for i in range(len(q["criteria"]))}}
-        lines.append("")
-    lines += ["Reply with only a JSON object in exactly this shape. Replace every 0.0 with your number.",
-              "noul = the probability of yes. The probabilities of one question add up to 1.",
-              "score = the expected level: the sum of level × probability.",
-              json.dumps(shape)]
-    return "\n".join(lines), shape
-
-
-def check_written(parsed: dict | None, qs: dict) -> dict:
-    """Per question: the value the model wrote, or, in plain words, why code cannot use it."""
-    out = {}
-    for qid, q in qs.items():
-        if parsed is None:
-            out[qid] = {"ok": False, "problem": "The reply is not valid JSON, so no answer can be read from it."}
-            continue
-        a = parsed.get(qid)
-        if not isinstance(a, dict):
-            out[qid] = {"ok": False, "problem": f'The reply has no "{qid}" at the top level of the JSON. It left it out, '
-                                               "or put it inside another question."}
-            continue
-        try:
-            if q["type"] == "noul":
-                v = float(a["noul"])
-                assert 0 <= v <= 1, f'"noul" is {v}, but a probability must be between 0 and 1.'
-                out[qid] = {"ok": True, "noul": v}
-            else:
-                probs = a["probabilities"]
-                if not isinstance(probs, dict):
-                    raise ValueError('"probabilities" is not a list of name: number pairs.')
-                probs = {str(k): float(v) for k, v in probs.items()}
-                if q["type"] == "choice":
-                    names = set(q["criteria"])
-                    assert set(probs) == names, f'"probabilities" must name exactly the options {sorted(names)}; it has {sorted(probs)}.'
-                    assert a["choice"] in names, f'"choice" is "{a["choice"]}", which is not one of the options.'
-                    out[qid] = {"ok": True, "choice": a["choice"], "probabilities": probs,
-                                "sums_to_1": abs(sum(probs.values()) - 1) < 0.02}
-                else:
-                    levels = {str(i) for i in range(len(q["criteria"]))}
-                    assert set(probs) == levels, f'"probabilities" must name the levels {sorted(levels)}; it has {sorted(probs)}.'
-                    out[qid] = {"ok": True, "score": float(a["score"]), "probabilities": probs,
-                                "sums_to_1": abs(sum(probs.values()) - 1) < 0.02}
-        except KeyError as e:
-            out[qid] = {"ok": False, "problem": f"The answer is missing the field {e}."}
-        except (TypeError, ValueError) as e:
-            out[qid] = {"ok": False, "problem": str(e) if str(e).startswith('"') else "A value that must be a number is not a number."}
-        except AssertionError as e:
-            out[qid] = {"ok": False, "problem": str(e)}
-    return out
-
-
-class StructuredWriter:
-    """Structured output, the way an AI API with an enforced JSON format works.
-
-    The program writes every fixed part of the JSON (braces, keys, quotes) itself; those tokens are fed to the
-    model in one pass per piece. The model decides only the content, one token per step, and only among valid
-    tokens: the digits of a number, or the tokens of one of the option names. So the reply is always valid.
-    """
-
-    def __init__(self, engine: Engine, prompt: str):
-        self.e, self.cache, self.text, self.decided, self.forced = engine, DynamicCache(), "", 0, 0
-        ids = engine.tok.apply_chat_template([{"role": "system", "content": SYSTEM}, {"role": "user", "content": prompt}],
-                                             add_generation_prompt=True)
-        self.prompt_tokens = len(ids)
-        self._run(ids)
-        self.digits = [engine.tok.encode(d, add_special_tokens=False)[0] for d in "0123456789"]
-
-    def _run(self, ids: list[int]) -> None:
-        self.logits = self.e.model(torch.tensor([ids]), past_key_values=self.cache, use_cache=True).logits[0, -1]
-
-    def force(self, text: str) -> None:
-        ids = self.e.tok.encode(text, add_special_tokens=False)
-        self._run(ids)
-        self.forced += len(ids)
-        self.text += text
-
-    def pick(self, allowed: list[int]) -> int:
-        best = max(allowed, key=lambda t: self.logits[t].item())
-        self._run([best])
-        self.decided += 1
-        self.text += self.e.tok.decode([best])
-        return best
-
-    def number(self, max_first: int = 1) -> float:
-        """A number d.dd, first digit 0..max_first. For a probability (max_first 1), 1 is written as 1.00."""
-        first = self.digits.index(self.pick(self.digits[:max_first + 1]))
-        if max_first == 1 and first == 1:
-            self.force(".00")
-            return 1.0
-        self.force(".")
-        d1 = self.digits.index(self.pick(self.digits))
-        d2 = self.digits.index(self.pick(self.digits))
-        return first + d1 / 10 + d2 / 100
-
-    def option(self, names: list[str]) -> str:
-        """One of the names, token by token; ends with the closing quote."""
-        seqs = {n: self.e.tok.encode(n + '"', add_special_tokens=False) for n in names}
-        step, alive = 0, list(names)
-        while True:
-            t = self.pick(sorted({seqs[n][step] for n in alive if len(seqs[n]) > step}))
-            alive = [n for n in alive if len(seqs[n]) > step and seqs[n][step] == t]
-            step += 1
-            done = [n for n in alive if len(seqs[n]) == step]
-            if done:
-                return done[0]
-
-
-@torch.inference_mode()
-def generate_structured(engine: Engine, prompt: str, qs: dict) -> dict:
-    """The model writes minijev's response JSON with the format enforced. Returns the parsed JSON and the cost."""
-    t0 = time.perf_counter()
-    w = StructuredWriter(engine, prompt)
-    out: dict = {}
-    w.force("{")
-    for i, (qid, q) in enumerate(qs.items()):
-        w.force(("" if i == 0 else ", ") + json.dumps(qid) + ": {")
-        if q["type"] == "noul":
-            w.force('"noul": ')
-            out[qid] = {"noul": w.number()}
-        elif q["type"] == "choice":
-            w.force('"choice": "')
-            choice = w.option(list(q["criteria"]))
-            probs = {}
-            for j, k in enumerate(q["criteria"]):
-                w.force((', "probabilities": {' if j == 0 else ", ") + json.dumps(k) + ": ")
-                probs[k] = w.number()
-            out[qid] = {"choice": choice, "probabilities": probs}
-        else:
-            n = len(q["criteria"])
-            w.force('"score": ')
-            score = w.number(max_first=n - 1)
-            probs = {}
-            for j in range(n):
-                w.force((', "probabilities": {' if j == 0 else ", ") + f'"{j}": ')
-                probs[str(j)] = w.number()
-            out[qid] = {"score": score, "probabilities": probs}
-        w.force("}" if q["type"] == "noul" else "}}")
-    w.force("}")
-    return {"parsed": out, "text": w.text, "seconds": time.perf_counter() - t0, "decided_tokens": w.decided,
-            "forced_tokens": w.forced, "prompt_tokens": w.prompt_tokens}
-
-
-def same_format_run(engine: Engine, body: dict, settings: Settings | None = None, mode: str = "packed") -> dict:
-    """One request two ways: minijev's readout, and the same model writing minijev's response JSON itself."""
-    doc = body["state"] if isinstance(body["state"], str) else json.dumps(body["state"], indent=2, ensure_ascii=False)
-    prompt, shape = same_format_prompt(doc, body["questions"])
-    budget = int(len(engine.tok.encode(json.dumps(shape))) * 1.5) + 24  # room for every digit, and a little more
-    t0 = time.perf_counter()
-    readout = ask(engine, body, mode, settings=settings or Settings())
-    t_readout = time.perf_counter() - t0
-    g = generate(engine, prompt, budget)
-    parsed = parse_json(g["text"])
-    written = check_written(parsed, body["questions"])
-    st = generate_structured(engine, prompt, body["questions"])
-    structured = check_written(st["parsed"], body["questions"])
-
-    def agreement(written: dict) -> dict:
-        out = {}
-        for qid, q in body["questions"].items():
-            a, w = readout["answers"][qid], written[qid]
-            if not w["ok"]:
-                out[qid] = {"agree": False, "note": w["problem"]}
-            elif q["type"] == "noul":
-                out[qid] = {"agree": (a["noul"] > 0.5) == (w["noul"] > 0.5), "note": "same side of 0.5"}
-            elif q["type"] == "choice":
-                out[qid] = {"agree": a["choice"] == w["choice"], "note": "same option"}
-            else:
-                out[qid] = {"agree": round(a["score"]) == round(w["score"]), "note": "same rounded level"}
-        return out
-    compare = agreement(written)
-    return {
-        "model": engine.name,
-        "readout": {"seconds": t_readout, "output_tokens": 0, "response": readout["answers"],
-                    "input_tokens": readout["usage"]["input_tokens"]},
-        "written": {"seconds": g["seconds"], "output_tokens": g["new_tokens"], "prompt_tokens": g["prompt_tokens"],
-                    "token_budget": budget, "text": g["text"], "valid_json": parsed is not None,
-                    "answers": written, "usable": sum(w["ok"] for w in written.values())},
-        "structured": {"seconds": st["seconds"], "output_tokens": st["decided_tokens"], "forced_tokens": st["forced_tokens"],
-                       "prompt_tokens": st["prompt_tokens"], "text": st["text"], "valid_json": True,
-                       "answers": structured, "usable": sum(w["ok"] for w in structured.values())},
-        "compare": compare, "compare_structured": agreement(structured), "prompt": prompt,
-    }
-
-
-SUPPORT_TICKET = {
-    "state": "Hi, my Stripe integration has failed for 3 days. Losing sales. Help ASAP.",
-    "questions": {
-        "urgency": {"type": "noul", "instructions": "Does this message express urgency?"},
-        "team": {"type": "choice", "instructions": "Which team should handle this?", "criteria": {
-            "billing": "Payments, invoices, refunds", "technical": "Integrations, bugs, outages", "sales": "Pricing, new plans"}},
-        "tone": {"type": "score", "instructions": "How upset is the customer?", "criteria": ["calm", "mildly annoyed", "frustrated", "angry"]},
-    },
-}
 
 
 def same_format(engine: Engine, repeats: int = 5) -> dict:
@@ -1715,14 +1132,6 @@ def readout_cache(engine: Engine, dataset: str, split: str) -> list[dict]:
     return items
 
 
-def nll_multi(logits: list[list[float]], y: list[int], t: float = 1.0) -> float:
-    total = 0.0
-    for z, yi in zip(logits, y):
-        m = max(v / t for v in z)
-        total -= z[yi] / t - m - math.log(sum(math.exp(v / t - m) for v in z))
-    return total / len(y)
-
-
 def heldout(engine: Engine) -> dict:
     """E14. Fit on train, select on val, report on test. Writes calibration/<model>.json with its provenance."""
     import data
@@ -1786,7 +1195,7 @@ def heldout(engine: Engine) -> dict:
     for k, m in noul_test.items():
         print(f"  test {k:12s} acc {m['accuracy']:.3f} [{m['accuracy_ci95'][0]:.2f},{m['accuracy_ci95'][1]:.2f}]  "
               f"ECE {m['ece']:.3f} [{m['ece_ci95'][0]:.2f},{m['ece_ci95'][1]:.2f}]  NLL {m['nll']:.3f}")
-    print(f"Choice (AG News): T = " + ", ".join(f"{m} {t:.2f}" for m, t in choice_t.items()) + f"; val picks {choice_pick}")
+    print("Choice (AG News): T = " + ", ".join(f"{m} {t:.2f}" for m, t in choice_t.items()) + f"; val picks {choice_pick}")
     for m, r in choice_test.items():
         c, rw = r["calibrated"], r["raw"]
         print(f"  test {m:10s} acc {c['accuracy']:.3f} [{c['accuracy_ci95'][0]:.2f},{c['accuracy_ci95'][1]:.2f}]  "
@@ -1802,9 +1211,289 @@ def heldout(engine: Engine) -> dict:
 
 # ---------------------------------------------------------------------------
 
+# E15: how much the answers depend on the template wording (W7, PLAN Task 4.3). A full grid of 3 wordings for each of
+# 4 template parts = 81 templates. Level 0 of every part is the production template. BoolQ val only: this measures,
+# it chooses nothing, and the test split stays unread.
+TEMPLATE_PARTS = {
+    "system": [SYSTEM, "You are a helpful assistant.", "Read the text below and answer the question about it."],
+    "state_label": ["STATE:", "TEXT:", "Passage:"],
+    "question_label": ["QUESTION:", "Question:", "Q:"],
+    "answer_line": ["Answer with Yes or No.", "Reply with Yes or No only.", "Is the answer Yes or No?"],
+}
+
+
+def template_sensitivity(engine: Engine, n: int = 200) -> dict:
+    import itertools
+
+    import data
+    parts = TEMPLATE_PARTS
+    with data.tuning():  # a PermissionError if anything here read the test split
+        rows = data.load_split("boolq", "val")[:n]
+    sentinel = "\x00SPLIT\x00"
+    heads = []
+    for system in parts["system"]:
+        text = engine.tok.apply_chat_template([{"role": "system", "content": system}, {"role": "user", "content": sentinel}],
+                                              tokenize=False, add_generation_prompt=True)
+        head, tail = text.split(sentinel)
+        assert tail == engine._tail
+        heads.append(head)
+    grid = list(itertools.product(*(range(len(v)) for v in parts.values())))  # (system, state, question, answer)
+    key = {"model": engine.name, "parts": parts, "n": n, "splits_sha256": data.splits_fingerprint()}
+    path = RESULTS / "readouts" / (tag(engine.name).lstrip("-") or "Qwen2.5-0.5B-Instruct") / "template_grid_boolq_val.json"
+    saved = json.loads(path.read_text()) if path.exists() else {}
+    if saved.get("key") == key:
+        z, mass = saved["z"], saved["mass"]
+    else:
+        z = {str(g): [] for g in grid}
+        mass = {str(g): [] for g in grid}
+        tails = list(itertools.product(range(3), range(3)))
+        t0 = time.perf_counter()
+        for i, r in enumerate(rows):
+            q = r["question"][0].upper() + r["question"][1:] + "?"
+            branches = [Branch(engine.suffix_ids(f"{parts['question_label'][qi]} {q}\n{parts['answer_line'][ai]}"),
+                               [engine.yes, engine.no], "q") for qi, ai in tails]
+            for si, head in enumerate(heads):
+                for li, label in enumerate(parts["state_label"]):
+                    prefix = engine.tok.encode(f"{head}{label}\n{r['passage']}\n\n", add_special_tokens=False)
+                    for (qi, ai), row in zip(tails, engine.readouts(prefix, branches, "packed")):
+                        (yes, no), m = class_logits(row, [engine.yes, engine.no])
+                        z[str((si, li, qi, ai))].append(yes - no)
+                        mass[str((si, li, qi, ai))].append(m)
+            if (i + 1) % 25 == 0:
+                print(f"  template grid {i + 1}/{len(rows)}  ({time.perf_counter() - t0:.0f}s)", flush=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"key": key, "z": z, "mass": mass}))
+    # The production template must give the same log-odds as ask() does.
+    base = str((0, 0, 0, 0))
+    q0 = {"type": "noul", "instructions": rows[0]["question"][0].upper() + rows[0]["question"][1:] + "?"}
+    ref = raw_scores(engine, {"state": rows[0]["passage"], "questions": {"q": q0}})[0]["q"]["logits"]
+    assert abs((ref[0] - ref[1]) - z[base][0]) < 1e-3, "grid level 0 is not the production template"
+
+    y = [r["y"] for r in rows]
+    decide = lambda zs: [v > 0 for v in zs]
+    base_dec = decide(z[base])
+    variants = []
+    for g in grid:
+        k = str(g)
+        m = binary_metrics(z[k], y)
+        variants.append({"parts": dict(zip(parts, g)), "accuracy": m["accuracy"], "ece": m["ece"], "nll": m["nll"],
+                         "mean_p_yes": m["mean_p_yes"], "min_mass": min(mass[k]),
+                         "median_mass": statistics.median(mass[k]),
+                         "flip_rate": sum(a != b for a, b in zip(decide(z[k]), base_dec)) / len(y)})
+    accs = [v["accuracy"] for v in variants]
+    base_acc = variants[0]["accuracy"]  # grid[0] is (0, 0, 0, 0)
+    effects = {part: [{"level": j, "text": text,
+                       **{f"mean_{m}": statistics.mean(v[m] for v in variants if v["parts"][part] == j)
+                          for m in ("accuracy", "ece", "flip_rate", "mean_p_yes")}}
+                      for j, text in enumerate(parts[part])] for part in parts}
+    decisions = [decide(z[str(g)]) for g in grid]
+    unstable = sum(len({d[i] for d in decisions}) > 1 for i in range(len(y))) / len(y)
+    return {
+        "design": "full grid, 3 wordings x 4 template parts = 81 templates; level 0 = production template",
+        "data": {"dataset": "boolq", "split": "val", "n": len(y), "test_read": False},
+        "parts": parts,
+        "base": next(v for v in variants if not any(v["parts"].values())),
+        "spread": {"accuracy_min": min(accs), "accuracy_max": max(accs), "accuracy_sd": statistics.pstdev(accs),
+                   "accuracy_ci95_halfwidth_one_template": 1.96 * math.sqrt(base_acc * (1 - base_acc) / len(y)),
+                   "flip_rate_mean": statistics.mean(v["flip_rate"] for v in variants),
+                   "flip_rate_max": max(v["flip_rate"] for v in variants),
+                   "items_that_change_under_some_template": unstable},
+        "effects": effects,
+        "variants": variants,
+    }
+
+
+# E16: contrastive Score levels (W5, PLAN Task 4.4) on SST-5, a labelled 5-level set (docs/DATA.md). Each pointwise
+# level can name its neighbours: "positive (not neutral; not very positive)". Chosen on val, reported on test.
+SST5_QUESTION = "How positive is the sentiment of this movie review?"
+SST5_LEVELS = ["very negative", "negative", "neutral", "positive", "very positive"]
+SCORE_VARIANTS = {"pointwise": {"score_mode": "pointwise"},
+                  "contrastive": {"score_mode": "pointwise", "contrastive": True},
+                  "listwise": {"score_mode": "listwise"}}
+
+
+def ordinal_metrics(probs: list[list[float]], y: list[int]) -> dict:
+    """Exact accuracy (most probable level), adjacent (off by 1) and far (off by 2 or more) error rates, mean absolute
+    error of the expected level, NLL of the true level, and the confusion matrix (rows: true level)."""
+    k = len(probs[0])
+    pred = [max(range(k), key=p.__getitem__) for p in probs]
+    conf = [[0] * k for _ in range(k)]
+    for t, pr in zip(y, pred):
+        conf[t][pr] += 1
+    n = len(y)
+    return {"accuracy": sum(a == b for a, b in zip(pred, y)) / n,
+            "adjacent_error": sum(abs(a - b) == 1 for a, b in zip(pred, y)) / n,
+            "far_error": sum(abs(a - b) >= 2 for a, b in zip(pred, y)) / n,
+            "mae_expected": sum(abs(sum(i * pi for i, pi in enumerate(p)) - t) for p, t in zip(probs, y)) / n,
+            "nll": -sum(math.log(max(p[t], 1e-12)) for p, t in zip(probs, y)) / n,
+            "mean_level_predicted": sum(pred) / n, "confusion": conf}
+
+
+def score_readouts(engine: Engine, split: str) -> list[dict]:
+    """Raw Score logits of every SST-5 item in one split, for each variant. Cached like readout_cache()."""
+    import data
+    q = {"type": "score", "instructions": SST5_QUESTION, "criteria": SST5_LEVELS}
+    key = {"model": engine.name, "prompt_sha1": prompt_fingerprint(engine), "splits_sha256": data.splits_fingerprint("sst5"),
+           "question": q, "variants": SCORE_VARIANTS}
+    path = RESULTS / "readouts" / (tag(engine.name).lstrip("-") or "Qwen2.5-0.5B-Instruct") / f"sst5_{split}.json"
+    rows = data.load_split("sst5", split)
+    if path.exists() and (saved := json.loads(path.read_text()))["key"] == key:
+        return saved["items"]
+    items, t0 = [], time.perf_counter()
+    for i, r in enumerate(rows):
+        raw, _ = raw_scores(engine, {"state": r["text"], "questions": {v: {**q, **extra} for v, extra in SCORE_VARIANTS.items()}},
+                            share_question=True)
+        items.append({"source_index": r["source_index"], "y": r["y"], **{v: raw[v]["logits"] for v in SCORE_VARIANTS},
+                      "mass": {v: min(raw[v]["mass"]) for v in SCORE_VARIANTS}})
+        if (i + 1) % 50 == 0:
+            print(f"  sst5/{split} {i + 1}/{len(rows)}  ({time.perf_counter() - t0:.0f}s)", flush=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"key": key, "items": items}))
+    return items
+
+
+def contrastive_levels(engine: Engine) -> dict:
+    import data
+    with data.tuning():  # choose on val; reading test here would raise
+        val = score_readouts(engine, "val")
+    val_metrics = {v: ordinal_metrics([softmax_list(it[v]) for it in val], [it["y"] for it in val]) for v in SCORE_VARIANTS}
+    chosen = min(("pointwise", "contrastive"), key=lambda v: val_metrics[v]["nll"])
+    test = score_readouts(engine, "test")
+    y = [it["y"] for it in test]
+    test_metrics = {}
+    for v in SCORE_VARIANTS:
+        probs = [softmax_list(it[v]) for it in test]
+        m = ordinal_metrics(probs, y)
+        pairs = list(zip(probs, y))
+        m["accuracy_ci95"] = bootstrap_ci(pairs, lambda s: ordinal_metrics([p for p, _ in s], [t for _, t in s])["accuracy"])
+        m["adjacent_error_ci95"] = bootstrap_ci(pairs, lambda s: ordinal_metrics([p for p, _ in s], [t for _, t in s])["adjacent_error"])
+        m["min_mass"] = min(it["mass"][v] for it in test)
+        test_metrics[v] = m
+    a, b = test_metrics["pointwise"]["adjacent_error"], test_metrics["contrastive"]["adjacent_error"]
+    pred = {v: [max(range(len(SST5_LEVELS)), key=softmax_list(it[v]).__getitem__) for it in test] for v in SCORE_VARIANTS}
+    paired = [(abs(pp - t) == 1, abs(pc - t) == 1) for pp, pc, t in zip(pred["pointwise"], pred["contrastive"], y)]
+    diff_ci = bootstrap_ci(paired, lambda s: (sum(c for _, c in s) - sum(p for p, _ in s)) / len(s))
+    # The documented Jev Score cases (exploratory: 11 cases, not held out): mean absolute gap to Jev's answer.
+    jev = []
+    for label, state, q, expected in JEV_DOC_CASES:
+        if q["type"] != "score":
+            continue
+        raw, _ = raw_scores(engine, {"state": state, "questions": {v: {**q, **SCORE_VARIANTS[v]} for v in ("pointwise", "contrastive")}})
+        got = {v: answer({**q}, raw[v]["logits"])["score"] for v in ("pointwise", "contrastive")}
+        jev.append({"case": label, "state": state, "jev": expected, **got})
+    return {
+        "data": {"dataset": "sst5", "question": SST5_QUESTION, "levels": SST5_LEVELS,
+                 "chosen_on": "val", "reported_on": "test", "n_val": len(val), "n_test": len(test),
+                 "splits_file": "datasets/splits_score_v1.json", "splits_sha256": data.splits_fingerprint("sst5")},
+        "val": {v: {k: m[k] for k in ("accuracy", "adjacent_error", "far_error", "mae_expected", "nll")} for v, m in val_metrics.items()},
+        "chosen": chosen,
+        "test": test_metrics,
+        "adjacent_error_change": (b - a) / a if a else None,  # relative: -0.2 = 20% fewer adjacent errors
+        "adjacent_error_diff_ci95": diff_ci,  # paired bootstrap of contrastive minus pointwise, absolute
+        "jev_doc_cases": {"cases": jev, "note": "exploratory: 11 documented cases, not held out",
+                          **{f"mae_vs_jev_{v}": statistics.mean(abs(c[v] - c["jev"]) for c in jev) for v in ("pointwise", "contrastive")}},
+        "splits_accessed": data.ACCESS,
+    }
+
+
+# E17: opposite Nouls (W6, PLAN Task 4.5). Each BoolQ question is also asked in a negated form; the two answers should
+# sum to 1. consistent() combines them. Val decides whether combining helps; test reports.
+def negated(question: str) -> str:
+    return f"Is the answer to the following question No? {question}"
+
+
+def opposite_readouts(engine: Engine, split: str) -> list[dict]:
+    import data
+    key = {"model": engine.name, "prompt_sha1": prompt_fingerprint(engine), "splits_sha256": data.splits_fingerprint(),
+           "negated": negated("\x00")}
+    path = RESULTS / "readouts" / (tag(engine.name).lstrip("-") or "Qwen2.5-0.5B-Instruct") / f"boolq_opposite_{split}.json"
+    rows = data.load_split("boolq", split)
+    if path.exists() and (saved := json.loads(path.read_text()))["key"] == key:
+        return saved["items"]
+    items, t0 = [], time.perf_counter()
+    for i, r in enumerate(rows):
+        q = r["question"][0].upper() + r["question"][1:] + "?"
+        raw, _ = raw_scores(engine, {"state": r["passage"], "questions": {
+            "x": {"type": "noul", "instructions": q}, "not_x": {"type": "noul", "instructions": negated(q)}}})
+        items.append({"source_index": r["source_index"], "y": r["y"],
+                      "z_x": raw["x"]["logits"][0] - raw["x"]["logits"][1],
+                      "z_not_x": raw["not_x"]["logits"][0] - raw["not_x"]["logits"][1]})
+        if (i + 1) % 100 == 0:
+            print(f"  boolq_opposite/{split} {i + 1}/{len(rows)}  ({time.perf_counter() - t0:.0f}s)", flush=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"key": key, "items": items}))
+    return items
+
+
+def opposite_metrics(items: list[dict]) -> dict:
+    from minijev.judge import consistent
+    y = [it["y"] for it in items]
+    px = [sigmoid(it["z_x"]) for it in items]
+    pn = [sigmoid(it["z_not_x"]) for it in items]
+    combined = [consistent(a, b)[0] for a, b in zip(px, pn)]
+    z = lambda ps: [logit(min(max(p, 1e-9), 1 - 1e-9)) for p in ps]
+    pick = lambda m: {k: m[k] for k in ("accuracy", "ece", "nll", "mean_p_yes")}
+    return {"mean_abs_sum_minus_1": statistics.mean(abs(a + b - 1) for a, b in zip(px, pn)),
+            "median_sum": statistics.median(a + b for a, b in zip(px, pn)),
+            "contradictions": sum((a > 0.5) == (b > 0.5) for a, b in zip(px, pn)) / len(y),
+            "x_alone": pick(binary_metrics(z(px), y)),
+            "negated_alone": pick(binary_metrics(z([1 - b for b in pn]), y)),
+            "combined": pick(binary_metrics(z(combined), y)), "n": len(y)}
+
+
+def opposite_pairs(engine: Engine) -> dict:
+    import data
+    with data.tuning():
+        val = opposite_metrics(opposite_readouts(engine, "val"))
+    use_combined = val["combined"]["nll"] < val["x_alone"]["nll"]
+    test_items = opposite_readouts(engine, "test")
+    test = opposite_metrics(test_items)
+    y = [it["y"] for it in test_items]
+    from minijev.judge import consistent
+    pairs = [(sigmoid(it["z_x"]), consistent(sigmoid(it["z_x"]), sigmoid(it["z_not_x"]))[0], t) for it, t in zip(test_items, y)]
+    test["accuracy_diff_ci95"] = bootstrap_ci(pairs, lambda s: sum((c > 0.5) == bool(t) for _, c, t in s) / len(s)
+                                              - sum((a > 0.5) == bool(t) for a, _, t in s) / len(s))
+    refund = next(c for c in JEV_DOC_CASES if c[0] == "noul: refund")
+    not_refund = next(c for c in JEV_DOC_CASES if c[0] == "noul: not refund")
+    r = ask(engine, {"state": refund[1], "questions": {"refund": refund[2], "not_refund": {**not_refund[2], "opposite_of": "refund"}}},
+            settings=Settings(), debug=True)
+    return {"data": {"dataset": "boolq", "chosen_on": "val", "reported_on": "test", "negated_template": negated("<question>")},
+            "val": val, "combine_on_val": use_combined, "test": test,
+            "jev_refund_pair": {"jev": {"refund": refund[3], "not_refund": not_refund[3], "sum": refund[3] + not_refund[3]},
+                                "minijev_sum_before": r["debug"]["opposite_pairs"]["not_refund"]["sum_before"],
+                                "minijev_after": {k: r["answers"][k]["noul"] for k in ("refund", "not_refund")}},
+            "splits_accessed": data.ACCESS}
+
+
+# E18: contrastive criteria for vague questions (W8, PLAN Task 4.6). The documented Jev Noul cases whose question has
+# a library entry, asked without and with its criteria. Exploratory: 13 cases, not held out, and the library was
+# written after the cases were visible (src/minijev/criteria.py says so).
+CASE_TO_LIBRARY = {"noul: human agent": "wants_human", "noul: urgency": "urgent", "noul: strong python": "strong_python",
+                   "noul: refund": "refund_request", "noul: refund (jaggedness)": "refund_request"}
+
+
+def criteria_ablation(engine: Engine) -> dict:
+    from minijev.criteria import LIBRARY
+    rows = []
+    for label, state, q, jev in JEV_DOC_CASES:
+        if label not in CASE_TO_LIBRARY:
+            continue
+        entry = LIBRARY[CASE_TO_LIBRARY[label]]
+        req = {"state": state, "questions": {"plain": q, "criteria": {**q, "criteria": entry["criteria"]}}}
+        a = ask(engine, req, settings=Settings(), debug=True)["answers"]
+        rows.append({"case": label, "state": state, "jev": jev, "plain": a["plain"]["noul"], "criteria": a["criteria"]["noul"]})
+    summary = {v: {"mean_abs_gap_to_jev": statistics.mean(abs(r[v] - r["jev"]) for r in rows),
+                   "same_side_of_0.5": sum((r[v] > 0.5) == (r["jev"] > 0.5) for r in rows) / len(rows)}
+               for v in ("plain", "criteria")}
+    return {"note": "exploratory: documented Jev cases, not held out; uncalibrated (Settings())", "n": len(rows),
+            "summary": summary, "rows": rows}
+
+
 EXPERIMENTS = {"demo": demo, "tree": tree, "latency": latency, "jevdocs": jevdocs, "permutation": permutation,
                "calibration": calibration, "llm_vs_minijev": llm_vs_minijev,
-               "fanout": lambda engine: {"rows": fan_out(engine, 500)}, "quality": quality, "same_format": same_format, "order_bias": order_bias, "heldout": heldout}
+               "fanout": lambda engine: {"rows": fan_out(engine, 500)}, "quality": quality, "same_format": same_format, "order_bias": order_bias, "heldout": heldout,
+               "template_sensitivity": template_sensitivity, "contrastive_levels": contrastive_levels,
+               "opposite_pairs": opposite_pairs, "criteria_ablation": criteria_ablation}
 
 
 def tag(model: str) -> str:

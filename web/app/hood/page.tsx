@@ -52,12 +52,21 @@ function Tree({ tree, k, setK, response, showTemplate, setShowTemplate }: {
   showTemplate: boolean; setShowTemplate: (v: boolean) => void;
 }) {
 
-  const B = tree.branches, P = tree.prefix.length, sel = B[Math.min(k, B.length - 1)];
+  const B = tree.branches, H = tree.heads ?? [], P = tree.prefix.length, sel = B[Math.min(k, B.length - 1)];
+  const selHead = sel.head !== null ? H[sel.head] : null;
   const [lo, hi] = tree.prefix.state_span;
   const rowH = Math.max(30, Math.min(64, 380 / B.length));
   const svgH = Math.max(240, B.length * rowH + 16);
   const S = 396 / tree.total;
-  const segs = [{ start: 0, length: P }, ...B.map((b) => ({ start: b.start, length: b.length }))];
+  // Mask blocks: the state, every head, every branch. A branch sees the state, its head (if any) and itself.
+  type Seg = { start: number; length: number; head: number | null; branch: number | null };
+  const segs: Seg[] = [{ start: 0, length: P, head: null, branch: null },
+    ...H.map((h, i) => ({ start: h.start, length: h.length, head: i, branch: null })),
+    ...B.map((b, i) => ({ start: b.start, length: b.length, head: b.head, branch: i }))];
+  const sees = (r: Seg, c: Seg) => c.start === 0 || r === c || (r.branch !== null && c.branch === null && c.head !== null && c.head === r.head);
+  const hotRow = (r: Seg) => r.start === 0 || r.branch === k || (r.branch === null && r.head !== null && r.head === sel.head);
+  // The prefix tree: a branch with a head hangs from its head node, not from the state.
+  const headY = (i: number) => { const ys = B.flatMap((b, j) => (b.head === i ? [8 + j * rowH + rowH / 2 - 4] : [])); return ys.reduce((a, y) => a + y, 0) / ys.length; };
   const mass = (b: (typeof B)[number], i: number) => {
     const m = response?.debug.raw[b.question]?.mass;
     if (!m) return null;
@@ -71,11 +80,11 @@ function Tree({ tree, k, setK, response, showTemplate, setShowTemplate }: {
         <div className="flex flex-col gap-1.5">
           <h1 className="m-0 text-[32px] font-semibold tracking-tight">One request, one forward pass</h1>
           <p className="m-0 text-[15px] text-muted max-w-[820px] leading-normal">
-            The state is prefilled once. Each question is a branch that sees only the state and itself; a pointwise Score or Choice gets one yes/no branch per item. Select a branch to trace it.
+            The state is prefilled once. Each question is a branch that sees only the state and itself; a pointwise Score or Choice gets one yes/no branch per item. Those items share one head with the question text, so it is prefilled once too. Select a branch to trace it.
           </p>
         </div>
         <div className="flex-1" />
-        <span className="font-mono text-xs text-muted">{P} + {B.map((b) => b.length).join(" + ")} = {tree.total} tokens</span>
+        <span className="font-mono text-xs text-muted">{P} + {[...H.map((h) => `[${h.length}]`), ...B.map((b) => b.length)].join(" + ")} = {tree.total} tokens</span>
       </div>
 
       <section className="rounded-xl border border-line bg-card p-6 flex flex-col gap-4">
@@ -158,9 +167,20 @@ function Tree({ tree, k, setK, response, showTemplate, setShowTemplate }: {
             <h2 className="text-[15px] font-semibold">Prefix tree</h2>
             <svg viewBox={`0 0 440 ${svgH}`} className="w-full max-w-[440px]" role="img" aria-label={`State with ${B.length} branches`}>
               {B.map((b, i) => {
-                const y = 8 + i * rowH + rowH / 2 - 4;
-                return <path key={i} className="anim" d={`M158 ${svgH / 2} C 205 ${svgH / 2}, 205 ${y}, 250 ${y}`} fill="none"
-                  stroke={i === k ? "var(--accent)" : "var(--line)"} strokeWidth={i === k ? 2 : 1} />;
+                const y = 8 + i * rowH + rowH / 2 - 4, on = i === k;
+                const d = b.head === null ? `M158 ${svgH / 2} C 205 ${svgH / 2}, 205 ${y}, 250 ${y}`
+                  : `M226 ${headY(b.head)} C 238 ${headY(b.head)}, 238 ${y}, 250 ${y}`;
+                return <path key={i} className="anim" d={d} fill="none" stroke={on ? "var(--accent)" : "var(--line)"} strokeWidth={on ? 2 : 1} />;
+              })}
+              {H.map((h, i) => {
+                const y = headY(i), on = sel.head === i;
+                return (
+                  <g key={`h${i}`}>
+                    <path d={`M158 ${svgH / 2} C 170 ${svgH / 2}, 170 ${y}, 182 ${y}`} fill="none" stroke={on ? "var(--accent)" : "var(--line)"} strokeWidth={on ? 2 : 1} />
+                    <rect x="182" y={y - 11} width="44" height="22" rx="5" fill={on ? "var(--soft)" : "var(--track)"} stroke={on ? "var(--accent)" : "var(--line)"} />
+                    <text x="204" y={y + 4} textAnchor="middle" fill="var(--fg)" fontSize="10" fontFamily="var(--font-geist-mono)">Q {h.length}</text>
+                  </g>
+                );
               })}
               <rect x="8" y={svgH / 2 - 30} width="150" height="60" rx="8" fill="var(--track)" stroke="var(--fg)" />
               <text x="83" y={svgH / 2 - 4} textAnchor="middle" fill="var(--fg)" fontSize="14" fontWeight="600">STATE</text>
@@ -186,7 +206,7 @@ function Tree({ tree, k, setK, response, showTemplate, setShowTemplate }: {
                 <button key={i} onClick={() => setK(i)} aria-pressed={i === k}
                   className={`flex flex-col items-start gap-0.5 min-h-11 px-2.5 py-1.5 rounded-md border text-left transition-colors ${i === k ? "border-accent bg-soft" : "border-line hover:bg-track"}`}>
                   <span className="font-mono text-xs truncate max-w-full">{b.label}</span>
-                  <span className="text-[11px] text-muted">{b.length} tok · {b.pointwise ? "yes/no log-odds" : b.type === "noul" ? "P(Yes) vs P(No)" : "letter labels"}{m !== null ? ` · mass ${m.toFixed(4)}` : ""}</span>
+                  <span className="text-[11px] text-muted">{b.head !== null ? `head ${H[b.head].length} + ` : ""}{b.length} tok · {b.pointwise ? "yes/no log-odds" : b.type === "noul" ? "P(Yes) vs P(No)" : "letter labels"}{m !== null ? ` · mass ${m.toFixed(4)}` : ""}</span>
                 </button>
               );
             })}
@@ -202,8 +222,8 @@ function Tree({ tree, k, setK, response, showTemplate, setShowTemplate }: {
             <div className="relative w-[396px] h-[396px] max-w-full bg-track border border-line" role="img"
               aria-label={`Branch ${sel.label} attends to the state and to itself only`}>
               {segs.flatMap((r, ri) => segs.map((c, ci) => {
-                if (!(ci === 0 || ri === ci)) return null;
-                const hot = ri === 0 || ri === k + 1;
+                if (!sees(r, c)) return null;
+                const hot = hotRow(r);
                 return <div key={`${ri}-${ci}`} className="anim absolute bg-accent"
                   style={{ left: c.start * S, top: r.start * S, width: c.length * S, height: r.length * S,
                     clipPath: ri === ci ? "polygon(0 0, 0 100%, 100% 100%)" : undefined, opacity: hot ? 1 : 0.3 }} />;
@@ -213,7 +233,7 @@ function Tree({ tree, k, setK, response, showTemplate, setShowTemplate }: {
               <span className="flex gap-2 items-center"><span className="w-3 h-3 bg-accent" />can attend</span>
               <span className="flex gap-2 items-center"><span className="w-3 h-3 bg-track border border-line" />masked</span>
               <span className="mt-2 text-fg font-mono">{sel.label} · rows {sel.start}–{sel.start + sel.length - 1}</span>
-              <span>sees the state (columns 0–{P - 1}) and its own tokens, causally. It never sees another branch.</span>
+              <span>sees the state (columns 0–{P - 1}){selHead ? `, the question head (columns ${selHead.start}–${selHead.start + selHead.length - 1})` : ""} and its own tokens, causally. It never sees another branch.</span>
               <span className="mt-2">The packed pass still computes the grey blocks, so its cost grows with the square of the total length.</span>
             </div>
           </div>
@@ -250,14 +270,19 @@ function Tree({ tree, k, setK, response, showTemplate, setShowTemplate }: {
       <section className="rounded-xl border border-line bg-card p-6 flex flex-col gap-3">
         <div className="flex items-baseline justify-between gap-3 flex-wrap">
           <h2 className="text-[15px] font-semibold flex items-center gap-1">Packed sequence · position ids restart after the state <Tip k="hoodPositions" /></h2>
-          <span className="text-xs text-muted font-mono">max position = {P} + longest branch − 1 = {tree.max_position}</span>
+          <span className="text-xs text-muted font-mono">max position = {P} + longest head and branch − 1 = {tree.max_position}</span>
         </div>
         <div className="flex h-11 rounded-md overflow-hidden border border-line">
           <div className="bg-fg text-bg grid place-items-center text-[11px] font-mono border-r border-bg" style={{ width: `${(P / tree.total) * 100}%` }}>STATE</div>
+          {H.map((h, i) => (
+            <div key={`h${i}`} title={`${h.question}: shared question head`}
+              className={`grid place-items-center text-[11px] font-mono border-r border-bg ${sel.head === i ? "bg-soft text-accent" : "bg-card text-muted"}`}
+              style={{ width: `${(h.length / tree.total) * 100}%`, order: h.start }}>{h.length / tree.total > 0.06 ? "Q" : ""}</div>
+          ))}
           {B.map((b, i) => (
             <button key={i} onClick={() => setK(i)} aria-label={`Select ${b.label}`}
               className={`anim grid place-items-center text-[11px] font-mono overflow-hidden whitespace-nowrap border-r border-bg ${i === k ? "bg-accent text-inv-fg" : "bg-track text-muted"}`}
-              style={{ width: `${(b.length / tree.total) * 100}%` }}>{b.length / tree.total > 0.06 ? b.label : ""}</button>
+              style={{ width: `${(b.length / tree.total) * 100}%`, order: b.start }}>{b.length / tree.total > 0.06 ? b.label : ""}</button>
           ))}
         </div>
         <div className="flex flex-wrap gap-1 font-mono text-[11px] mt-2" aria-label={`Tokens of ${sel.label}`}>
