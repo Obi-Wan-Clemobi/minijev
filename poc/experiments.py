@@ -1354,10 +1354,16 @@ def score_readouts(engine: Engine, split: str) -> list[dict]:
 
 def contrastive_levels(engine: Engine) -> dict:
     import data
+    # A temperature per variant, fitted on train: a flatter distribution alone lowers the NLL, so the variants are
+    # compared after calibration, as E14 compares Choice modes.
+    train = score_readouts(engine, "train")
+    temp = {v: fit_temperature_multiclass([it[v] for it in train], [it["y"] for it in train]) for v in SCORE_VARIANTS}
+    cal = lambda it, v: softmax_list([z / temp[v] for z in it[v]])
     with data.tuning():  # choose on val; reading test here would raise
         val = score_readouts(engine, "val")
     val_metrics = {v: ordinal_metrics([softmax_list(it[v]) for it in val], [it["y"] for it in val]) for v in SCORE_VARIANTS}
-    chosen = min(("pointwise", "contrastive"), key=lambda v: val_metrics[v]["nll"])
+    val_cal = {v: ordinal_metrics([cal(it, v) for it in val], [it["y"] for it in val]) for v in SCORE_VARIANTS}
+    chosen = min(("pointwise", "contrastive"), key=lambda v: val_cal[v]["nll"])
     test = score_readouts(engine, "test")
     y = [it["y"] for it in test]
     test_metrics = {}
@@ -1368,6 +1374,7 @@ def contrastive_levels(engine: Engine) -> dict:
         m["accuracy_ci95"] = bootstrap_ci(pairs, lambda s: ordinal_metrics([p for p, _ in s], [t for _, t in s])["accuracy"])
         m["adjacent_error_ci95"] = bootstrap_ci(pairs, lambda s: ordinal_metrics([p for p, _ in s], [t for _, t in s])["adjacent_error"])
         m["min_mass"] = min(it["mass"][v] for it in test)
+        m["calibrated"] = {k: x for k, x in ordinal_metrics([cal(it, v) for it in test], y).items() if k != "confusion"}
         test_metrics[v] = m
     a, b = test_metrics["pointwise"]["adjacent_error"], test_metrics["contrastive"]["adjacent_error"]
     pred = {v: [max(range(len(SST5_LEVELS)), key=softmax_list(it[v]).__getitem__) for it in test] for v in SCORE_VARIANTS}
@@ -1383,10 +1390,12 @@ def contrastive_levels(engine: Engine) -> dict:
         jev.append({"case": label, "state": state, "jev": expected, **got})
     return {
         "data": {"dataset": "sst5", "question": SST5_QUESTION, "levels": SST5_LEVELS,
-                 "chosen_on": "val", "reported_on": "test", "n_val": len(val), "n_test": len(test),
+                 "fitted_on": "train", "chosen_on": "val", "reported_on": "test", "n_train": len(train), "n_val": len(val), "n_test": len(test),
                  "splits_file": "datasets/splits_score_v1.json", "splits_sha256": data.splits_fingerprint("sst5")},
+        "temperature": temp,
         "val": {v: {k: m[k] for k in ("accuracy", "adjacent_error", "far_error", "mae_expected", "nll")} for v, m in val_metrics.items()},
-        "chosen": chosen,
+        "val_calibrated_nll": {v: val_cal[v]["nll"] for v in SCORE_VARIANTS},
+        "chosen": chosen, "chosen_by": "lowest val NLL after a temperature fitted on train",
         "test": test_metrics,
         "adjacent_error_change": (b - a) / a if a else None,  # relative: -0.2 = 20% fewer adjacent errors
         "adjacent_error_diff_ci95": diff_ci,  # paired bootstrap of contrastive minus pointwise, absolute

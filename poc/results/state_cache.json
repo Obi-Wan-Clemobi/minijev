@@ -1,0 +1,62 @@
+{
+ "experiment": "Task 4.2 state cache timing",
+ "model": "Qwen/Qwen2.5-0.5B-Instruct",
+ "conditions": "CPU, 6 threads, eager attention, share_question on; median of 7 interleaved runs; hit = the state key/values come from the cache",
+ "script": "poc/state_cache_timing.py",
+ "rows": [
+  {
+   "case": "support ticket (3 questions)",
+   "mode": "kv",
+   "input_tokens": 240,
+   "prefix_tokens": 45,
+   "off_s": 1.592,
+   "hit_s": 1.328,
+   "speedup": 1.2
+  },
+  {
+   "case": "support ticket (3 questions)",
+   "mode": "packed",
+   "input_tokens": 240,
+   "prefix_tokens": 45,
+   "off_s": 0.809,
+   "hit_s": 0.682,
+   "speedup": 1.19
+  },
+  {
+   "case": "GDPR 512 tokens (13 questions)",
+   "mode": "kv",
+   "input_tokens": 1543,
+   "prefix_tokens": 587,
+   "off_s": 8.408,
+   "hit_s": 6.452,
+   "speedup": 1.3
+  },
+  {
+   "case": "GDPR 512 tokens (13 questions)",
+   "mode": "packed",
+   "input_tokens": 1543,
+   "prefix_tokens": 587,
+   "off_s": 7.44,
+   "hit_s": 4.547,
+   "speedup": 1.64
+  },
+  {
+   "case": "GDPR 2000 tokens (13 questions)",
+   "mode": "kv",
+   "input_tokens": 3067,
+   "prefix_tokens": 2111,
+   "off_s": 22.699,
+   "hit_s": 10.936,
+   "speedup": 2.08
+  },
+  {
+   "case": "GDPR 2000 tokens (13 questions)",
+   "mode": "packed",
+   "input_tokens": 3067,
+   "prefix_tokens": 2111,
+   "off_s": 21.216,
+   "hit_s": 7.251,
+   "speedup": 2.93
+  }
+ ]
+}

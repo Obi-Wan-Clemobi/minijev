@@ -820,12 +820,18 @@ cd web && npm test && npm run lint
 | 2.3 Update Web UI | - | Done | 2026-09-24 | 2026-09-24 | Calibration panel, Data page |
 | 3.1 Package Structure | - | Done | 2026-09-25 | 2026-09-25 | src/minijev; torch pinned to 2.2.2 (Intel Mac), not >=2.4 |
 | 4.1 Two-Level Tree | - | Done | 2026-09-25 | 2026-09-25 | Score branches −21.6% tokens (GDPR); logits within 2e-5; W14 |
-| 4.2 State Cache | - | Not Started | - | - | - |
-| 4.3 Template Sensitivity | - | Not Started | - | - | - |
+| 4.2 State Cache | - | Done | 2026-09-25 | 2026-09-25 | LRU of state key/values; 1.2–2.9× per hit (W13); hit rate depends on the client |
+| 4.3 Template Sensitivity | - | Done | 2026-09-25 | 2026-09-25 | E15: 81 templates on BoolQ val; heatmap on Findings (W7) |
 | 4.4 Contrastive Levels | - | Not Started | - | - | - |
-| 4.5 Complementary Norm | - | Not Started | - | - | - |
-| 4.6 Contrastive Criteria | - | Not Started | - | - | - |
-| 5.1 ClaudeJudge Baseline | - | Not Started | - | - | **Requires API key** |
+| 4.5 Complementary Norm | - | Done | 2026-09-25 | 2026-09-25 | E17; explicit `opposite_of` (no automatic detection); opt-in: at 0.5B it lowers accuracy (W6) |
+| 4.6 Contrastive Criteria | - | Done | 2026-09-25 | 2026-09-25 | Library of 20; picker in the editor; E18 mixed at 0.5B (W8) |
+| 5.1 ClaudeJudge Baseline | - | Blocked | - | - | **Requires `ANTHROPIC_API_KEY`**; not set on this machine |
+| 6.1 Model Scaling 3B–7B | - | Blocked | - | - | Needs a GPU with 16 GB+ |
+| 6.2 LoRA + shuffle augmentation | - | Blocked | - | - | Needs a GPU, an API budget and training-data rules (docs/DATA.md §9) |
+| 6.3 FlexAttention | - | Blocked | - | - | Needs PyTorch 2.5+ and a GPU; torch is pinned to 2.2.2 (Intel Mac) |
+| 6.4 Two-Stage Choice | - | Blocked | - | - | Needs a labelled dataset with more than 25 options |
+| 6.5 Needle-in-Haystack | - | Done (to 8k) | 2026-09-25 | 2026-09-25 | E19 in kv mode on CPU; 32k still open (W11) |
+| 6.6 RadixCache | - | Not needed yet | - | - | The hash cache (4.2) has no hit-rate problem to solve yet |
 
 ---
 

@@ -19,14 +19,14 @@ average gap between stated confidence and accuracy.
 | W3 | Calibration does not transfer beyond its data, and Score has none | Calibration | High | Open |
 | W4 | The 0.5B model is at chance on BoolQ | Model | High | Use 1.5B or larger; open |
 | W5 | Pointwise items on small models say "yes" to the plausible item | Method | Medium | Open |
-| W6 | Opposite questions are not consistent | Method | Medium | Not measured |
+| W6 | Opposite questions are not consistent | Method | Medium | Measured (E17); opt-in pair step |
 | W7 | Answers depend on the prompt wording | Method | Medium | Measured (E15); template frozen |
 | W8 | Literal reading of vague questions | Model | Medium | Partly: Noul `criteria` |
 | W9 | Contextual calibration over-corrects | Calibration | Low | Avoided (opt-in) |
 | W10 | More than 25 options is not supported | Method | Low | Open |
-| W11 | Long states are untested | Model | Medium | Open |
+| W11 | Long states lose details | Model | Medium | Measured to 8k (E19) |
 | W12 | The packed pass computes the hidden attention blocks | Speed | Low (CPU), Medium (GPU) | Open |
-| W13 | No state cache across requests; one request at a time | Speed | Medium | Open |
+| W13 | No state cache across requests; one request at a time | Speed | Medium | Partly: state cache (up to 2.9×) |
 | W14 | Pointwise Scores repeat the question for every level | Speed | Low | Fixed |
 | W15 | Small samples, and tests that are not held out | Measurement | Medium | Partly: held-out test of 300 / 400 (E14); E1–E13 stay exploratory |
 | W16 | Timing noise on one laptop | Measurement | Low | Partly: medians, rotation |
@@ -72,8 +72,17 @@ average gap between stated confidence and accuracy.
 - **What:** each question is its own branch and never sees another one. Nothing forces P(X) + P(not X) = 1.
 - **Evidence:** Jev shows it: P(refund) + P(not refund) = 1.19 (Stated, jaggedness page, row 26). minijev has the same
   structure, so it has the same risk (Inferred; not measured).
-- **Candidate fix:** measure it with pairs of opposite Nouls (RESEARCH.md §8 test 9); if needed, a consistency
-  step that asks both and renormalizes.
+- **Evidence (Measured, E17, 0.5B, BoolQ test, n = 300):** each question was also asked as "Is the answer to the
+  following question No? …". The pair should sum to 1; the mean gap |P(X) + P(not X) − 1| is 0.53, and 67% of the
+  pairs contradict each other (both above or both below 0.5). The model mostly fails on the negated wording: alone
+  it scores 0.427, below always-"yes" (0.620).
+- **Fix, opt-in:** mark the pair in the request (`"opposite_of": "<question id>"`). `ask()` averages the two log-odds,
+  so the pair sums to 1. On BoolQ test this lowers ECE from 0.160 to 0.095 and NLL from 0.695 to 0.624, but accuracy
+  falls from 0.693 to 0.637 (95% interval of the change: −0.117 to +0.007), because the negated answer is weak.
+  A fitted temperature alone does better (ECE 0.100, NLL 0.577, accuracy unchanged; E14). So the pair step stays
+  opt-in; it helps only when the model handles both wordings.
+- **Jev's refund pair (exploratory):** Jev sums to 1.19; minijev 0.5B sums to 0.11 (both answers low), and 1.00 after
+  the pair step (0.63 / 0.37).
 - **What Jev may do (Inferred):** nothing yet; its own docs list it as a known weakness.
 
 ### W7. Answers depend on the prompt wording
@@ -137,10 +146,18 @@ average gap between stated confidence and accuracy.
 - **Candidate fix:** Noul `criteria` ("Yes means …") make the question precise; a larger model.
 - **What Jev may do:** it lists literal reading as a known weakness (Stated, row 25).
 
-### W11. Long states are untested
-- **What:** our runs use states of at most 1,000 tokens. Jev allows 32k tokens and warns about "context rot".
-- **Candidate fix:** a long-context test: the same question with the answer early, in the middle, and late in a long
-  state.
+### W11. Long states lose details
+- **What:** Jev allows 32k tokens and warns about "context rot". Before E19, our runs used states of at most 1,000
+  tokens.
+- **Evidence (Measured, E19, 0.5B, kv mode, uncalibrated):** a fact was put into the GDPR article at 5%, 50% or 95%
+  of 1k, 2k, 4k and 8k tokens, and asked about with a true and a near-miss question (the same fact with a wrong date,
+  name or code). 3 facts per cell, so each cell is small.
+  - The model finds the fact at every length and position: P(yes) for the true question is 0.66–0.99.
+  - Without the fact, P(yes) stays at 0.04 or less.
+  - The near-miss question gets more "yes" as the state grows: P(yes) is 0.03–0.22 at 1k and 0.37–0.57 at 8k.
+    The model still finds the topic, but it loses the details.
+  - A request takes 3.6–4.6 s at 1k and 33 s at 8k (CPU, one request).
+- **Still open:** lengths above 8k (the dense packed mask does not fit; kv mode does); 1.5B; more facts per cell.
 
 ## Speed and serving
 
@@ -152,7 +169,20 @@ average gap between stated confidence and accuracy.
 
 ### W13. No state cache across requests; one request at a time
 - **What:** the API computes every state again for every request, and a lock allows one forward pass at a time.
-- **Candidate fix:** keep the KV cache of recent states; batch concurrent requests.
+- **Fix, in part (Measured):** the API keeps the key/values of recent states (`MINIJEV_STATE_CACHE`, 16 in
+  `minijev.env`; least recently used first out). A repeated state is not prefilled again; `/v1/health` shows hits and
+  misses. Tests check that cached logits equal fresh ones (within 1e-3). Speedup of a hit (0.5B, CPU, median of 7,
+  `poc/results/state_cache.json`):
+
+  | Request | State tokens | kv mode | packed mode |
+  |---|---:|---:|---:|
+  | Support ticket, 3 questions | 45 | 1.20× | 1.19× |
+  | GDPR, 13 questions | 587 | 1.30× | 1.64× |
+  | GDPR, 13 questions | 2,111 | 2.08× | 2.93× |
+
+  The longer the state compared with the questions, the larger the gain. The hit rate depends only on how often a
+  client repeats a state; an agent that asks k separate requests about one state gets (k − 1)/k hits.
+- **Still open:** one forward pass at a time (no batching of concurrent requests).
 - **What Jev may do (Inferred):** the cookbook latencies fit a cross-request state cache (RESEARCH.md §3.9);
   RESEARCH.md §8 test 7 can confirm it.
 

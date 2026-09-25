@@ -585,26 +585,28 @@ evidence about Jev: the attention mask makes minijev's branches isolated by cons
 restart after the state give the same answers as KV branching or full re-encoding. `poc/tests/test_engine.py`
 checks both properties.
 
-**R3. Latency (E3).** Minimum of 2 runs, in seconds, over the first N of TypeSafe's 13 GDPR questions.
-The 3 Scores become 13 level branches. Thus 13 questions make 23 branches, with a total of ≈1,070 tokens.
+**R3. Latency (E3).** Median of 5 runs in seconds (interquartile range in brackets), over the first N of TypeSafe's
+13 GDPR questions. Every mode runs in every round, in a rotated order, after 3 warm-up runs (CPU, fp32, 6 threads,
+0.5B, `poc/results/latency.json`). The 3 Scores become 13 level branches. Thus 13 questions make 23 branches, with a
+total of ≈1,070 tokens.
 
 | State | Questions (branches) | naive | kv | packed |
 |---|---|---:|---:|---:|
-| 250 tokens | 1 (1) | 1.13 | 1.24 | 1.12 |
-| 250 tokens | 4 (4) | 4.56 | 1.76 | 1.21 |
-| 250 tokens | 13 (23) | 27.73 | 7.16 | 5.71 |
-| 1,000 tokens | 1 (1) | 4.06 | 4.11 | 4.00 |
-| 1,000 tokens | 4 (4) | 16.09 | 4.82 | 4.54 |
-| 1,000 tokens | 13 (23) | 93.25 | 10.20 | 10.07 |
+| 250 tokens | 1 (1) | 1.26 (0.07) | 1.45 (0.26) | 1.26 (0.08) |
+| 250 tokens | 4 (4) | 5.80 (1.08) | 2.03 (0.39) | 1.64 (0.37) |
+| 250 tokens | 13 (23) | 29.60 (0.44) | 7.72 (0.22) | 6.67 (0.08) |
+| 1,000 tokens | 1 (1) | 4.75 (0.03) | 4.88 (0.07) | 4.78 (0.07) |
+| 1,000 tokens | 4 (4) | 19.06 (0.12) | 5.78 (0.11) | 5.42 (0.13) |
+| 1,000 tokens | 13 (23) | 119.05 (12.98) | 12.76 (2.82) | 12.59 (0.77) |
 
 The table shows these points:
-- **The naive time increases with branches × state.** In the largest cell, one encoding of the state gives 9.3× the
+- **The naive time increases with branches × state.** In the largest cell, one encoding of the state gives 9.5× the
   speed. Jev bills for this saving, because it charges for the state once (§2 row 19).
 - **kv and packed are approximately equal on a CPU.** Packed is faster on small states, because it makes one call,
   not 24. It also calculates the masked attention blocks, so its cost increases as (total length)². On a GPU, the
   packed layout lets every branch run in one kernel launch.
 - **Added questions are cheap only when the state is the largest part.** Here the questions (≈1,070 tokens) are as
-  long as the state. Thus 13 questions cost 2.5× as much as 1 question. In TypeSafe's cookbook, the state was
+  long as the state. Thus 13 questions cost 2.6× as much as 1 question (packed). In TypeSafe's cookbook, the state was
   ≈11.8k tokens and the questions ≈0.7k, and Jev's time increased from 0.21 → 0.27 s.
 - **Our constant is ~200× Jev's.** We process ≈250–300 tokens/s on a CPU. Jev processed ≈11.8k tokens in less than
   0.27 s, network time included. The shape is the same; the hardware is different.
@@ -759,6 +761,18 @@ Findings page). Accuracy ranges from 0.64 to 0.74, inside the ±0.065 interval o
 flip on average and 39.5% of questions flip under some template. The system line has the largest effect on ECE and on
 the "yes" rate. For Jev (Inferred): Jev adds ≈270–300 hidden tokens per request (row 22, Observed), so it uses a fixed template
 that users cannot change; that keeps the answers stable against wording.
+
+**R13. Opposite Nouls (E17).** 300 BoolQ test questions, each also asked in a negated wording, 0.5B
+(`poc/results/opposite_pairs.json`). 67% of the pairs contradict each other, mostly because the model fails on the
+negated wording (accuracy 0.427). Averaging the two log-odds makes each pair sum to 1 and lowers ECE (0.160 → 0.095),
+but lowers accuracy (0.693 → 0.637); a fitted temperature alone is better (E14). For Jev (Inferred): the jaggedness
+that Jev documents (row 26) is the same effect, and an averaging step only helps if the model reads both wordings well.
+
+**R14. A needle in a long state (E19).** One fact in the GDPR article at 1k–8k tokens, 0.5B
+(`poc/results/needle.json`). The true question gets P(yes) 0.66–0.99 at every length and position, and the question
+without the fact stays at 0.04 or less. A near-miss question (wrong date, name or code) rises from 0.03–0.22 at 1k
+to 0.37–0.57 at 8k. For Jev (Inferred): its "context rot" warning fits this: the topic survives in long states, the
+details do not.
 
 **What the POC does not show:**
 - Jev's accuracy, which comes from its model and training.

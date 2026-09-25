@@ -301,15 +301,15 @@ All three modes give the same numbers (R2 below). The diagram shows the packed m
   evidence about how Jev works.
 
 **R3 — One prefill of the state gives ~9× the speed.** We asked 13 questions on a 1,000-token state. The naive mode
-took 93 s. The shared state took 10 s. Added questions are "almost free" only when the state is much longer than the
+took 119 s (median of 5). The shared state took 13 s. Added questions are "almost free" only when the state is much longer than the
 questions.
 
 ```mermaid
 xychart-beta
     title "13 questions on a 1,000-token state, 0.5B (seconds)"
     x-axis ["naive: prefill again", "kv: cached", "packed: one pass"]
-    y-axis "seconds" 0 --> 100
-    bar [93.25, 10.20, 10.07]
+    y-axis "seconds" 0 --> 130
+    bar [119.05, 12.76, 12.59]
 ```
 
 **R4 — On small models, the A/B/C option list is sensitive to order.** We rotated the option order of 8 documented

@@ -361,20 +361,26 @@ flowchart LR
      Jev's published answers at both model sizes.
    - For label bias in listwise Choice, use pointwise Choice (§5.2) or PriDe (Zheng et al. 2024).
 
-minijev stores the result as `calibration.json` → `{ "noul": {"T": 2.72}, "choice": {"T": …}, ... }`, with model and
-template as keys. Fit it again after each template change.
+minijev stores the result in `poc/calibration/<model>.json`: the fitted values, the chosen Noul calibrator and Choice
+mode, and their provenance (data, split, sizes, splits checksum, prompt fingerprint). `experiments.py heldout` (E14)
+fits it on the train split and chooses on the val split (docs/DATA.md). Fit it again after each template change.
 
-**In the POC, the dials are in `poc/minijev.env`.** `ask()` and `Engine()` read them through `Settings.load()`.
-A `MINIJEV_*` environment variable overrides the same line in the file. The dials are:
-- `MINIJEV_TEMP_NOUL`, `MINIJEV_TEMP_CHOICE`, `MINIJEV_TEMP_SCORE`: the temperature per primitive.
-- `MINIJEV_BIAS_NOUL`: the Platt shift `b`. Use it with `MINIJEV_TEMP_NOUL = 1/a`.
-- `MINIJEV_CHOICE_MODE`, `MINIJEV_SCORE_MODE`: the default readout (listwise or pointwise).
+**In the POC, the dials are in `poc/minijev.env`.** `ask()`, `Engine()` and the API read them through
+`Settings.load()`. A `MINIJEV_*` environment variable overrides the same line in the file. The dials are:
+- `MINIJEV_CALIBRATION`: `fitted` uses `calibration/<model>.json`; `none` gives raw probabilities.
+- `MINIJEV_TEMP_NOUL`, `MINIJEV_TEMP_CHOICE`, `MINIJEV_TEMP_SCORE`, `MINIJEV_BIAS_NOUL`: `fitted`, or a number that
+  replaces the fitted value (the Platt shift `b` goes with `MINIJEV_TEMP_NOUL = 1/a`).
+- `MINIJEV_CHOICE_MODE`: `selected` (the mode that val chose for this model), `listwise`, `pointwise` or `averaged`.
+- `MINIJEV_SCORE_MODE`: `pointwise` or `listwise`. `MINIJEV_SCORE_CONTRASTIVE`: pointwise levels name their
+  neighbours (E16 decides the default).
+- `MINIJEV_SHARE_QUESTION`: the two-level tree; a pointwise question's text is prefilled once for all its items.
+- `MINIJEV_STATE_CACHE`: the API server keeps the key/values of this many recent states (0 = off).
 - `MINIJEV_MIN_LABEL_MASS`: the warning threshold of the §5.3 diagnostic.
 - `MINIJEV_MODEL`, `MINIJEV_THREADS`, `MINIJEV_ATTN`: the runtime.
 
-`experiments.py calibration` prints the fitted values in the format of the file. The shipped file holds the
-uncalibrated defaults. The experiments always use those defaults, so the file cannot change a measured result.
-The temperature is model-specific: change it when you change `MINIJEV_MODEL`.
+A request can also mark two Nouls as opposites (`"opposite_of": "<question id>"`). `ask()` then averages their two
+log-odds, so the pair sums to 1 (W6). The experiments use `Settings()`, which is uncalibrated and has every option off,
+so `minijev.env` cannot change a measured result. The temperature is model-specific: each model has its own file.
 
 **Lesson:** calibration is a property of *groups* of predictions on a *distribution* of data. A temperature fitted
 on sentiment data can be wrong for support tickets. SemIf measured temperatures from 1.2 to 2.5 for different
