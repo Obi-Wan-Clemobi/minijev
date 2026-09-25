@@ -1,0 +1,41 @@
+{
+  "id": "customer-triage",
+  "name": "Customer support triage",
+  "description": "A support message comes in. Is it urgent? Which team gets it? How upset is the customer? Upset customers are offered a human.",
+  "version": "1.0",
+  "start": "urgent",
+  "steps": {
+    "urgent": {
+      "id": "urgent", "type": "noul",
+      "instructions": "Does this message need an answer today?",
+      "criteria": {"true": "Money, access or a live system is affected now", "false": "A question or request that can wait"},
+      "position": {"x": 0, "y": 160},
+      "transitions": [{"target": "team"}]
+    },
+    "team": {
+      "id": "team", "type": "choice",
+      "instructions": "Which team should handle this message?",
+      "criteria": {"billing": "Payments, invoices, refunds", "technical": "Integrations, bugs, outages", "sales": "Pricing, plans, new purchases"},
+      "position": {"x": 340, "y": 160},
+      "transitions": [{"target": "upset"}]
+    },
+    "upset": {
+      "id": "upset", "type": "score",
+      "instructions": "How upset is the customer?",
+      "criteria": ["calm", "mildly annoyed", "frustrated", "angry"],
+      "position": {"x": 680, "y": 160},
+      "transitions": [
+        {"from_answer": 0, "target": "DONE"},
+        {"from_answer": 1, "target": "DONE"},
+        {"from_answer": 2, "target": "human"},
+        {"from_answer": 3, "target": "human"}
+      ]
+    },
+    "human": {
+      "id": "human", "type": "noul",
+      "instructions": "Would the customer accept a call from a person instead of an email?",
+      "position": {"x": 1020, "y": 280},
+      "transitions": [{"target": "DONE"}]
+    }
+  }
+}

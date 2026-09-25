@@ -1,3 +1,4 @@
+import type { Flow } from "./flow";
 import type { AskResponse, Fitted, Preset, Req, Settings } from "./types";
 
 export const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -30,7 +31,15 @@ export const api = {
   model: () => call<{ model: string; available: string[] }>("/v1/model"),
   calibration: () => call<{ model: string; mode: string; fitted: Fitted | null; selected_choice_mode: string | null }>("/v1/calibration"),
   setModel: (name: string) => call<{ model: string }>("/v1/model", post({ name })),
+  flowTemplates: () => call<Flow[]>("/v1/flows/templates"),
+  flows: () => call<{ id: string; name: string; saved: string }[]>("/v1/flows"),
+  flow: (id: string) => call<Flow>(`/v1/flows/${encodeURIComponent(id)}`),
+  saveFlow: (flow: Flow) => call<FlowCheck & { id: string }>("/v1/flows", post(flow)),
+  checkFlow: (flow: Flow) => call<FlowCheck>("/v1/flows/check", post(flow)),
+  deleteFlow: (id: string) => fetch(`${API}/v1/flows/${encodeURIComponent(id)}`, { method: "DELETE" }),
 };
+
+export type FlowCheck = { errors: { step: string | null; message: string }[]; warnings: { step: string | null; message: string }[] };
 
 export type TreeBranch = {
   question: string; label: string; type: string; pointwise: boolean; head: number | null;

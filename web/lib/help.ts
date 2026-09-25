@@ -243,6 +243,38 @@ export const HELP = {
   hoodTemplate: { t: "Template tokens", e: "display", d: ["The fixed wrapper around your text (a system instruction and the word \"STATE:\"). The model reads it too, and it is the same for every request."] },
   hoodRun: { t: "Run for label mass", d: ["Asks the model once so that each branch can show how well it worked (its label mass). The picture itself only needs the text to be split into tokens."] },
 
+  // ---- state machine (flows)
+  smWhat: { t: "State machine", e: "display", d: [
+    "A chain of questions. Each answer decides which question comes next, like a flowchart that the model walks through.",
+    "Example: \"What kind of tool is needed?\" → search → \"Which search tool?\" → grep → done. A different answer would take a different arrow.",
+    "Each box is one normal minijev question: one readout, about 1 second on this laptop. The chain is only the glue between them." ] },
+  smStep: { t: "Step", e: "display", d: [
+    "One box = one question the model answers: yes/no (Noul), pick one (Choice), or a scale (Score).",
+    "The green START tag marks where every run begins. DONE is where a run ends.",
+    "We say \"step\", not \"state\": in minijev, \"state\" already means the text the model reads." ] },
+  smArrow: { t: "Arrows", e: "display", d: [
+    "Each arrow starts at one answer (the small dots on the right of a box) and goes to the next step.",
+    "The \"any answer\" dot is a fallback: it matches whatever the answer is.",
+    "If two arrows leave the same answer, the first one whose condition holds wins. Order matters." ] },
+  smSure: { t: "Only if sure", e: "run", d: [
+    "An arrow can also require the model to be sure enough. A dashed arrow has such a condition.",
+    "Example: take the \"search\" arrow straight to the search tool only if the model is at least 0.5 sure; otherwise ask a clarifying question first.",
+    "How sure is measured, from 0 (no idea) to 1 (certain): for yes/no, 0 at 50/50 and 1 at 0% or 100%. For a Choice, 0 when all options are equal and 1 when one option has everything. For a Score, 0 when the levels are spread out.",
+    "The maths: yes/no 2·max(p, 1−p) − 1; Choice (p_max − 1/k)/(1 − 1/k)." ] },
+  smAnswer: { t: "Which answer counts", e: "display", d: [
+    "Yes/no: yes if P(yes) is 50% or more.",
+    "Choice: the option with the highest probability.",
+    "Score: the expected level, rounded. Example: 1.6 on a 0–3 scale counts as level 2." ] },
+  smHistory: { t: "What the model reads", e: "display", d: [
+    "Each step reads your request plus every earlier decision (question, answer, how sure). So the second question knows what the first one decided.",
+    "This is the \"state\" in minijev's sense: the text all questions of one request share. It grows by one line per step, so later steps are a little slower." ] },
+  smRun: { t: "Run", d: [
+    "Type a request and press Run. The steps light up one by one as the model decides them: blue = deciding now, outlined = done.",
+    "The arrows that were taken turn blue. The panel on the right lists every decision with its probabilities." ] },
+  smSave: { t: "Save and share", e: "display", d: [
+    "Save keeps the flow on this computer (poc/flows/definitions/). Export downloads it as a JSON file; Import loads such a file.",
+    "Templates are ready-made flows to start from." ] },
+
   // ---- fine-tune (E20)
   ftWhat: { t: "Fine-tuning", e: "display", d: [
     "Everything else on this page changes how we ask the model. Fine-tuning changes the model itself: we show it examples with the right answer, and nudge its weights after each one.",

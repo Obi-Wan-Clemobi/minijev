@@ -902,6 +902,26 @@ thus the base value differs from the 2.23 that E14 fitted on train (§6.11). A t
 its BoolQ test ECE is 0.063 raw and 0.076 with the val temperature. These are in-domain results: the training and test items come from the
 same two datasets. Full table and limits: RESEARCH.md §7.3 R17. The Findings page shows the same results.
 
+### 6.13 Chaining questions: the State machine page
+
+One request answers a fixed set of questions. Many real decisions need a chain: the second question depends on the
+first answer. A **flow** does this. It is a state machine of **steps**; each step asks one question, and a
+**transition** from its answer leads to the next step, until DONE. The State machine page builds and runs flows.
+
+1. Load a template, for example "Tool selection": "What type of tool is needed?" → search → "Which search tool?".
+2. Type a request and press Run. Each step lights up when the model decides it.
+3. Read the decisions on the right: the answer, how sure the model was, and the probabilities of every answer.
+
+Two rules make a flow work:
+- **Each step reads the earlier decisions.** The state of a step is the request plus every earlier question, answer
+  and confidence. Thus "Which search tool?" knows that the first step chose "search".
+- **An arrow can require confidence.** In the tool-selection template, "search" goes straight to the search tool only
+  if the model is at least 0.5 sure; otherwise a clarifying yes/no question comes first.
+
+Each step is one readout. With 0.5B on the laptop CPU, a step takes 0.6–1.4 s (Measured): the two-step tool-selection
+run took 2.2 s through the API. The design and the API are in
+docs/superpowers/specs/2026-09-24-state-machine-flow-builder-design.md.
+
 ## 7. Next steps
 
 1. **Fit a Score temperature.** SST-5 train (300) is frozen and unused; fit on it, choose on val, report on test.

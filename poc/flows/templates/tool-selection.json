@@ -1,0 +1,45 @@
+{
+  "id": "tool-selection",
+  "name": "Tool selection",
+  "description": "An agent needs a tool. First the kind of tool, then the exact tool. A low-confidence 'search' asks a clarifying yes/no question first.",
+  "version": "1.0",
+  "start": "tool_type",
+  "steps": {
+    "tool_type": {
+      "id": "tool_type", "type": "choice",
+      "instructions": "What type of tool is needed for this task?",
+      "criteria": {"search": "Find text or patterns inside files", "file": "Read, write, move or delete files", "network": "HTTP requests, APIs, downloads"},
+      "position": {"x": 0, "y": 160},
+      "transitions": [
+        {"from_answer": "search", "target": "search_tool", "condition": {"confidence_gte": 0.5}},
+        {"from_answer": "search", "target": "contents_or_names"},
+        {"from_answer": "file", "target": "file_tool"},
+        {"from_answer": "network", "target": "DONE"}
+      ]
+    },
+    "contents_or_names": {
+      "id": "contents_or_names", "type": "noul",
+      "instructions": "Does the task need to search inside file contents, not only file names?",
+      "criteria": {"true": "Search inside the contents of files", "false": "Find files by their names"},
+      "position": {"x": 360, "y": 300},
+      "transitions": [
+        {"from_answer": true, "target": "search_tool"},
+        {"from_answer": false, "target": "file_tool"}
+      ]
+    },
+    "search_tool": {
+      "id": "search_tool", "type": "choice",
+      "instructions": "Which search tool should the agent use?",
+      "criteria": {"grep": "Standard Unix grep, available everywhere", "ripgrep": "Fast modern search that respects .gitignore"},
+      "position": {"x": 720, "y": 60},
+      "transitions": [{"target": "DONE"}]
+    },
+    "file_tool": {
+      "id": "file_tool", "type": "choice",
+      "instructions": "Which file tool should the agent use?",
+      "criteria": {"find": "Find files by name or pattern", "cat": "Print the contents of a file", "mv": "Move or rename a file"},
+      "position": {"x": 720, "y": 300},
+      "transitions": [{"target": "DONE"}]
+    }
+  }
+}

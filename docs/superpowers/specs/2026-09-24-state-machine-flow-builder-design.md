@@ -4,7 +4,9 @@
 
 ## 1. Overview
 
-Build a visual flow builder that lets users chain minijev decisions into state machines. Users drag nodes onto a canvas, connect them with transitions, and execute multi-stage decision workflows where each stage feeds its result into the next.
+Build a visual flow builder that lets users chain minijev decisions into state machines. Users drag steps onto a canvas, connect them with arrows (transitions), and run multi-step decision flows where each step feeds its result into the next.
+
+**Terms.** A **flow** is the whole state machine. A **step** is one node of it: one question. A **transition** (an "arrow" in the UI) goes from one answer of a step to the next step. We do not call a node a "state": in minijev, **state** is the input text that the questions of one request share (CLAUDE.md glossary). At each step, the state is the request plus the decisions so far.
 
 **Core use case:** Tool selection workflow
 1. "What type of tool is needed?" → "search tool"
@@ -42,8 +44,8 @@ The system maintains structured decision history throughout execution, giving fu
               │ HTTP
 ┌─────────────┴───────────────────────────┐
 │  API Layer (FastAPI)                    │
-│  - POST /flows/execute                  │
-│  - GET/POST/DELETE /flows               │
+│  - POST /v1/flows/run (streams steps)   │
+│  - GET/POST/DELETE /v1/flows            │
 └─────────────┬───────────────────────────┘
               │
 ┌─────────────┴───────────────────────────┐
@@ -57,28 +59,26 @@ The system maintains structured decision history throughout execution, giving fu
 ### 4.2 File Structure
 
 ```
-poc/
-├── flows/
-│   ├── executor.py          # State machine execution engine
-│   ├── schema.py            # Flow definition validation (Pydantic)
-│   ├── templates/           # Pre-built flow templates
-│   │   ├── tool-selection.json
-│   │   └── customer-triage.json
-│   └── definitions/         # User-saved flows (gitignored)
-└── server.py                # Add /flows endpoints
+src/minijev/
+├── flows.py                 # Schema (Pydantic), check(), run() executor (a generator: one event per step)
+└── api/server.py            # /v1/flows endpoints
+
+poc/flows/
+├── templates/               # Pre-built flows (committed)
+│   ├── tool-selection.json
+│   └── customer-triage.json
+└── definitions/             # User-saved flows (gitignored; outside src/, so a save does not restart the API under Tilt)
+
+poc/tests/test_flows.py      # executor tests with a fake ask(), plus one end-to-end model test
 
 web/
-├── app/
-│   └── flows/
-│       ├── page.tsx         # Main flow builder page
-│       ├── FlowCanvas.tsx   # React Flow canvas component
-│       ├── NodePalette.tsx  # Drag-to-add node types
-│       ├── NodeEditor.tsx   # Side panel for editing nodes
-│       ├── ExecutionViewer.tsx  # Show execution trace
-│       └── nodes/           # Custom node components
-│           ├── NoulNode.tsx
-│           ├── ChoiceNode.tsx
-│           └── ScoreNode.tsx
+├── app/flows/page.tsx       # The State machine page: toolbar, palette, canvas, side panel, run
+├── components/flows/
+│   ├── Nodes.tsx            # StepNode (one output dot per answer, plus "any answer") and DoneNode
+│   ├── StepEditor.tsx       # Side panel: question, options or levels, arrows and conditions
+│   └── RunTrace.tsx         # Side panel: the decisions of a run, with probabilities and what the model read
+├── lib/flow.ts              # Flow types, flow JSON <-> React Flow nodes/edges, edit operations
+└── tests/flow.test.ts
 ```
 
 ## 5. Flow Definition Format
@@ -91,8 +91,8 @@ Flows are stored as JSON with this schema:
   "name": "Tool Chain Selection",
   "description": "Select the appropriate tool type, then specific tool",
   "version": "1.0",
-  "initial_state": "select_tool_type",
-  "states": {
+  "start": "select_tool_type",
+  "steps": {
     "select_tool_type": {
       "id": "select_tool_type",
       "type": "choice",
@@ -156,12 +156,21 @@ Flows are stored as JSON with this schema:
 }
 ```
 
-### 5.1 Special States
+A transition without `from_answer` (or with `null`) matches any answer: a fallback. For a Score step, `from_answer` is a level number.
 
-- **`DONE`**: Terminal state - execution stops successfully
-- **`ERROR`**: Terminal state - execution failed (not implemented yet)
+### 5.1 How an answer picks a transition
 
-### 5.2 Conditional Transitions
+| Step type | The answer | Confidence ("sure" in the UI), 0 to 1 |
+|---|---|---|
+| Noul | `true` when P(yes) ≥ 0.5 | `2·max(p, 1−p) − 1`: 0 at 0.5, 1 at 0 or 1 (the Choice formula with k = 2) |
+| Choice | the most likely option | `(p_max − 1/k)/(1 − 1/k)`, as in the Jev response |
+| Score | the expected level, rounded to the nearest level | the ordinal Score confidence |
+
+### 5.2 Special targets
+
+- **`DONE`**: a run that reaches it ends with status `completed`.
+
+### 5.3 Conditional Transitions
 
 Transitions can have optional conditions based on confidence:
 
@@ -178,7 +187,7 @@ Transitions can have optional conditions based on confidence:
 
 Multiple transitions from the same answer are evaluated in order. The first matching condition wins.
 
-### 5.3 Parallel Execution (Future)
+### 5.4 Parallel Execution (Future)
 
 For asking multiple independent questions at once:
 
@@ -261,17 +270,17 @@ The executor maintains structured history as decisions are made:
 
 ### 6.1 State Passed to Minijev
 
-At each stage, minijev receives:
+At each step, minijev receives:
 
 ```json
 {
   "state": {
-    "original_query": "find all TODO comments in Python files",
-    "decisions": [
+    "request": "find all TODO comments in Python files",
+    "decisions so far": [
       {
-        "stage": "tool_type",
-        "choice": "search",
-        "confidence": 0.93
+        "question": "What type of tool is needed for this task?",
+        "answer": "search",
+        "confidence": 0.96
       }
     ]
   },
@@ -298,7 +307,7 @@ def execute_flow(flow: FlowDefinition, query: str) -> ExecutionTrace:
         "decisions": []
     }
     
-    current_state_id = flow.initial_state
+    current_step = flow.start
     max_depth = 20  # Safety limit
     depth = 0
     
@@ -340,12 +349,16 @@ def execute_flow(flow: FlowDefinition, query: str) -> ExecutionTrace:
     return ExecutionTrace(state)
 ```
 
+`minijev.flows.run()` implements this loop as a generator: it yields one `decision` event per step and then one `end` event. Each decision records the answer, confidence, probabilities, the state the model read, the transition taken and the time in ms.
+
 ### 7.2 Error Handling
 
-- **No matching transition**: Raise `NoTransitionFound` exception
-- **Max depth exceeded**: Raise `MaxDepthExceeded` exception  
-- **Minijev API error**: Propagate with context (which state failed)
-- **Invalid flow definition**: Validate before execution (Pydantic schema)
+A run never raises for a flow problem. The `end` event carries a status and the step where the run stopped:
+- `completed`: reached DONE.
+- `no_transition`: no transition of the step matched the answer and confidence.
+- `max_steps`: 20 steps without reaching DONE (a loop without an exit).
+- `invalid`: `check()` found errors; no step ran.
+- `error`: the request was rejected (for example an invalid question).
 
 ## 8. React Flow Integration
 
@@ -403,50 +416,55 @@ During/after execution:
 
 ## 9. API Endpoints
 
-### 9.1 Execute Flow
+### 9.1 Run a Flow
 
 ```
-POST /flows/execute
+POST /v1/flows/run
 Content-Type: application/json
 
 {
   "flow": {...},  // Complete flow definition
-  "query": "find all TODO comments in Python files"
+  "query": "find all TODO comments in Python files",
+  "mode": "packed",   // optional
+  "settings": {}      // optional overrides, as in /v1/ask
 }
 
-Response 200:
-{
-  "execution_id": "exec_abc123",
-  "status": "completed",
-  "trace": {...},  // Full execution trace from §6
-  "duration_ms": 1234
-}
+Response 200 (application/x-ndjson): one JSON line per step, then an end line
+{"event": "decision", "step": "tool_type", "answer": "search", "confidence": 0.96, "next": "search_tool", "ms": 1189, ...}
+{"event": "decision", "step": "search_tool", "answer": "grep", "confidence": 0.16, "next": "DONE", "ms": 1007, ...}
+{"event": "end", "status": "completed", "path": ["tool_type", "search_tool"], "decisions": [...]}
 ```
+
+Each step is one `ask()` with the same settings and calibration as `/v1/ask`, under the server's model lock.
 
 ### 9.2 Flow Management
 
 ```
-GET /flows
+GET /v1/flows
 Response: [
   {"id": "tool-selector-v1", "name": "Tool Chain Selection", "created_at": "..."},
   ...
 ]
 
-POST /flows
-Body: {"flow": {...}}
-Response: {"id": "flow_xyz", "created_at": "..."}
+POST /v1/flows
+Body: the flow
+Response: {"id": "tool-selector-v1", "errors": [...], "warnings": [...]}
 
-GET /flows/{id}
-Response: {"flow": {...}}
+GET /v1/flows/{id}
+Response: the flow
 
-DELETE /flows/{id}
+DELETE /v1/flows/{id}
 Response: 204 No Content
+
+POST /v1/flows/check
+Body: the flow
+Response: {"errors": [{"step", "message"}], "warnings": [...]}
 ```
 
 ### 9.3 Templates
 
 ```
-GET /flows/templates
+GET /v1/flows/templates
 Response: [
   {
     "id": "tool-selection",
@@ -527,7 +545,7 @@ Users can save their flows as templates (personal templates directory).
 ### 11.1 Flow Validation (Runtime)
 
 Before execution, validate:
-- `initial_state` exists in `states`
+- `start` exists in `steps`
 - Every transition target exists (or is "DONE")
 - No unreachable states (warning, not error)
 - No cycles without exit conditions (warning)
@@ -579,6 +597,10 @@ Show validation badges on nodes (red = error, yellow = warning).
 - Export and re-import a flow
 
 ## 13. Implementation Phases
+
+**Status (2026-09-25):** built: Phases 1–3, confidence conditions, the 2 templates, save and reload, export and
+import. Not built: undo/redo, validation badges on nodes, execution history, the template modal, the parallel step,
+and Playwright tests.
 
 Given the full-featured scope, break into incremental milestones:
 
@@ -671,14 +693,12 @@ The flow builder is a new standalone page. Future integration:
 ## 15. Dependencies
 
 **New Dependencies:**
-- `reactflow` (React Flow library) - MIT license
-- `@xyflow/react` (React Flow v12+)
-- `zustand` (state management for React Flow) - MIT license
+- `@xyflow/react` 12 (React Flow) - MIT license
 
 **Existing Dependencies (no changes):**
 - FastAPI, Pydantic (backend)
 - Next.js, React, TailwindCSS (frontend)
-- minijev POC (`poc/minijev_poc.py`)
+- the minijev package (`src/minijev`)
 
 ## 16. Success Criteria
 
@@ -722,7 +742,7 @@ React Flow provides zoom, pan, selection, undo/redo, minimap, and edge routing f
 ## 18. Non-Functional Requirements
 
 **Performance:**
-- Flow execution should complete in ~500ms per state (limited by minijev speed)
+- One step is one readout: about 0.6–1.4 s per step with Qwen2.5-0.5B on the laptop CPU (Measured, 2026-09-25). The state grows by one decision per step, so later steps are a little slower.
 - Canvas should handle 50+ nodes without lag
 - Save/load should be instant (<100ms)
 

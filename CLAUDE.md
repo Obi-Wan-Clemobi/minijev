@@ -45,3 +45,6 @@ Add a term here when a document defines it. Use the term exactly as written. The
 | fine-tune | Train an existing model further on labelled examples, so that its weights change. | retrain |
 | LoRA | Low-Rank Adaptation: a fine-tune that freezes the model and trains small added matrices. | |
 | adapter | The trained LoRA weights, stored apart from the model and merged into it at load. | |
+| flow | A state machine of steps: each answer picks the next step, until DONE. | workflow, graph |
+| step | One node of a flow: one question, and its transitions. Other kinds of step keep their qualifier: optimizer step, decode step. | state, stage, node (in docs) |
+| transition | A link from one answer of a step (and an optional confidence condition) to the next step. Called "arrow" in the UI. | edge (in docs) |

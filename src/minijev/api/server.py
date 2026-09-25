@@ -14,6 +14,7 @@ import importlib
 import importlib.util
 import json
 import os
+import re
 import sys
 import threading
 import time
@@ -22,8 +23,11 @@ from pathlib import Path
 import torch
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response, StreamingResponse
+from pydantic import ValidationError
 from transformers import DynamicCache
 
+from .. import flows
 from ..engine import Engine, StateCache
 from ..fixtures import GDPR_QUESTIONS, JEV_DOC_CASES, SHOES, gdpr_state
 from ..generation import generate, generate_logprobs, match_option, options_text, parse_json, same_format_run
@@ -31,9 +35,10 @@ from ..judge import ask, branches_for, validate, with_modes
 from ..primitives import answer, class_logits
 from ..prompt import choice_block, render_inline
 from ..settings import Settings
-from .schema import CompareReq, ModelReq, Req
+from .schema import CompareReq, FlowRun, ModelReq, Req
 
 RESULTS = Path(os.environ.get("MINIJEV_RESULTS_DIR", Path.cwd() / "results"))
+FLOWS = Path(os.environ.get("MINIJEV_FLOWS_DIR", Path.cwd() / "flows"))  # templates/ (committed), definitions/ (saved)
 
 MODELS = ["Qwen/Qwen2.5-0.5B-Instruct", "Qwen/Qwen2.5-1.5B-Instruct"]
 
@@ -358,3 +363,88 @@ def v1_set_model(req: ModelReq):
         if _engine is None or _engine.name != req.name:
             _engine = cached(Engine(req.name))
     return {"model": _engine.name}
+
+
+# ---------------------------------------------------------------------------
+# Flows: questions chained into a state machine (minijev.flows)
+
+
+def parse_flow(body: dict) -> flows.Flow:
+    try:
+        return flows.Flow.model_validate(body)
+    except ValidationError as e:
+        raise HTTPException(400, "; ".join(f"{'.'.join(map(str, x['loc']))}: {x['msg']}" for x in e.errors()))
+
+
+def flow_path(fid: str) -> Path:
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", fid):
+        raise HTTPException(400, "a flow id may use letters, digits, - and _ (at most 64)")
+    return FLOWS / "definitions" / f"{fid}.json"
+
+
+@app.get("/v1/flows/templates")
+def v1_flow_templates():
+    return [json.loads(p.read_text()) for p in sorted((FLOWS / "templates").glob("*.json"))]
+
+
+@app.get("/v1/flows")
+def v1_flows():
+    """The saved flows (poc/flows/definitions/, not in git), newest first."""
+    paths = sorted((FLOWS / "definitions").glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    out = []
+    for p in paths:
+        f = json.loads(p.read_text())
+        out.append({"id": f["id"], "name": f.get("name", f["id"]), "saved": time.strftime("%Y-%m-%d %H:%M", time.localtime(p.stat().st_mtime))})
+    return out
+
+
+@app.post("/v1/flows")
+def v1_save_flow(body: dict):
+    f = parse_flow(body)
+    path = flow_path(f.id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(f.model_dump(), indent=1))
+    return {"id": f.id, **flows.check(f)}
+
+
+@app.get("/v1/flows/{fid}")
+def v1_get_flow(fid: str):
+    path = flow_path(fid)
+    if not path.exists():
+        raise HTTPException(404, f"no saved flow {fid!r}")
+    return json.loads(path.read_text())
+
+
+@app.delete("/v1/flows/{fid}")
+def v1_delete_flow(fid: str):
+    flow_path(fid).unlink(missing_ok=True)
+    return Response(status_code=204)
+
+
+@app.post("/v1/flows/check")
+def v1_check_flow(body: dict):
+    return flows.check(parse_flow(body))
+
+
+@app.post("/v1/flows/run")
+def v1_run_flow(req: FlowRun):
+    """Run a flow on one request. The response streams one JSON line per step, then an end line, so the page can
+    light up each step when it is decided. Each step is one ask() with the same settings as /v1/ask."""
+    f = parse_flow(req.flow)
+    s = settings_for(req.settings)
+
+    def ask_one(body: dict) -> dict:
+        body = checked(Req(state=body["state"], questions=body["questions"], mode=req.mode), s)
+        with _lock:  # one forward pass at a time; a model switch waits for the step
+            return ask(engine(), body, req.mode, settings=s)
+
+    def lines():
+        try:
+            for event in flows.run(f, req.query, ask_one):
+                yield json.dumps(event) + "\n"
+        except HTTPException as e:
+            yield json.dumps({"event": "end", "status": "error", "step": None, "decisions": [], "message": str(e.detail)}) + "\n"
+        except Exception as e:  # never cut the stream without an end line: the page would wait forever
+            yield json.dumps({"event": "end", "status": "error", "step": None, "decisions": [], "message": f"{type(e).__name__}: {e}"}) + "\n"
+
+    return StreamingResponse(lines(), media_type="application/x-ndjson")

@@ -18,3 +18,10 @@ class CompareReq(Req):
 
 class ModelReq(BaseModel):
     name: str
+
+
+class FlowRun(BaseModel):
+    flow: dict
+    query: str
+    mode: str = "packed"
+    settings: dict = Field(default_factory=dict)
