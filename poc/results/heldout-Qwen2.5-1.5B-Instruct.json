@@ -1,0 +1,243 @@
+{
+  "calibration": {
+    "model": "Qwen/Qwen2.5-1.5B-Instruct",
+    "created": "2026-09-25",
+    "provenance": {
+      "splits_file": "datasets/splits_v2.json",
+      "splits_sha256": "54bb491d210778dc",
+      "fitted_on": {
+        "noul": {
+          "dataset": "boolq",
+          "split": "train",
+          "n": 500
+        },
+        "choice": {
+          "dataset": "ag_news",
+          "split": "train",
+          "n": 600
+        }
+      },
+      "selected_on": {
+        "split": "val",
+        "rule": "lowest negative log-likelihood"
+      },
+      "prompt_sha1": "6ea197a79d72",
+      "experiment": "E14 heldout"
+    },
+    "noul": {
+      "temperature": 1.7382520687499143,
+      "platt": {
+        "a": 0.5731662842836714,
+        "b": 0.023437643718161805
+      },
+      "selected": "temperature"
+    },
+    "choice": {
+      "temperature": {
+        "listwise": 3.424513393432863,
+        "averaged": 2.992760962927448,
+        "pointwise": 1.7204733155859255
+      },
+      "selected_mode": "pointwise"
+    },
+    "score": null
+  },
+  "val": {
+    "noul_nll": {
+      "temperature": 0.46823784973744187,
+      "platt": 0.46851457511524175
+    },
+    "choice_nll": {
+      "listwise": 0.5692582990814207,
+      "averaged": 0.5076105584747392,
+      "pointwise": 0.38050098240430796
+    }
+  },
+  "test": {
+    "noul": {
+      "raw": {
+        "accuracy": 0.7733333333333333,
+        "ece": 0.1196162103530935,
+        "brier": 0.15909782002230374,
+        "nll": 0.5509279937180697,
+        "mean_p_yes": 0.6586824053709673,
+        "accuracy_ci95": [
+          0.7266666666666667,
+          0.8233333333333334
+        ],
+        "ece_ci95": [
+          0.08883599453717507,
+          0.16840374390016172
+        ],
+        "n": 300
+      },
+      "temperature": {
+        "accuracy": 0.7733333333333333,
+        "ece": 0.06563805242704072,
+        "brier": 0.15131876041022177,
+        "nll": 0.4706976655520318,
+        "mean_p_yes": 0.6441676604090044,
+        "accuracy_ci95": [
+          0.7266666666666667,
+          0.8233333333333334
+        ],
+        "ece_ci95": [
+          0.05034276000583297,
+          0.11957883957207763
+        ],
+        "n": 300
+      },
+      "platt": {
+        "accuracy": 0.7733333333333333,
+        "ece": 0.07109886385475596,
+        "brier": 0.15150389531083922,
+        "nll": 0.47113244491343503,
+        "mean_p_yes": 0.647242289206377,
+        "accuracy_ci95": [
+          0.7266666666666667,
+          0.8233333333333334
+        ],
+        "ece_ci95": [
+          0.053505720561666005,
+          0.12315046074212214
+        ],
+        "n": 300
+      }
+    },
+    "choice": {
+      "listwise": {
+        "raw": {
+          "accuracy": 0.8225,
+          "ece": 0.15694460809012262,
+          "brier": 0.32915568088141306,
+          "accuracy_ci95": [
+            0.7825,
+            0.8575
+          ],
+          "ece_ci95": [
+            0.1272761378320807,
+            0.1977835457374786
+          ]
+        },
+        "calibrated": {
+          "accuracy": 0.8225,
+          "ece": 0.044008873668304506,
+          "brier": 0.26772914655234853,
+          "accuracy_ci95": [
+            0.7825,
+            0.8575
+          ],
+          "ece_ci95": [
+            0.032734214465793256,
+            0.08418168054700886
+          ]
+        },
+        "nll_raw": 1.1854871629101336,
+        "nll_calibrated": 0.5205821877499524
+      },
+      "averaged": {
+        "raw": {
+          "accuracy": 0.82,
+          "ece": 0.1275187976595157,
+          "brier": 0.2988993739740629,
+          "accuracy_ci95": [
+            0.7825,
+            0.8575
+          ],
+          "ece_ci95": [
+            0.099914437813024,
+            0.16546802919387762
+          ]
+        },
+        "calibrated": {
+          "accuracy": 0.82,
+          "ece": 0.03488234658970162,
+          "brier": 0.2589970941019758,
+          "accuracy_ci95": [
+            0.7825,
+            0.8575
+          ],
+          "ece_ci95": [
+            0.02635954889385678,
+            0.07604878532692
+          ]
+        },
+        "nll_raw": 1.004540608345168,
+        "nll_calibrated": 0.5033104221214024
+      },
+      "pointwise": {
+        "raw": {
+          "accuracy": 0.8525,
+          "ece": 0.08715945890777664,
+          "brier": 0.23153039990899785,
+          "accuracy_ci95": [
+            0.8175,
+            0.885
+          ],
+          "ece_ci95": [
+            0.06523175101052679,
+            0.12172504974099922
+          ]
+        },
+        "calibrated": {
+          "accuracy": 0.8525,
+          "ece": 0.05384934045066887,
+          "brier": 0.21614415396435735,
+          "accuracy_ci95": [
+            0.8175,
+            0.885
+          ],
+          "ece_ci95": [
+            0.03462613768281652,
+            0.09037922094170454
+          ]
+        },
+        "nll_raw": 0.5491538590130274,
+        "nll_calibrated": 0.4178378656680708
+      }
+    }
+  },
+  "base_rates": {
+    "boolq_test_yes": 0.62,
+    "ag_news_test_per_topic": 100
+  },
+  "splits_accessed": [
+    {
+      "dataset": "boolq",
+      "split": "train",
+      "n": 500
+    },
+    {
+      "dataset": "boolq",
+      "split": "val",
+      "n": 200
+    },
+    {
+      "dataset": "boolq",
+      "split": "test",
+      "n": 300
+    },
+    {
+      "dataset": "ag_news",
+      "split": "train",
+      "n": 600
+    },
+    {
+      "dataset": "ag_news",
+      "split": "val",
+      "n": 200
+    },
+    {
+      "dataset": "ag_news",
+      "split": "test",
+      "n": 400
+    }
+  ],
+  "use_of_splits": {
+    "train": "fit temperatures",
+    "val": "choose Noul calibrator and Choice mode",
+    "test": "report only; no value was chosen from it"
+  },
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "seconds_total": 10909.05174710801
+}

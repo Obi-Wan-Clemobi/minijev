@@ -833,6 +833,49 @@ The results show these points:
 
 The app offers the fix as the Choice mode "asked: all orders averaged". The Findings page shows this experiment.
 
+### 6.11 Held-out results (E14)
+
+Sections 6.2–6.10 are exploratory: they fitted and reported on overlapping items. E14 (`experiments.py heldout`,
+`poc/results/heldout*.json`) uses the frozen splits of docs/DATA.md. It fits on train, chooses on val (the lowest
+negative log-likelihood, NLL), and reports on test once. Each AG News article shows its options in its own random order.
+Brackets are 95% bootstrap intervals.
+
+**Noul on BoolQ** (train 500, val 200, test 300; always "yes" scores 0.620):
+
+| Model | Method | T (or a, b) | Test accuracy | Test ECE | Test NLL | Val NLL |
+|---|---|---|---:|---:|---:|---:|
+| 0.5B | raw | T = 1 | 0.693 [0.64–0.74] | 0.160 [0.13–0.22] | 0.695 | — |
+| 0.5B | temperature **(chosen on val)** | T = 2.23 | 0.693 [0.64–0.74] | 0.100 [0.08–0.16] | 0.577 | 0.577 |
+| 0.5B | platt | a = 0.416, b = 0.219 | 0.720 [0.67–0.77] | 0.085 [0.07–0.14] | 0.578 | 0.584 |
+| 1.5B | raw | T = 1 | 0.773 [0.73–0.82] | 0.120 [0.09–0.17] | 0.551 | — |
+| 1.5B | temperature **(chosen on val)** | T = 1.74 | 0.773 [0.73–0.82] | 0.066 [0.05–0.12] | 0.471 | 0.468 |
+| 1.5B | platt | a = 0.573, b = 0.023 | 0.773 [0.73–0.82] | 0.071 [0.05–0.12] | 0.471 | 0.469 |
+
+**Choice on AG News** (train 600, val 200, test 400; chance is 0.25). The temperature T is fitted per mode on train:
+
+| Model | Mode | T | Val NLL | Test accuracy | Test ECE raw → calibrated | Test NLL raw → calibrated |
+|---|---|---:|---:|---:|---:|---:|
+| 0.5B | listwise | 2.72 | 0.641 | 0.782 [0.74–0.82] | 0.183 → 0.064 [0.04–0.11] | 1.341 → 0.689 |
+| 0.5B | averaged **(chosen on val)** | 1.74 | 0.546 | 0.797 [0.76–0.83] | 0.116 → 0.053 [0.03–0.09] | 0.764 → 0.577 |
+| 0.5B | pointwise | 1.23 | 0.586 | 0.770 [0.73–0.81] | 0.084 → 0.051 [0.03–0.09] | 0.665 → 0.630 |
+| 1.5B | listwise | 3.42 | 0.569 | 0.823 [0.78–0.86] | 0.157 → 0.044 [0.03–0.08] | 1.185 → 0.521 |
+| 1.5B | averaged | 2.99 | 0.508 | 0.820 [0.78–0.86] | 0.128 → 0.035 [0.03–0.08] | 1.005 → 0.503 |
+| 1.5B | pointwise **(chosen on val)** | 1.72 | 0.381 | 0.853 [0.82–0.89] | 0.087 → 0.054 [0.03–0.09] | 0.549 → 0.418 |
+
+The results show these points:
+- **Calibration works on unseen items.** The fitted temperature lowers the test ECE by 38% at 0.5B (0.160 → 0.100) and
+  by 45% at 1.5B (0.120 → 0.066). Accuracy does not change, because a temperature never changes which side of 0.5 an
+  answer is on.
+- **Both models are over-confident.** Every fitted temperature is above 1 (1.23–3.42), so the raw probabilities are
+  too close to 0 and 1.
+- **Val chooses a different Choice mode for each size.** At 0.5B it chooses averaged; at 1.5B it chooses pointwise,
+  which is also the most accurate at that size (0.853). Listwise is never chosen: with the options in a new order for
+  every article, it has the highest raw ECE and NLL at both sizes (W1).
+- **The val choice holds on test.** The chosen mode has the lowest test NLL at both sizes.
+- **1.5B is better than 0.5B** on both tasks: 0.773 against 0.693 on BoolQ, and 0.853 against 0.797 on AG News.
+
+`poc/calibration/<model>.json` stores these fitted values and choices. `ask()` and the web app use them by default.
+
 ## 7. Next steps
 
 1. **Package the POC** (Phase 2). Move `poc/` into `src/minijev` with a pydantic API and a CLI.

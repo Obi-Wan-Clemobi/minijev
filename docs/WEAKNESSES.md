@@ -20,7 +20,7 @@ average gap between stated confidence and accuracy.
 | W4 | The 0.5B model is at chance on BoolQ | Model | High | Use 1.5B or larger; open |
 | W5 | Pointwise items on small models say "yes" to the plausible item | Method | Medium | Open |
 | W6 | Opposite questions are not consistent | Method | Medium | Not measured |
-| W7 | Answers depend on the prompt wording | Method | Medium | Open |
+| W7 | Answers depend on the prompt wording | Method | Medium | Measured (E15); template frozen |
 | W8 | Literal reading of vague questions | Model | Medium | Partly: Noul `criteria` |
 | W9 | Contextual calibration over-corrects | Calibration | Low | Avoided (opt-in) |
 | W10 | More than 25 options is not supported | Method | Low | Open |
@@ -81,7 +81,17 @@ average gap between stated confidence and accuracy.
 - **Evidence (Measured):** the answer format alone changed the picked option in E10 (69% agreement at 0.5B between
   "answer with the name" and the letter readout, WALKTHROUGH.md §6.3). The template was chosen while the documented
   cases were visible, so R5 is not a held-out test.
-- **Candidate fix:** freeze the templates, then fit calibration; keep a held-out set; test several templates.
+- **Evidence (Measured, E15):** 81 templates (3 wordings of the system line, the state label, the question label and
+  the answer line) on 200 BoolQ val questions at 0.5B. Accuracy goes from 0.64 to 0.74 (SD 0.019); one template's
+  95% interval is ±0.065, so no template is clearly more accurate. But single answers move: on average 9.8% of answers
+  flip against the production template (at most 21%), and 39.5% of the questions flip under at least one template.
+- **Which part matters most (Measured, E15):** the system line. Over the 27 templates that use each line, the mean ECE
+  is 0.173 for the production line and 0.126–0.129 for the two others; the production line also gives the highest
+  mean P(yes) (0.697 against a true rate of 0.620). The question label changes the least (mean flips 9.6–9.9%).
+- **Fix, in part:** the template is frozen and pre-registered (`poc/templates/v1-preregistration.json`), and E14 fits
+  the temperature for this template, which absorbs most of the over-confidence. A different template must be chosen
+  on val and registered again.
+- **Still open:** a template that is less biased to "yes"; the same grid at 1.5B.
 - **What Jev may do (Inferred):** a hidden template of ≈270–300 tokens per request (Observed, row 22), tuned in
   training, so users never write the prompt.
 

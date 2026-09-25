@@ -1,0 +1,43 @@
+{
+ "model": "Qwen/Qwen2.5-1.5B-Instruct",
+ "created": "2026-09-25",
+ "provenance": {
+  "splits_file": "datasets/splits_v2.json",
+  "splits_sha256": "54bb491d210778dc",
+  "fitted_on": {
+   "noul": {
+    "dataset": "boolq",
+    "split": "train",
+    "n": 500
+   },
+   "choice": {
+    "dataset": "ag_news",
+    "split": "train",
+    "n": 600
+   }
+  },
+  "selected_on": {
+   "split": "val",
+   "rule": "lowest negative log-likelihood"
+  },
+  "prompt_sha1": "6ea197a79d72",
+  "experiment": "E14 heldout"
+ },
+ "noul": {
+  "temperature": 1.7382520687499143,
+  "platt": {
+   "a": 0.5731662842836714,
+   "b": 0.023437643718161805
+  },
+  "selected": "temperature"
+ },
+ "choice": {
+  "temperature": {
+   "listwise": 3.424513393432863,
+   "averaged": 2.992760962927448,
+   "pointwise": 1.7204733155859255
+  },
+  "selected_mode": "pointwise"
+ },
+ "score": null
+}

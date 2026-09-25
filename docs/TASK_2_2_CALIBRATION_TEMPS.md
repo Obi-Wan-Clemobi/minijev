@@ -12,7 +12,7 @@ estimated or typed by hand.*
 |---|---|---|---|---|
 | Noul (yes/no) | BoolQ | train (500): a temperature, and Platt (a·z + b) | val (200): the one with the lower negative log-likelihood | test (300) |
 | Choice | AG News | train (600): one temperature per readout mode (listwise, averaged, pointwise) | val (200): the mode with the lowest negative log-likelihood | test (400) |
-| Score | — | not fitted: there is no labelled ordinal data yet | — | — |
+| Score | SST-5 | not fitted yet: SST-5 train (300) is kept for it | val (200): plain or contrastive levels (E16) | test (300) |
 
 The result is `poc/calibration/<model>.json`. It records the fitted values, the chosen Noul calibrator and Choice
 mode, and its provenance: the dataset, split and size per primitive, the splits-file checksum, the prompt fingerprint

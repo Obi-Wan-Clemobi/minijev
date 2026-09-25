@@ -745,6 +745,21 @@ Pointwise: 0%. Debiasing by the letter liking: 18% and 8%, so the
 position effect depends on the content (Inferred). For Jev (Inferred): order-invariant judging (Score levels judged
 separately, row 12) and option shuffling or averaging (row 24) fit these lessons.
 
+**R11. Held-out calibration and mode choice (E14).** Frozen splits (docs/DATA.md): fitted on train, chosen on val,
+reported on test (BoolQ 300, AG News 400). Full tables: WALKTHROUGH.md §6.11.
+- A fitted temperature lowers the Noul test ECE from 0.160 to 0.100 (0.5B) and from 0.120 to 0.066 (1.5B), at the same
+  accuracy (0.693 and 0.773).
+- Val chooses averaged Choice at 0.5B (test accuracy 0.797, ECE 0.053) and pointwise at 1.5B (0.853, ECE 0.054).
+  Listwise is never chosen when each item shows the options in its own order.
+- For Jev: TypeSafe publishes no calibration evidence (row 31). minijev now has held-out calibration numbers for these
+  two tasks; they do not transfer to other domains without new data (W3, Inferred).
+
+**R12. Template sensitivity (E15).** 81 templates on 200 BoolQ val questions, 0.5B (`poc/results/template_sensitivity.json`;
+Findings page). Accuracy ranges from 0.64 to 0.74, inside the ±0.065 interval of one template, but 9.8% of answers
+flip on average and 39.5% of questions flip under some template. The system line has the largest effect on ECE and on
+the "yes" rate. For Jev (Inferred): Jev adds ≈270–300 hidden tokens per request (row 22, Observed), so it uses a fixed template
+that users cannot change; that keeps the answers stable against wording.
+
 **What the POC does not show:**
 - Jev's accuracy, which comes from its model and training.
 - Jev's speed, which comes from its hardware.
