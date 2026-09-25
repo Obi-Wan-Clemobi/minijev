@@ -20,6 +20,7 @@ compute the same tree, and all three should give the same numbers:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import os
@@ -290,6 +291,20 @@ def score_listwise_block(q: dict) -> str:
         lines.append(f"{letter}) {render_inline(level)}")
     lines.append("Answer with the letter of the level that fits best.")
     return "\n".join(lines)
+
+
+def template_fingerprint() -> str:
+    """SHA-256 of every prompt template as the code renders it, on fixed probe inputs, plus the labels and the
+    system line. templates/v1-preregistration.json records it; tests/test_templates.py fails when it changes."""
+    probe = {
+        "system": SYSTEM, "content_free_state": CONTENT_FREE_STATE, "letters": LETTERS, "yes": YES, "no": NO,
+        "noul": noul_block({"instructions": "<Q>"}),
+        "noul_criteria": noul_block({"instructions": "<Q>", "criteria": {"true": "<T>", "false": "<F>"}}),
+        "choice": choice_block({"instructions": "<Q>", "criteria": {"<a>": "<A>", "<b>": None}}),
+        "proposal": proposal_block({"instructions": "<Q>"}, "<P>"),
+        "score_listwise": score_listwise_block({"instructions": "<Q>", "criteria": ["<l0>", "<l1>"]}),
+    }
+    return hashlib.sha256(json.dumps(probe, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
 def validate(req: dict) -> None:

@@ -1,7 +1,8 @@
 {
   "version": "v1",
   "locked_at": "2026-09-24",
-  "sha256": "c98e15d33a8a0ecd51e52cfa81f716d1e0c081946c0372b8ee574f2d23d77310",
+  "code_fingerprint_sha256": "369b3374fd8b0da2fad9bca2643208dbffe65931544f7b8569c15e4b6716a3a7",
+  "fingerprint_rule": "minijev_poc.template_fingerprint(): SHA-256 of the templates as the code renders them on fixed probe inputs, plus SYSTEM, LETTERS, YES, NO and the content-free state. tests/test_templates.py checks it.",
   "note": "These templates were chosen with E1-E13 test cases visible. Future changes must use disjoint held-out splits for validation. This preregistration establishes baseline templates for contamination tracking.",
   "primitives": {
     "system": {
@@ -224,17 +225,19 @@
   },
   "code_references": {
     "file": "poc/minijev_poc.py",
-    "functions": {
-      "noul_block": "lines 203-211",
-      "choice_block": "lines 214-219",
-      "proposal_block": "lines 222-230",
-      "score_listwise_block": "lines 233-238"
-    },
-    "constants": {
-      "SYSTEM": "line 34",
-      "LETTERS": "line 37",
-      "YES": "line 38",
-      "NO": "line 38"
-    }
+    "functions": [
+      "noul_block",
+      "choice_block",
+      "proposal_block",
+      "score_listwise_block",
+      "branches_for"
+    ],
+    "constants": [
+      "SYSTEM",
+      "LETTERS",
+      "YES",
+      "NO",
+      "CONTENT_FREE_STATE"
+    ]
   }
 }

@@ -72,6 +72,9 @@ This is enforced, not only promised:
 - The calibration file (`poc/calibration/<model>.json`) records the dataset, split and size it was fitted on, and the
   checksum of the splits file.
 - Readouts never use the labels, so computing them for val and test is not tuning on them.
+- **Option order.** Each AG News article shows its four topics in its own random order, seeded by the article's
+  source index (reproducible). Listwise questions depend on the order (docs/WEAKNESSES.md W1); one fixed order for
+  every item would hide that sensitivity and could flatter listwise when val chooses the mode.
 
 ## 5. Statistics per split
 

@@ -37,6 +37,22 @@ SOURCES = {
                 "labels": {"0": "World", "1": "Sports", "2": "Business", "3": "Sci/Tech"}, "file": "agnews_test_full.json"},
 }
 ACCESS: list[dict] = []  # every load_split() call in this process: (dataset, split, n)
+_TUNING = [False]
+
+
+class tuning:
+    """Context for choosing anything (a template, a mode, a threshold): reading the test split inside it raises.
+
+        with data.tuning():
+            rows = data.load_split("boolq", "val")    # allowed
+            rows = data.load_split("boolq", "test")   # raises PermissionError
+    """
+
+    def __enter__(self):
+        _TUNING[0] = True
+
+    def __exit__(self, *exc):
+        _TUNING[0] = False
 
 
 def row_sha(row: dict) -> str:
@@ -149,6 +165,8 @@ def build() -> None:
 
 def load_split(name: str, split: str) -> list[dict]:
     """The rows of one split, each with its label as 'y'. Fails loudly if any row differs from the frozen split."""
+    if split == "test" and _TUNING[0]:
+        raise PermissionError(f"{name}/test was read inside data.tuning(): the test split is for reporting only")
     spec = json.loads(SPLITS.read_text())["datasets"][name]
     rows = download(name)
     out = []

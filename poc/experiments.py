@@ -320,16 +320,16 @@ def latency(engine: Engine, lengths=(250, 1000), counts=(1, 4, 13), repeats: int
         state = gdpr_state(engine, n_tokens)
         for n in counts:
             req = {"state": state, "questions": {k: GDPR_QUESTIONS[k] for k in keys[:n]}}
-            # Rotation order: modes are tested in [A, B, C, A, B] pattern to avoid systematic order effects
-            mode_order = [MODES[i % len(MODES)] for i in range(repeats)]
+            # Every mode runs `repeats` times. Each round shifts the order of the modes (ABC, BCA, CAB, ...), so that
+            # a slow drift of the CPU speed spreads over all modes instead of landing on the one timed last.
             mode_times = {mode: [] for mode in MODES}
             usage_per_mode = {}
-
-            for mode in mode_order:
-                t0 = time.perf_counter()
-                _, usage = raw_scores(engine, req, mode)
-                mode_times[mode].append(time.perf_counter() - t0)
-                usage_per_mode[mode] = usage
+            for r in range(repeats):
+                for mode in MODES[r % len(MODES):] + MODES[:r % len(MODES)]:
+                    t0 = time.perf_counter()
+                    _, usage = raw_scores(engine, req, mode)
+                    mode_times[mode].append(time.perf_counter() - t0)
+                    usage_per_mode[mode] = usage
 
             for mode in MODES:
                 times = mode_times[mode]
@@ -345,7 +345,7 @@ def latency(engine: Engine, lengths=(250, 1000), counts=(1, 4, 13), repeats: int
                       f"[Q1={q1:.3f}, Q3={q3:.3f}]  (input tokens {usage_per_mode[mode]['input_tokens']})")
     return {"repeats": repeats, "rows": out,
             "note": f"median and IQR over {repeats} runs with rotation order; warm-up 3x; CPU fp32; 6 threads",
-            "rotation_pattern": "modes rotated in [A, B, C, A, B, ...] order to mitigate systematic order effects"}
+            "rotation_pattern": "each mode runs every round; the mode order shifts each round (ABC, BCA, CAB, ...)"}
 
 
 # Jev's published answers for documented inputs (docs.typesafe.ai, jev-1.13.0).
@@ -1683,7 +1683,10 @@ def readout_cache(engine: Engine, dataset: str, split: str) -> list[dict]:
     import data
     key = {"model": engine.name, "prompt_sha1": prompt_fingerprint(engine), "choice_block_sha1":
            hashlib.sha1(choice_block({"instructions": "?", "criteria": AG_OPTIONS}).encode()).hexdigest()[:12],
-           "splits_sha256": data.splits_fingerprint()}
+           "splits_sha256": data.splits_fingerprint(),
+           # AG News options are shown in a per-item random order (seeded by the source index), so that the one
+           # order-sensitive mode, listwise, is judged under ordinary orders and not flattered by one fixed order.
+           **({"option_order": "per-item shuffle, random.Random(source_index)"} if dataset == "ag_news" else {})}
     path = RESULTS / "readouts" / f"{tag(engine.name).lstrip('-') or 'Qwen2.5-0.5B-Instruct'}" / f"{dataset}_{split}.json"
     rows = data.load_split(dataset, split)
     if path.exists():
@@ -1697,9 +1700,13 @@ def readout_cache(engine: Engine, dataset: str, split: str) -> list[dict]:
             raw, _ = raw_scores(engine, {"state": r["passage"], "questions": {"q": q}})
             items.append({"source_index": r["source_index"], "y": r["y"], "z": raw["q"]["logits"][0] - raw["q"]["logits"][1]})
         else:
-            q = {"type": "choice", "instructions": AG_QUESTION, "criteria": AG_OPTIONS}
+            keys = list(AG_OPTIONS)
+            order = random.Random(r["source_index"]).sample(range(len(keys)), len(keys))
+            q = {"type": "choice", "instructions": AG_QUESTION, "criteria": {keys[j]: AG_OPTIONS[keys[j]] for j in order}}
             raw, _ = raw_scores(engine, {"state": r["text"], "questions": {m: {**q, "choice_mode": m} for m in CHOICE_MODES}})
-            items.append({"source_index": r["source_index"], "y": r["y"], **{m: raw[m]["logits"] for m in CHOICE_MODES},
+            canon = lambda z: [z[order.index(c)] for c in range(len(keys))]  # back to the fixed label order
+            items.append({"source_index": r["source_index"], "y": r["y"], "order": order,
+                          **{m: canon(raw[m]["logits"]) for m in CHOICE_MODES},
                           "mass": min(min(raw[m]["mass"]) for m in CHOICE_MODES)})
         if (i + 1) % 100 == 0:
             print(f"  {dataset}/{split} {i + 1}/{len(rows)}  ({time.perf_counter() - t0:.0f}s)", flush=True)
