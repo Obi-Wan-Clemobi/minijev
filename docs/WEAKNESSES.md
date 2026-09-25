@@ -27,7 +27,7 @@ average gap between stated confidence and accuracy.
 | W11 | Long states are untested | Model | Medium | Open |
 | W12 | The packed pass computes the hidden attention blocks | Speed | Low (CPU), Medium (GPU) | Open |
 | W13 | No state cache across requests; one request at a time | Speed | Medium | Open |
-| W14 | Pointwise Scores repeat the question for every level | Speed | Low | Open |
+| W14 | Pointwise Scores repeat the question for every level | Speed | Low | Fixed |
 | W15 | Small samples, and tests that are not held out | Measurement | Medium | Partly: held-out test of 300 / 400 (E14); E1–E13 stay exploratory |
 | W16 | Timing noise on one laptop | Measurement | Low | Partly: medians, rotation |
 | W17 | Datasets are not pinned | Reproducibility | Low | Fixed: frozen splits with per-row SHA-256, checked on every load |
@@ -148,7 +148,15 @@ average gap between stated confidence and accuracy.
 
 ### W14. Pointwise Scores repeat the question for every level
 - **What:** a 5-level Score sends its question text 5 times.
-- **Candidate fix:** share the question as a second prefix level in the tree (state → question → level).
+- **Fix (Measured):** a two-level tree (state → question head → level). The question text runs once; each level
+  branch sees the state, the head and itself. `MINIJEV_SHARE_QUESTION=true` in `poc/minijev.env` turns it on;
+  `Settings()` leaves it off, so the recorded experiments do not change.
+- **Rule:** a head is shared only when the tokens are identical to the joined text. If a token merges across the
+  split, that question keeps the flat layout.
+- **Result (Measured, Qwen2.5-0.5B, GDPR article cut to 512 tokens, 587-token prefix):** the 3 GDPR Score questions
+  use 542 branch tokens instead of 691 (−21.6%); the full 13-question request uses 1,543 input tokens instead of
+  1,692 (−8.8%). The largest logit difference against the flat layout is 1.9e-5 (packed mode). Tests check naive, kv
+  and packed within 1e-3 (`tests/test_engine.py`).
 
 ## Measurement
 

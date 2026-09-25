@@ -812,14 +812,14 @@ cd web && npm test && npm run lint
 | Task | Owner | Status | Started | Completed | Notes |
 |------|-------|--------|---------|-----------|-------|
 | 1.1 Pin Datasets | - | Done | 2026-09-24 | 2026-09-24 | datasets/splits_v2.json: per-row SHA-256, frozen; `data.py check` |
-| 1.2 Pre-Register Template | - | Not Started | - | - | - |
-| 1.3 Improve Timing | - | Not Started | - | - | - |
+| 1.2 Pre-Register Template | - | Done | 2026-09-24 | 2026-09-24 | Code fingerprint in templates/v1-preregistration.json |
+| 1.3 Improve Timing | - | Done | 2026-09-24 | 2026-09-24 | E3 runs every mode in rotated order |
 | 1.4 Expand Samples | - | Done | 2026-09-24 | 2026-09-24 | Held-out test: 300 BoolQ, 400 AG News (docs/DATA.md) |
 | 2.1 Mode chosen on val | - | Done | 2026-09-24 | 2026-09-24 | E14 |
 | 2.2 Fitted Temps | - | Done | 2026-09-24 | 2026-09-24 | E14; calibration/<model>.json |
 | 2.3 Update Web UI | - | Done | 2026-09-24 | 2026-09-24 | Calibration panel, Data page |
 | 3.1 Package Structure | - | Done | 2026-09-25 | 2026-09-25 | src/minijev; torch pinned to 2.2.2 (Intel Mac), not >=2.4 |
-| 4.1 Two-Level Tree | - | Not Started | - | - | - |
+| 4.1 Two-Level Tree | - | Done | 2026-09-25 | 2026-09-25 | Score branches −21.6% tokens (GDPR); logits within 2e-5; W14 |
 | 4.2 State Cache | - | Not Started | - | - | - |
 | 4.3 Template Sensitivity | - | Not Started | - | - | - |
 | 4.4 Contrastive Levels | - | Not Started | - | - | - |

@@ -5,9 +5,11 @@ from __future__ import annotations
 import math
 import time
 
-from .engine import Branch, Engine
+from dataclasses import replace
+
+from .engine import Branch, Engine, groups
 from .primitives import answer, class_logits, rounded, softmax
-from .prompt import LETTERS, choice_block, noul_block, proposal_block, render_inline, score_listwise_block
+from .prompt import LETTERS, choice_block, noul_block, proposal_block, render, render_inline, score_listwise_block
 from .settings import Settings
 
 
@@ -23,7 +25,36 @@ def validate(req: dict) -> None:
             raise ValueError(f"{qid}: unknown type {t!r}")
 
 
-def branches_for(engine: Engine, qid: str, q: dict) -> list[Branch]:
+def share_head(engine: Engine, branches: list[Branch], blocks: list[str], head_text: str) -> list[Branch]:
+    """The two-level tree: move the text that every block starts with (the question) into a shared head, but only
+    when the tokens stay exactly the same as the joined text, so that the model reads the same tokens either way."""
+    head = engine.tok.encode(head_text, add_special_tokens=False)
+    children = [engine.suffix_ids(block[len(head_text):]) for block in blocks]
+    if not all(block.startswith(head_text) for block in blocks) or any(
+            head + c != b.ids for c, b in zip(children, branches)):
+        return branches  # a token merges across the split: keep the flat layout
+    return [replace(b, ids=c, head=tuple(head)) for b, c in zip(branches, children)]
+
+
+def branches_for(engine: Engine, qid: str, q: dict, share_question: bool = False) -> list[Branch]:
+    """The branches of one question. share_question: pointwise items and averaged rotations share the question text
+    in one head (state -> question -> item), when the tokens allow it (share_head)."""
+    flat = _branches(engine, qid, q)
+    if not share_question or len(flat) < 2:
+        return flat
+    question = f"QUESTION: {render(q['instructions'])}\n"
+    if q["type"] == "choice" and q.get("choice_mode") == "averaged":
+        keys = list(q["criteria"])
+        blocks = [choice_block({**q, "criteria": {keys[i]: q["criteria"][keys[i]] for i in b.order}}) for b in flat]
+        return share_head(engine, flat, blocks, question + "OPTIONS:\n")
+    if flat[0].pointwise:
+        items = ([f"{key}: {render_inline(d)}" if d is not None else key for key, d in q["criteria"].items()]
+                 if q["type"] == "choice" else [render_inline(level) for level in q["criteria"]])
+        return share_head(engine, flat, [proposal_block(q, it) for it in items], question)
+    return flat
+
+
+def _branches(engine: Engine, qid: str, q: dict) -> list[Branch]:
     if q["type"] == "noul":
         return [Branch(engine.suffix_ids(noul_block(q)), [engine.yes, engine.no], qid)]
     k = len(q["criteria"])
@@ -51,11 +82,11 @@ def branches_for(engine: Engine, qid: str, q: dict) -> list[Branch]:
     ]
 
 
-def raw_scores(engine: Engine, req: dict, mode: str = "packed") -> tuple[dict, dict]:
+def raw_scores(engine: Engine, req: dict, mode: str = "packed", share_question: bool = False) -> tuple[dict, dict]:
     """Per question: the uncalibrated logits the answer is built from, plus label mass and usage."""
     validate(req)
     prefix = engine.prefix_ids(req["state"])
-    branches = [b for qid, q in req["questions"].items() for b in branches_for(engine, qid, q)]
+    branches = [b for qid, q in req["questions"].items() for b in branches_for(engine, qid, q, share_question)]
     t0 = time.perf_counter()
     lp = engine.readouts(prefix, branches, mode)
     elapsed = time.perf_counter() - t0
@@ -76,7 +107,7 @@ def raw_scores(engine: Engine, req: dict, mode: str = "packed") -> tuple[dict, d
     for qid, p in averaged.items():  # log of the mean probability: softmax(logits) gives the average back
         raw[qid]["logits"] = [math.log(max(v, 1e-12)) for v in p]
     usage = {
-        "input_tokens": len(prefix) + sum(len(b.ids) for b in branches),
+        "input_tokens": len(prefix) + sum(len(b.ids) for b in branches) + sum(len(h) for h, _ in groups(branches)),
         "output_tokens": 0,
         "latency_ms": round(elapsed * 1000),  # minijev extension; not in Jev's usage object
     }
@@ -99,7 +130,7 @@ def ask(engine: Engine, req: dict, mode: str = "packed", settings: Settings | No
     """
     s = settings or Settings.load()
     req = {**req, "questions": {qid: with_modes(q, s) for qid, q in req["questions"].items()}}
-    raw, usage = raw_scores(engine, req, mode)
+    raw, usage = raw_scores(engine, req, mode, s.share_question)
     answers, warnings, applied = {}, [], {}
     for qid, q in req["questions"].items():
         readout_mode = q.get("choice_mode") if q["type"] == "choice" else None

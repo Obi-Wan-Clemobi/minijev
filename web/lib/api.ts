@@ -32,10 +32,15 @@ export const api = {
 };
 
 export type TreeBranch = {
-  question: string; label: string; type: string; pointwise: boolean;
+  question: string; label: string; type: string; pointwise: boolean; head: number | null;
   length: number; start: number; positions: [number, number]; tokens: string[];
 };
-export type TreeResponse = { prefix: { length: number; tokens: string[]; state_span: [number, number] }; branches: TreeBranch[]; total: number; max_position: number };
+// A head is the question text that the items of one pointwise question share (the two-level tree, Task 4.1).
+export type TreeHead = { question: string; length: number; start: number; positions: [number, number]; tokens: string[] };
+export type TreeResponse = {
+  prefix: { length: number; tokens: string[]; state_span: [number, number] };
+  heads: TreeHead[]; branches: TreeBranch[]; total: number; max_position: number;
+};
 
 export type MethodResult = {
   seconds: number; output_tokens: number; answers: Record<string, string | null>;

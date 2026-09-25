@@ -38,6 +38,7 @@ class Settings:
     choice_mode: str = "listwise"  # listwise | pointwise | averaged | selected (the mode chosen on val)
     score_mode: str = "pointwise"  # or "listwise": all levels in one prompt (ablation)
     min_label_mass: float = 0.5  # warn when less next-token probability than this is on the labels
+    share_question: bool = False  # two-level tree: the question text runs once, shared by its items (Task 4.1)
     fitted: dict = field(default_factory=dict, compare=False, repr=False)  # the loaded calibration file
 
     @classmethod
@@ -61,6 +62,8 @@ class Settings:
             v = values[k]
             if f.name in _FLOAT_OR_FITTED:
                 kw[f.name] = None if v.lower() in ("", "fitted", "none") else float(v)
+            elif isinstance(f.default, bool):
+                kw[f.name] = v.lower() in ("1", "true", "yes")  # bool("false") is True
             else:
                 kw[f.name] = type(f.default)(v)
         return cls(**kw).with_calibration()

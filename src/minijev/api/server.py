@@ -110,17 +110,25 @@ def branch_labels(qid: str, q: dict) -> list[str]:
 
 @app.post("/v1/tree")
 def v1_tree(req: Req):
-    """The packed layout: prefix and branch tokens, their positions, and the block mask."""
+    """The packed layout: prefix, shared question heads and branch tokens, and their positions."""
     s = settings_for(req.settings)
     body = checked(req, s)
     e = engine()
     prefix = e.prefix_ids(body["state"])
-    branches, start = [], len(prefix)
+    branches, heads, start = [], [], len(prefix)
     for qid, q in body["questions"].items():
-        for b, label in zip(branches_for(e, qid, q), branch_labels(qid, q)):
+        bs = branches_for(e, qid, q, s.share_question)
+        head = bs[0].head if bs else ()
+        if head:  # the two-level tree: the question text once, then one short branch per item
+            heads.append({"question": qid, "length": len(head), "start": start,
+                          "positions": [len(prefix), len(prefix) + len(head) - 1],
+                          "tokens": [e.tok.decode([t]) for t in head]})
+            start += len(head)
+        for b, label in zip(bs, branch_labels(qid, q)):
+            first = len(prefix) + len(b.head)
             branches.append({"question": qid, "label": label, "type": q["type"], "pointwise": b.pointwise,
-                             "length": len(b.ids), "start": start,
-                             "positions": [len(prefix), len(prefix) + len(b.ids) - 1],
+                             "head": len(heads) - 1 if b.head else None, "length": len(b.ids), "start": start,
+                             "positions": [first, first + len(b.ids) - 1],
                              "tokens": [e.tok.decode([t]) for t in b.ids]})
             start += len(b.ids)
     # Where the user's state sits inside the prefix: after the chat template and "STATE:\n", before the blank line.
@@ -130,8 +138,8 @@ def v1_tree(req: Req):
     while hi > lo and not e.tok.decode(prefix[hi - 1:hi]).strip():
         hi -= 1
     return {"prefix": {"length": len(prefix), "tokens": [e.tok.decode([t]) for t in prefix], "state_span": [lo, hi]},
-            "branches": branches, "total": start,
-            "max_position": len(prefix) + max((b["length"] for b in branches), default=0) - 1}
+            "heads": heads, "branches": branches, "total": start,
+            "max_position": max((b["positions"][1] for b in branches), default=len(prefix) - 1)}
 
 
 def to_choice(q: dict) -> dict:

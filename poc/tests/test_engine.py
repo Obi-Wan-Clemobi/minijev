@@ -86,3 +86,30 @@ def test_averaged_choice_ignores_the_option_order(engine):
         probs.append({k: torch.tensor(v).exp().item() for k, v in zip(order, z)})
     for p in probs[1:]:
         assert max(abs(p[k] - probs[0][k]) for k in keys) < 1e-4
+
+
+SHARED = {**QUESTIONS,
+          "team_pw": {**QUESTIONS["team"], "choice_mode": "pointwise"},
+          "team_avg": {**QUESTIONS["team"], "choice_mode": "averaged"}}
+
+
+@pytest.mark.parametrize("mode", MODES)
+def test_shared_question_head_keeps_the_logits(engine, mode):
+    # Task 4.1: the two-level tree (state -> question -> item) gives the same logits as one flat branch per item.
+    req = {"state": STATE, "questions": SHARED}
+    flat, flat_usage = raw_scores(engine, req, mode)
+    tree, tree_usage = raw_scores(engine, req, mode, share_question=True)
+    assert gap(flat, tree) < 1e-3
+    assert tree_usage["input_tokens"] < flat_usage["input_tokens"]
+
+
+def test_pack_tree_mask(engine):
+    # prefix 2, one head of 2 with two children (1 and 2 tokens), then a flat branch of 1 token.
+    ids_len = 2 + 2 + 1 + 2 + 1
+    pos, mask, last = engine.pack_tree(2, [(2, [1, 2]), (0, [1])])
+    m = mask.reshape(ids_len, ids_len)
+    see = lambda i, j: bool(m[i, j] == 0) if m.dtype.is_floating_point else bool(m[i, j])
+    assert see(4, 2) and see(4, 3) and see(5, 3) and see(6, 3)   # children see their head
+    assert not see(5, 4) and not see(4, 5)                       # siblings do not see each other
+    assert not see(7, 2) and see(7, 0)                           # the flat branch sees the state, not the head
+    assert pos[0].tolist() == [0, 1, 2, 3, 4, 4, 5, 2] and last.tolist() == [4, 6, 7]

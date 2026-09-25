@@ -22,6 +22,18 @@ class Branch:
     question: str  # question id this branch belongs to
     pointwise: bool = False  # one of several yes/no branches (a Score level or a Choice option)
     order: list[int] | None = None  # averaged mode: the option index shown at each letter position
+    head: tuple[int, ...] = ()  # shared question tokens (two-level tree); sibling branches of a question share it
+
+
+def groups(branches: list[Branch]) -> list[tuple[tuple[int, ...], list[Branch]]]:
+    """Consecutive branches of one question that share a head, as (head, branches); unshared branches alone."""
+    out: list = []
+    for b in branches:
+        if b.head and out and out[-1][0] == b.head and out[-1][1][0].question == b.question:
+            out[-1][1].append(b)
+        else:
+            out.append((b.head, [b]))
+    return out
 
 
 class Engine:
@@ -68,19 +80,25 @@ class Engine:
     def readouts(self, prefix: list[int], branches: list[Branch], mode: str = "packed") -> torch.Tensor:
         """Next-token log-probs (full vocab) at the last token of every branch: [n_branches, vocab]."""
         if mode == "naive":
-            rows = [self.model(torch.tensor([prefix + b.ids]), logits_to_keep=1).logits[0, -1] for b in branches]
+            rows = [self.model(torch.tensor([prefix + list(b.head) + b.ids]), logits_to_keep=1).logits[0, -1]
+                    for b in branches]
         elif mode == "kv":
             cache = DynamicCache()
             self.model(torch.tensor([prefix]), past_key_values=cache, use_cache=True, logits_to_keep=1)
             rows = []
-            for b in branches:
-                out = self.model(torch.tensor([b.ids]), past_key_values=cache, use_cache=True, logits_to_keep=1)
-                rows.append(out.logits[0, -1])
-                cache.crop(len(prefix))  # back to the shared state for the next branch
+            for head, group in groups(branches):
+                if head:  # the shared question: once, then every level on top of it
+                    self.model(torch.tensor([list(head)]), past_key_values=cache, use_cache=True, logits_to_keep=1)
+                for b in group:
+                    out = self.model(torch.tensor([b.ids]), past_key_values=cache, use_cache=True, logits_to_keep=1)
+                    rows.append(out.logits[0, -1])
+                    cache.crop(len(prefix) + len(head))  # back to state (+ question) for the next branch
+                cache.crop(len(prefix))
         elif mode == "packed":
-            pos, mask, last = self.pack(len(prefix), [len(b.ids) for b in branches])
+            tree = groups(branches)
+            pos, mask, last = self.pack_tree(len(prefix), [(len(h), [len(b.ids) for b in g]) for h, g in tree])
             out = self.model(
-                torch.tensor([prefix + [t for b in branches for t in b.ids]]),
+                torch.tensor([prefix + [t for h, g in tree for t in list(h) + [t for b in g for t in b.ids]]]),
                 attention_mask=mask,
                 position_ids=pos,
                 logits_to_keep=last,
@@ -89,6 +107,40 @@ class Engine:
         else:
             raise ValueError(mode)
         return torch.log_softmax(torch.stack(rows).float(), dim=-1)
+
+    def pack_tree(self, n_prefix: int, tree: list[tuple[int, list[int]]]):
+        """Position ids, additive 4D mask and readout indices for [prefix][head1][b1a][b1b]...[head2][b2a]...
+
+        tree: per group, (length of its shared head, lengths of its branches); a head of length 0 means no sharing.
+        Token i may attend to token j iff j <= i and (j is in the prefix, or in i's own node, or in the head that is
+        the parent of i's branch). A head's positions start at n_prefix; its branches' positions continue after it.
+        """
+        total = n_prefix + sum(h + sum(ls) for h, ls in tree)
+        segment = torch.zeros(total, dtype=torch.long)  # 0 = prefix; every head and branch has its own id
+        parent = [0]  # parent[node id] = the node it may also see (0 = the prefix only)
+        pos = torch.arange(total)
+        last, start = [], n_prefix
+        for h, lengths in tree:
+            head_id = 0
+            if h:
+                head_id = len(parent)
+                parent.append(0)
+                segment[start : start + h] = head_id
+                pos[start : start + h] = torch.arange(n_prefix, n_prefix + h)
+                start += h
+            for n in lengths:
+                node = len(parent)
+                parent.append(head_id)
+                segment[start : start + n] = node
+                pos[start : start + n] = torch.arange(n_prefix + h, n_prefix + h + n)
+                last.append(start + n - 1)
+                start += n
+        par = torch.tensor(parent)[segment]
+        causal = torch.ones(total, total, dtype=torch.bool).tril()
+        visible = causal & ((segment[None, :] == 0) | (segment[None, :] == segment[:, None]) | (segment[None, :] == par[:, None]))
+        mask = torch.zeros(total, total, dtype=torch.float32)
+        mask.masked_fill_(~visible, torch.finfo(torch.float32).min)
+        return pos[None, :], mask[None, None], torch.tensor(last)
 
     def pack(self, n_prefix: int, lengths: list[int]):
         """Position ids, additive 4D mask and readout indices for [prefix][b1][b2]...

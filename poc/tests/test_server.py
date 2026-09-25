@@ -47,8 +47,13 @@ def test_settings_change_the_answer_not_the_logits(client):
 def test_tree_layout_adds_up(client):
     t = client.post("/v1/tree", json={**REQ, "settings": DEFAULTS}).json()
     assert len(t["branches"]) == 1 + 1 + 4  # Noul, listwise Choice, 4 Score levels
-    assert t["total"] == t["prefix"]["length"] + sum(b["length"] for b in t["branches"])
-    assert all(b["positions"][0] == t["prefix"]["length"] for b in t["branches"])  # positions restart
+    n = t["prefix"]["length"]
+    assert t["total"] == n + sum(h["length"] for h in t["heads"]) + sum(b["length"] for b in t["branches"])
+    for b in t["branches"]:  # positions restart after the state, or after the shared question head
+        assert b["positions"][0] == n + (t["heads"][b["head"]]["length"] if b["head"] is not None else 0)
+    assert [h["question"] for h in t["heads"]] == ["tone"]  # the 4 Score levels share the question text
+    flat = client.post("/v1/tree", json={**REQ, "settings": {**DEFAULTS, "share_question": False}}).json()
+    assert flat["heads"] == [] and flat["total"] > t["total"]
     lo, hi = t["prefix"]["state_span"]
     assert "".join(t["prefix"]["tokens"][lo:hi]).rstrip() == REQ["state"]  # BPE can merge the last character with the blank line
     assert client.post("/v1/ask", json={**REQ, "settings": DEFAULTS}).json()["usage"]["input_tokens"] == t["total"]
