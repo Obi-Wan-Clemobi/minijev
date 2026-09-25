@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import OrderedDict
 from dataclasses import dataclass
 
 import torch
@@ -36,6 +37,40 @@ def groups(branches: list[Branch]) -> list[tuple[tuple[int, ...], list[Branch]]]
     return out
 
 
+class StateCache:
+    """The key/value tensors of recent states, so a repeated state is not prefilled again (Task 4.2, W13).
+
+    Keyed by the prefix token ids. Least recently used entries go first. size 0 turns it off. The stored tensors are
+    never changed: the model appends to a copy (torch.cat) and crop() only slices.
+    Memory: Qwen2.5-0.5B keeps about 24 KB per token (24 layers x 2 x 2 heads x 64 x 4 bytes), so a 600-token state
+    is about 15 MB; Qwen2.5-1.5B keeps about 57 KB per token.
+    """
+
+    def __init__(self, size: int = 0):
+        self.size, self.entries = size, OrderedDict()
+        self.hits = self.misses = self.tokens_saved = 0
+
+    def get(self, key: tuple[int, ...]):
+        if key in self.entries:
+            self.entries.move_to_end(key)
+            self.hits += 1
+            self.tokens_saved += len(key)
+            return self.entries[key]
+        self.misses += 1
+        return None
+
+    def put(self, key: tuple[int, ...], layers) -> None:
+        self.entries[key] = layers
+        self.entries.move_to_end(key)
+        while len(self.entries) > self.size:
+            self.entries.popitem(last=False)
+
+    def stats(self) -> dict:
+        n = self.hits + self.misses
+        return {"enabled": self.size > 0, "size": self.size, "entries": len(self.entries), "hits": self.hits,
+                "misses": self.misses, "hit_rate": self.hits / n if n else None, "tokens_saved": self.tokens_saved}
+
+
 class Engine:
     def __init__(self, model: str | None = None, attn: str | None = None, threads: int | None = None):
         s = Settings.load() if None in (model, attn, threads) else Settings()
@@ -46,6 +81,7 @@ class Engine:
             model, torch_dtype=torch.float32, attn_implementation=attn
         ).eval()
         self.name = model
+        self.state_cache = StateCache(0)  # off; the server sets the size from MINIJEV_STATE_CACHE
         self.yes = self._variants(YES)
         self.no = self._variants(NO)
         self.letters = [self._variants([c]) for c in LETTERS]
@@ -83,8 +119,7 @@ class Engine:
             rows = [self.model(torch.tensor([prefix + list(b.head) + b.ids]), logits_to_keep=1).logits[0, -1]
                     for b in branches]
         elif mode == "kv":
-            cache = DynamicCache()
-            self.model(torch.tensor([prefix]), past_key_values=cache, use_cache=True, logits_to_keep=1)
+            cache = self.prefilled(prefix)
             rows = []
             for head, group in groups(branches):
                 if head:  # the shared question: once, then every level on top of it
@@ -97,16 +132,29 @@ class Engine:
         elif mode == "packed":
             tree = groups(branches)
             pos, mask, last = self.pack_tree(len(prefix), [(len(h), [len(b.ids) for b in g]) for h, g in tree])
-            out = self.model(
-                torch.tensor([prefix + [t for h, g in tree for t in list(h) + [t for b in g for t in b.ids]]]),
-                attention_mask=mask,
-                position_ids=pos,
-                logits_to_keep=last,
-            )
+            tokens = prefix + [t for h, g in tree for t in list(h) + [t for b in g for t in b.ids]]
+            if self.state_cache.size:  # the state from the cache (or prefilled once and stored); the tree on top
+                n = len(prefix)
+                out = self.model(torch.tensor([tokens[n:]]), past_key_values=self.prefilled(prefix), use_cache=True,
+                                 attention_mask=mask[:, :, n:, :], position_ids=pos[:, n:], logits_to_keep=last - n)
+            else:
+                out = self.model(torch.tensor([tokens]), attention_mask=mask, position_ids=pos, logits_to_keep=last)
             rows = list(out.logits[0])
         else:
             raise ValueError(mode)
         return torch.log_softmax(torch.stack(rows).float(), dim=-1)
+
+    def prefilled(self, prefix: list[int]) -> DynamicCache:
+        """A cache that holds the state's keys and values: from the state cache when it has them, else computed."""
+        key = tuple(prefix)
+        layers = self.state_cache.get(key) if self.state_cache.size else None
+        if layers is not None:
+            return DynamicCache.from_legacy_cache(layers)
+        cache = DynamicCache()
+        self.model(torch.tensor([prefix]), past_key_values=cache, use_cache=True, logits_to_keep=1)
+        if self.state_cache.size:
+            self.state_cache.put(key, cache.to_legacy_cache())
+        return cache
 
     def pack_tree(self, n_prefix: int, tree: list[tuple[int, list[int]]]):
         """Position ids, additive 4D mask and readout indices for [prefix][head1][b1a][b1b]...[head2][b2a]...

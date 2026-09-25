@@ -113,3 +113,29 @@ def test_pack_tree_mask(engine):
     assert not see(5, 4) and not see(4, 5)                       # siblings do not see each other
     assert not see(7, 2) and see(7, 0)                           # the flat branch sees the state, not the head
     assert pos[0].tolist() == [0, 1, 2, 3, 4, 4, 5, 2] and last.tolist() == [4, 6, 7]
+
+
+@pytest.mark.parametrize("mode", ["kv", "packed"])
+def test_state_cache_keeps_the_logits(engine, mode):
+    # Task 4.2: a state from the cache gives the same logits as a state prefilled again.
+    from minijev.engine import StateCache
+    req = {"state": STATE, "questions": SHARED}
+    plain = raw_scores(engine, req, mode, share_question=True)[0]
+    engine.state_cache = StateCache(4)
+    try:
+        first = raw_scores(engine, req, mode, share_question=True)[0]   # miss: prefill and store
+        second = raw_scores(engine, req, mode, share_question=True)[0]  # hit: no prefill
+        stats = engine.state_cache.stats()
+    finally:
+        engine.state_cache = StateCache(0)
+    assert gap(plain, first) < 1e-3 and gap(plain, second) < 1e-3
+    assert (stats["hits"], stats["misses"], stats["entries"]) == (1, 1, 1)
+
+
+def test_state_cache_evicts_the_oldest():
+    from minijev.engine import StateCache
+    c = StateCache(2)
+    for k in [(1,), (2,), (1,), (3,)]:  # (1,) is used again, so (2,) is the oldest when (3,) arrives
+        if c.get(k) is None:
+            c.put(k, "kv")
+    assert list(c.entries) == [(1,), (3,)] and c.hits == 1

@@ -22,7 +22,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from transformers import DynamicCache
 
-from ..engine import Engine
+from ..engine import Engine, StateCache
 from ..fixtures import GDPR_QUESTIONS, JEV_DOC_CASES, SHOES, gdpr_state
 from ..generation import generate, generate_logprobs, match_option, options_text, parse_json, same_format_run
 from ..judge import ask, branches_for, validate, with_modes
@@ -43,18 +43,24 @@ _lock = threading.RLock()  # re-entrant: engine() may load the model while the l
 _engine: Engine | None = None
 
 
+def cached(e: Engine) -> Engine:
+    """Give the engine the state cache that minijev.env asks for (MINIJEV_STATE_CACHE entries; 0 = off)."""
+    e.state_cache = StateCache(Settings.load().state_cache)
+    return e
+
+
 def engine() -> Engine:
     global _engine
     if _engine is None:
         with _lock:
             if _engine is None:
-                _engine = Engine()  # model, threads and attention from minijev.env
+                _engine = cached(Engine())  # model, threads and attention from minijev.env
     return _engine
 
 
 def settings_for(overrides: dict) -> Settings:
     base = Settings.load()
-    known = {f.name for f in dataclasses.fields(Settings)} - {"fitted"}
+    known = {f.name for f in dataclasses.fields(Settings)} - {"fitted", "state_cache"}  # the cache is per server
     bad = sorted(set(overrides) - known)
     if bad:
         raise HTTPException(400, f"unknown settings {bad}; known: {sorted(known)}")
@@ -82,7 +88,8 @@ def checked(req: Req, s: Settings) -> dict:
 
 @app.get("/v1/health")
 def health():
-    return {"ok": True, "model": engine().name}
+    e = engine()
+    return {"ok": True, "model": e.name, "state_cache": e.state_cache.stats()}
 
 
 @app.post("/v1/ask")
@@ -334,5 +341,5 @@ def v1_set_model(req: ModelReq):
         raise HTTPException(400, f"model must be one of {MODELS}")
     with _lock:
         if _engine is None or _engine.name != req.name:
-            _engine = Engine(req.name)
+            _engine = cached(Engine(req.name))
     return {"model": _engine.name}

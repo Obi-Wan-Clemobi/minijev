@@ -91,3 +91,13 @@ def test_same_format_returns_both_sides(client):
 def test_calibration_endpoint(client):
     r = client.get("/v1/calibration").json()
     assert r["model"] == MODEL and r["mode"] in ("fitted", "none")
+
+
+def test_health_reports_the_state_cache(client):
+    before = client.get("/v1/health").json()["state_cache"]
+    for _ in range(2):
+        client.post("/v1/ask", json={**REQ, "settings": DEFAULTS})
+    after = client.get("/v1/health").json()["state_cache"]
+    if after["enabled"]:  # MINIJEV_STATE_CACHE > 0 in minijev.env
+        assert after["hits"] >= before["hits"] + 1
+    assert set(after) == {"enabled", "size", "entries", "hits", "misses", "hit_rate", "tokens_saved"}

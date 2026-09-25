@@ -38,6 +38,7 @@ class Settings:
     choice_mode: str = "listwise"  # listwise | pointwise | averaged | selected (the mode chosen on val)
     score_mode: str = "pointwise"  # or "listwise": all levels in one prompt (ablation)
     min_label_mass: float = 0.5  # warn when less next-token probability than this is on the labels
+    state_cache: int = 0  # the server keeps the key/values of this many recent states (Task 4.2); 0 = off
     share_question: bool = False  # two-level tree: the question text runs once, shared by its items (Task 4.1)
     fitted: dict = field(default_factory=dict, compare=False, repr=False)  # the loaded calibration file
 
