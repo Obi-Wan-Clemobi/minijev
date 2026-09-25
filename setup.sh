@@ -54,6 +54,6 @@ fi
 
 bold "Done. Start the playground with one of:"
 echo "  tilt up                                   # both servers, with a dashboard at http://localhost:10350"
-echo "  cd poc && uv run uvicorn server:app --port 8000   # then, in a second terminal:"
+echo "  cd poc && uv run minijev serve --port 8000   # then, in a second terminal:"
 echo "  cd web && npm run dev                     # open http://localhost:3000"
 echo "  docker compose up --build                 # everything in Docker"

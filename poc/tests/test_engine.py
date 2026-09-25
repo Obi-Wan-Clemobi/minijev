@@ -5,7 +5,7 @@ import torch
 from transformers import DynamicCache
 
 from experiments import GDPR_QUESTIONS, as_choice, generate_batched, generate_logprobs
-from minijev_poc import MODEL, MODES, Engine, choice_block, raw_scores
+from minijev import MODEL, MODES, Engine, choice_block, raw_scores
 
 pytestmark = pytest.mark.model
 

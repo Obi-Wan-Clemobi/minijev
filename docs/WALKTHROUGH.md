@@ -203,10 +203,10 @@ xychart-beta
 
 | File | Contents |
 |---|---|
-| `poc/minijev_poc.py` | Prompt building, the three evaluators, the primitives, confidence, and `ask()`, which implements the Jev contract. About 330 lines. |
+| `src/minijev/` | The package: prompt building (`prompt.py`), the three evaluators (`engine.py`), the readout and `ask()`, which implements the Jev contract (`judge.py`), the primitives and confidence (`primitives.py`), calibration (`calibrate.py`, `settings.py`), the generation baselines (`generation.py`), the API and the CLI. |
 | `poc/experiments.py` | One function per experiment. Run `uv run python experiments.py <name>`. |
 | `poc/results/*.json` | Raw outputs of every run. The numbers below come from these files. |
-| `poc/server.py` | A local HTTP API over the POC (FastAPI) for the web playground. |
+| `src/minijev/api/` | A local HTTP API (FastAPI) for the web playground; start it with `minijev serve`. |
 | `web/` | The web playground: a question editor, live calibration dials, a readout-vs-generation comparison, and views of the prefix tree and the attention mask. |
 
 ### 4.2 One request, from start to end

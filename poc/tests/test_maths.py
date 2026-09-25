@@ -6,7 +6,7 @@ import pytest
 import torch
 
 from experiments import bootstrap_ci, parse_probs_lenient
-from minijev_poc import Engine, answer, choice_confidence, score_confidence, softmax
+from minijev import Engine, answer, choice_confidence, score_confidence, softmax
 
 
 def test_choice_confidence_endpoints():
@@ -81,7 +81,7 @@ def test_bootstrap_ci_brackets_the_mean():
 
 
 def test_settings_file_env_and_defaults(tmp_path, monkeypatch):
-    from minijev_poc import Settings
+    from minijev import Settings
     f = tmp_path / "x.env"
     f.write_text("MINIJEV_TEMP_NOUL=2.5   # comment\nMINIJEV_CHOICE_MODE=pointwise\n")
     monkeypatch.setenv("MINIJEV_TEMP_SCORE", "3")
@@ -96,7 +96,7 @@ def test_settings_file_env_and_defaults(tmp_path, monkeypatch):
 
 
 def test_shipped_env_file_uses_fitted_calibration(monkeypatch):
-    from minijev_poc import SETTINGS_FILE, Settings
+    from minijev import SETTINGS_FILE, Settings
     for k in [k for k in __import__("os").environ if k.startswith("MINIJEV_")]:
         monkeypatch.delenv(k)
     s = Settings.load(SETTINGS_FILE)
@@ -106,13 +106,13 @@ def test_shipped_env_file_uses_fitted_calibration(monkeypatch):
 
 def test_fitted_calibration_is_used_and_overridable(tmp_path, monkeypatch):
     import json
-    import minijev_poc
-    from minijev_poc import Settings
+    import minijev.settings
+    from minijev import Settings
     (tmp_path / "Qwen2.5-0.5B-Instruct.json").write_text(json.dumps({
         "provenance": {"fitted_on": "train"},
         "noul": {"temperature": 2.0, "platt": {"a": 0.5, "b": 0.3}, "selected": "platt"},
         "choice": {"temperature": {"listwise": 3.0, "pointwise": 1.5, "averaged": 2.5}, "selected_mode": "pointwise"}}))
-    monkeypatch.setattr(minijev_poc, "CALIBRATION_DIR", tmp_path)
+    monkeypatch.setattr(minijev.settings, "CALIBRATION_DIR", tmp_path)
     s = Settings(calibration="fitted", choice_mode="selected").with_calibration()
     assert s.calibrator("noul") == (2.0, 0.3, "fitted")  # Platt: T = 1/a, b
     assert s.resolved_choice_mode() == "pointwise"

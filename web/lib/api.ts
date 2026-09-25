@@ -7,7 +7,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     r = await fetch(API + path, { ...init, headers: { "content-type": "application/json", ...init?.headers } });
   } catch {
-    throw new Error(`Cannot reach the minijev API at ${API}. Start it: cd poc && uv run uvicorn server:app --port 8000`);
+    throw new Error(`Cannot reach the minijev API at ${API}. Start it: cd poc && uv run minijev serve --port 8000`);
   }
   if (!r.ok) {
     const body = await r.json().catch(() => ({}));

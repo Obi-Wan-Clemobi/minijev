@@ -16,7 +16,7 @@ Analysis of 10 research reports and 20 peer reviews covering minijev's 19 docume
 
 4. **Measurement discipline (W15-W18) gates everything else**: Current template was chosen with test cases visible (W7/W15), datasets are unpinned (W17), and timing has ±10-20% noise (W16). No weakness can be declared "fixed" without first closing W15-W18.
 
-5. **Infrastructure (W19) is the true blocker**: The POC is two flat files (minijev_poc.py 412 lines, server.py 313 lines, experiments.py 1473 lines). Every advanced proposal (LoRA, Redis, multi-stage serving) assumes a package structure that does not exist.
+5. **Infrastructure (W19)**: the code is now the `minijev` package (`src/minijev/`, PLAN.md Task 3.1), with a CLI and the API; `poc/` keeps the experiments and the data.
 
 **Recommended sequence:** Fix measurement first (W15-W18, ~2 weeks), then package structure (W19, ~1 week), then calibration expansion (W2/W3, ~1 week), then the validated quick wins (W1 pointwise default, W14 two-level tree). Defer or drop training-based solutions until infrastructure exists.
 

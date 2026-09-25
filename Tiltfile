@@ -7,9 +7,9 @@
 
 local_resource(
     "api",
-    serve_cmd="uv run uvicorn server:app --port 8000",
+    serve_cmd="uv run minijev serve --port 8000",
     serve_dir="poc",
-    deps=["poc/server.py", "poc/minijev_poc.py", "poc/experiments.py", "poc/minijev.env"],
+    deps=["src/minijev", "poc/data.py", "poc/minijev.env", "poc/calibration"],
     readiness_probe=probe(period_secs=3, http_get=http_get_action(port=8000, path="/v1/health")),
     links=[link("http://localhost:8000/docs", "API docs")],
     labels=["app"],

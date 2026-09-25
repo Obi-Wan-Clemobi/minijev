@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 import data
-from minijev_poc import template_fingerprint
+from minijev import template_fingerprint
 
 PREREG = Path(__file__).resolve().parents[1] / "templates" / "v1-preregistration.json"
 

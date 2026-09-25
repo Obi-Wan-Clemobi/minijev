@@ -2,7 +2,9 @@
 #   docker compose up --build        then open http://localhost:3000
 services:
   api:
-    build: ./poc
+    build:
+      context: .
+      dockerfile: poc/Dockerfile
     ports: ["8000:8000"]
     volumes:
       - hf-cache:/hf              # model weights survive rebuilds

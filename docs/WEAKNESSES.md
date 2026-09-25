@@ -32,7 +32,7 @@ average gap between stated confidence and accuracy.
 | W16 | Timing noise on one laptop | Measurement | Low | Partly: medians, rotation |
 | W17 | Datasets are not pinned | Reproducibility | Low | Fixed: frozen splits with per-row SHA-256, checked on every load |
 | W18 | No cloud-model baseline | Measurement | Medium | Open (needs an API key) |
-| W19 | The app is a POC: no packaging, no persistence, Docker untested | Engineering | Low | Open |
+| W19 | The app is a POC: no packaging, no persistence, Docker untested | Engineering | Low | Partly: package, CLI and API exist (src/minijev); Docker build untested |
 
 ---
 
@@ -178,7 +178,7 @@ average gap between stated confidence and accuracy.
 ## Engineering
 
 ### W19. The app is a POC
-- No pydantic API or CLI package (DESIGN.md §12 Phase 2).
-- The last response is lost when a page reloads.
-- The Docker path is not tested.
-- The Compare page asks every question as a Choice, so a Noul or a Score is not compared in its own form there.
+- **Done:** the code is the `minijev` package (`src/minijev/`): `pip install -e .` or `uv sync` in poc/, the
+  `minijev ask` and `minijev serve` commands, and the API. The old and the new code give byte-identical logits (Measured).
+- **Open:** the last response is lost when a page reloads; the Docker build is not tested (the Docker daemon was not
+  running); the Compare page asks every question as a Choice.

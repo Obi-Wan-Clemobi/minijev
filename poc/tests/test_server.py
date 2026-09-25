@@ -3,8 +3,8 @@
 import pytest
 from fastapi.testclient import TestClient
 
-import server
-from minijev_poc import MODEL, Engine, Settings, ask
+import minijev.api.server as server
+from minijev import MODEL, Engine, Settings, ask
 
 pytestmark = pytest.mark.model
 

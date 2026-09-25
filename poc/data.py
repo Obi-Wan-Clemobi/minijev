@@ -65,7 +65,7 @@ def file_sha(path: Path) -> str:
 
 def download(name: str) -> list[dict]:
     """The full source split, cached in data/. Pages of 100 rows from the Hugging Face datasets-server API."""
-    from experiments import fetch  # certificate-checked download
+    from minijev.fixtures import fetch  # certificate-checked download
 
     src = SOURCES[name]
     path = DATA / src["file"]

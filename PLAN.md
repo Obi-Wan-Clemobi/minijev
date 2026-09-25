@@ -818,7 +818,7 @@ cd web && npm test && npm run lint
 | 2.1 Mode chosen on val | - | Done | 2026-09-24 | 2026-09-24 | E14 |
 | 2.2 Fitted Temps | - | Done | 2026-09-24 | 2026-09-24 | E14; calibration/<model>.json |
 | 2.3 Update Web UI | - | Done | 2026-09-24 | 2026-09-24 | Calibration panel, Data page |
-| 3.1 Package Structure | - | Not Started | - | - | **Blocks Phase 4** |
+| 3.1 Package Structure | - | Done | 2026-09-25 | 2026-09-25 | src/minijev; torch pinned to 2.2.2 (Intel Mac), not >=2.4 |
 | 4.1 Two-Level Tree | - | Not Started | - | - | - |
 | 4.2 State Cache | - | Not Started | - | - | - |
 | 4.3 Template Sensitivity | - | Not Started | - | - | - |

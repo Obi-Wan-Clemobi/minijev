@@ -5,7 +5,7 @@ readout with generation, and look inside the packed forward pass. It calls the A
 
 Run both parts (two terminals):
 
-1. `cd poc && uv run uvicorn server:app --port 8000`. The first start downloads the model (~1 GB for 0.5B).
+1. `cd poc && uv run minijev serve --port 8000`. The first start downloads the model (~1 GB for 0.5B).
 2. `cd web && npm install && npm run dev`, then open http://localhost:3000.
 
 The API address comes from `NEXT_PUBLIC_API_URL` (default `http://localhost:8000`).
