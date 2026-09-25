@@ -1489,11 +1489,67 @@ def criteria_ablation(engine: Engine) -> dict:
             "summary": summary, "rows": rows}
 
 
+# E19: a needle in a long state (W11, PLAN Task 6.5). One fact is put into the GDPR article at the start, the middle or
+# the end, at 1k-8k tokens. Two Nouls ask about it: one true, one false. The same true question on the article without
+# the fact is the control. kv mode with SDPA attention: no dense mask, so it fits in CPU memory.
+NEEDLES = [
+    ("The backup generator in building C was last serviced on 14 March.",
+     "Does the text say that the backup generator in building C was last serviced on 14 March?",
+     "Does the text say that the backup generator in building C was last serviced on 21 June?"),
+    ("Maria Okafor was appointed head of the audit committee.",
+     "Does the text say that Maria Okafor was appointed head of the audit committee?",
+     "Does the text say that Daniel Weiss was appointed head of the audit committee?"),
+    ("The access code for the storage room is 4172.",
+     "Does the text say that the access code for the storage room is 4172?",
+     "Does the text say that the access code for the storage room is 9381?"),
+]
+
+
+def needle(engine: Engine, lengths=(1000, 2000, 4000, 8000), positions=(0.05, 0.5, 0.95)) -> dict:
+    ids = engine.tok.encode(gdpr_text(), add_special_tokens=False)
+    assert len(ids) >= max(lengths), f"the article has {len(ids)} tokens"
+    rows = []
+    for n in lengths:
+        hay = engine.tok.decode(ids[:n])
+        cut = [i + 2 for i in range(len(hay) - 1) if hay[i] == "." and hay[i + 1] in " \n"]  # sentence ends
+        control = {f"t{k}": {"type": "noul", "instructions": t} for k, (_, t, _) in enumerate(NEEDLES)}
+        t0 = time.perf_counter()
+        raw, usage = raw_scores(engine, {"state": hay, "questions": control}, "kv")
+        rows.append({"tokens": usage["input_tokens"], "position": None, "needle": None, "seconds": time.perf_counter() - t0,
+                     **{f"absent_{k}": sigmoid(raw[f"t{k}"]["logits"][0] - raw[f"t{k}"]["logits"][1]) for k in range(len(NEEDLES))}})
+        for pos in positions:
+            at = min(cut, key=lambda c: abs(c - pos * len(hay)))
+            for k, (fact, true_q, false_q) in enumerate(NEEDLES):
+                state = hay[:at] + fact + " " + hay[at:]
+                t0 = time.perf_counter()
+                raw, usage = raw_scores(engine, {"state": state, "questions": {
+                    "true": {"type": "noul", "instructions": true_q}, "false": {"type": "noul", "instructions": false_q}}}, "kv")
+                z = {q: raw[q]["logits"][0] - raw[q]["logits"][1] for q in ("true", "false")}
+                rows.append({"tokens": usage["input_tokens"], "position": pos, "needle": k, "seconds": time.perf_counter() - t0,
+                             "p_true": sigmoid(z["true"]), "p_false": sigmoid(z["false"]),
+                             "mass": min(min(raw[q]["mass"]) for q in raw)})
+            print(f"  needle {n} tokens at {pos:.2f}", flush=True)
+    summary = []
+    for n in lengths:
+        ctrl = next(r for r in rows if r["position"] is None and abs(r["tokens"] - n) < 400)
+        for pos in positions:
+            rs = [r for r in rows if r["position"] == pos and abs(r["tokens"] - n) < 400]
+            summary.append({"length": n, "position": pos,
+                            "mean_p_true": statistics.mean(r["p_true"] for r in rs),
+                            "mean_p_false": statistics.mean(r["p_false"] for r in rs),
+                            "mean_p_absent": statistics.mean(ctrl[f"absent_{k}"] for k in range(len(NEEDLES))),
+                            "correct": (sum(r["p_true"] > 0.5 for r in rs) + sum(r["p_false"] < 0.5 for r in rs)) / (2 * len(rs)),
+                            "seconds_per_request": statistics.mean(r["seconds"] for r in rs)})
+    return {"note": "uncalibrated (Settings()); kv mode; attention " + engine.model.config._attn_implementation,
+            "haystack": "GDPR article, pinned revision", "needles": NEEDLES, "summary": summary, "rows": rows}
+
+
 EXPERIMENTS = {"demo": demo, "tree": tree, "latency": latency, "jevdocs": jevdocs, "permutation": permutation,
                "calibration": calibration, "llm_vs_minijev": llm_vs_minijev,
                "fanout": lambda engine: {"rows": fan_out(engine, 500)}, "quality": quality, "same_format": same_format, "order_bias": order_bias, "heldout": heldout,
                "template_sensitivity": template_sensitivity, "contrastive_levels": contrastive_levels,
-               "opposite_pairs": opposite_pairs, "criteria_ablation": criteria_ablation}
+               "opposite_pairs": opposite_pairs, "criteria_ablation": criteria_ablation,
+               "needle": needle}
 
 
 def tag(model: str) -> str:

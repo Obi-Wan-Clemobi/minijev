@@ -11,8 +11,10 @@ from __future__ import annotations
 
 import dataclasses
 import importlib
+import importlib.util
 import json
 import os
+import sys
 import threading
 import time
 from pathlib import Path
@@ -314,10 +316,14 @@ def v1_criteria():
 @app.get("/v1/data")
 def v1_data():
     """The data card's facts, computed from the files now, and every claim of data.py check with its result."""
-    try:
-        data = importlib.import_module("data")  # poc/data.py: present when the API runs from poc/
-    except ImportError:
+    path = RESULTS.parent / "data.py"  # poc/data.py, next to poc/results
+    if not path.exists():
         raise HTTPException(404, "The data checks need poc/data.py: run the API from poc/.")
+    if "data" not in sys.modules:
+        spec = importlib.util.spec_from_file_location("data", path)
+        sys.modules["data"] = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(sys.modules["data"])
+    data = sys.modules["data"]
     claims: list = []
     ok = data.check(claims, quiet=True)
     heldout = {}

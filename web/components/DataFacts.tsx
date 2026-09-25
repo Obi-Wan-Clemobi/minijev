@@ -7,7 +7,7 @@ import { Icon } from "./Icon";
 import { Tip } from "./Tip";
 
 const SPLITS = ["train", "val", "test"] as const;
-const COLORS = ["var(--accent)", "var(--gen)", "var(--accent2)", "var(--ok)"];
+const COLORS = ["var(--accent)", "var(--gen)", "var(--accent2)", "var(--ok)", "var(--warn)"];
 
 function Interval({ v, lo, hi }: { v: number; lo: number; hi: number }) {
   return <span className="font-mono">{v.toFixed(3)} <span className="text-muted">[{lo.toFixed(2)}–{hi.toFixed(2)}]</span></span>;
@@ -37,7 +37,9 @@ export function DataFacts() {
             {showClaims ? "Hide the checks" : "Show the checks"}
           </button>
         </div>
-        <p className="text-xs text-muted">Frozen splits file <span className="font-mono">datasets/splits_v2.json</span> · SHA-256 <span className="font-mono">{d.summary.splits_sha256.slice(0, 16)}…</span> · seed {d.summary.seed} · created {d.summary.created}</p>
+        <p className="text-xs text-muted">Frozen splits files: {[...new Map(Object.values(d.summary.datasets).map((ds: any) => [ds.splits_file, ds.splits_sha256])).entries()].map(([f, sha], i) => (
+          <span key={f as string}>{i ? " · " : ""}<span className="font-mono">{f as string}</span> (SHA-256 <span className="font-mono">{(sha as string).slice(0, 16)}…</span>)</span>
+        ))} · seed {d.summary.seed} · created {d.summary.created}</p>
         {showClaims && (
           <ul className="flex flex-col gap-1 text-[13px]">
             {d.claims.map((c: any, i: number) => (
@@ -54,7 +56,7 @@ export function DataFacts() {
           return (
             <div key={name} className="rounded-xl border border-line bg-card p-5 flex flex-col gap-3">
               <div className="flex items-baseline justify-between gap-2 flex-wrap">
-                <h3 className="text-[15px] font-semibold">{name === "boolq" ? "BoolQ · yes/no" : "AG News · topics"}</h3>
+                <h3 className="text-[15px] font-semibold">{({ boolq: "BoolQ · yes/no", ag_news: "AG News · topics", sst5: "SST-5 · 5-level sentiment" } as Record<string, string>)[name] ?? name}</h3>
                 <span className="text-xs text-muted font-mono">{ds.source.hf_id} · {ds.source.split} · {ds.source.rows} rows</span>
               </div>
               {SPLITS.map((s) => {
