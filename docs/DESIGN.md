@@ -424,7 +424,7 @@ calibration error with no loss of accuracy.
   teacher's probabilities, not its sampled answers. Frontier APIs no longer return logits, so the teacher must be an
   open-weight model. Jev's founder gives this argument in his distillation post (RESEARCH.md §9).
 
-**Compute:** LoRA on a 0.5B model on your CPU is possible but slow (hours for a few thousand examples). If it is too
+**Compute:** LoRA on a 0.5B model on your CPU is possible but slow (Measured: 2.4 h for 3,400 examples, E20). If it is too
 slow, run `train/` in a free Colab GPU notebook. The code is identical.
 
 ---
@@ -438,7 +438,7 @@ Machine: Intel i7-8850H (6 cores), 32 GB RAM, x86_64 macOS, no CUDA. PyTorch can
 | Python | **3.12** via `uv` | PyTorch's last Intel-Mac build (2.2.2) does not support 3.13 |
 | torch | **2.2.2** (CPU) | last x86_64 macOS wheels (confirmed with `uv pip install --dry-run`) |
 | numpy | **< 2** | torch 2.2.2 was compiled against numpy 1.x |
-| transformers, peft | **transformers 4.49.0** (verified); peft to match | Phase 0 passed: it loads Qwen2.5-0.5B/1.5B-Instruct on torch 2.2.2 + numpy 1.26.4, passes custom 4D attention masks through unchanged, and accepts `logits_to_keep` index tensors. Newer families (Qwen3+) need newer transformers; whether that runs on torch 2.2.2 is unknown (not tested) |
+| transformers, peft | **transformers 4.49.0** (verified); **peft 0.21.0** (verified, uv group `train`) | Phase 0 passed: it loads Qwen2.5-0.5B/1.5B-Instruct on torch 2.2.2 + numpy 1.26.4, passes custom 4D attention masks through unchanged, and accepts `logits_to_keep` index tensors. Newer families (Qwen3+) need newer transformers; whether that runs on torch 2.2.2 is unknown (not tested) |
 | model (dev) | Qwen2.5-0.5B-Instruct (verified) | fast iteration on CPU; calibratable but weak: 0.652 on BoolQ vs a 0.615 base rate |
 | model (quality) | Qwen2.5-1.5B-Instruct (verified) | 0.782 on BoolQ, much closer to Jev on Score; 2.2× slower readout, 2.6–2.9× slower generation (measured) |
 | API | FastAPI + pydantic | mirrors the Jev HTTP API |

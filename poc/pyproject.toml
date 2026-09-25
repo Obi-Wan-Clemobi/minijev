@@ -20,6 +20,9 @@ dev = [
     "httpx>=0.27",
     "pytest>=8",
 ]
+train = [
+    "peft>=0.21.0",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -296,6 +296,7 @@ def v1_results():
             "jevdocs": (load(f"jevdocs{suffix}.json") or {}).get("summary"),
             "order_bias": load(f"order_bias{suffix}.json"),
             "template_sensitivity": load(f"template_sensitivity{suffix}.json"),
+            "lora": load(f"lora{suffix}.json"),
             "quality": {task: {k: v for k, v in r.items() if k != "rows"}
                         for task, r in ((load(f"quality{suffix}.json") or {}).get("tasks") or {}).items()} or None,
         }

@@ -784,6 +784,31 @@ prompt change does not give it.
 at 0.5B but made other answers too low; at 1.5B they reduced the mean gap to Jev (0.26 → 0.22) without fixing the
 literal case. The effect depends on the model and the question.
 
+**R17. A LoRA fine-tune with option shuffles (E20).** One LoRA adapter (1.08 M trained weights, 0.2% of the model;
+a 4.35 MB file) for Qwen2.5-0.5B. It was trained on the frozen train splits: 500 BoolQ Nouls and 600 AG News Choices,
+each Choice in 2 new random option orders per pass. The loss is the log loss of the readout itself: cross-entropy over
+the label classes at the answer position. Settings were fixed before the run: rank 8, attention projections,
+learning rate 2e-4, 2 passes, 425 optimizer steps of 8 examples. It took 2.4 h on the laptop CPU. Val chose the second
+pass. Test results, raw (`poc/results/lora.json`; paired 95% intervals):
+
+| Test (0.5B) | Base | LoRA | Change |
+|---|---:|---:|---:|
+| BoolQ accuracy (n = 300) | 0.693 | 0.770 | +0.077 [+0.030, +0.127] |
+| BoolQ log loss | 0.695 | 0.494 | −0.202 [−0.278, −0.128] |
+| BoolQ ECE | 0.160 | 0.063 | — |
+| AG News listwise accuracy (n = 400) | 0.782 | 0.873 | +0.090 [+0.052, +0.130] |
+| AG News listwise ECE | 0.183 | 0.061 | — |
+| AG News pointwise accuracy (not trained) | 0.770 | 0.890 | — |
+| Listwise flips over 4 option orders | 0.223 | 0.090 | −0.133 [−0.180, −0.085] |
+| Temperature fitted on val, Noul | 2.60 | 1.20 | — |
+
+The fine-tuned 0.5B model matches base 1.5B on BoolQ (0.773), and it is closer to calibrated without a temperature.
+Both temperatures were fitted on val, because the adapter has seen train (E14 fitted 2.23 for the base model on train).
+The val temperature does not help the adapter: its BoolQ test ECE is 0.063 raw and 0.076 with the temperature.
+Limits: the test items come from the same datasets as the training items, so this shows in-domain learning. The
+effect on other tasks (SST-5 Scores, the GDPR questions, Jev's documented cases) is not measured. The labels are hard
+(0 or 1), not the soft labels of DESIGN.md §7. Pretraining contamination is unknown (DATA.md §8).
+
 **What the POC does not show:**
 - Jev's accuracy, which comes from its model and training.
 - Jev's speed, which comes from its hardware.
@@ -818,7 +843,8 @@ each documented property.
 Experiments that do not need a Jev key:
 - **Distillation.** Fine-tune the 1.5B model with LoRA on soft labels from averaged Claude samples. Measure agreement
   and ECE against the base model (DESIGN.md §7). This tests the part of §3.9 that is easiest to copy.
-- **Invariance training.** Add option-shuffle augmentation to that fine-tune, then run `permutation` again.
+- **Invariance training.** Done with hard labels at 0.5B (R17): listwise flips fell from 22% to 9%. Still open: soft
+  labels, 1.5B, and a test on held-out domains.
 
 ---
 

@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
 from collections import OrderedDict
 from dataclasses import dataclass
+from pathlib import Path
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, DynamicCache
@@ -72,7 +74,10 @@ class StateCache:
 
 
 class Engine:
-    def __init__(self, model: str | None = None, attn: str | None = None, threads: int | None = None):
+    def __init__(self, model: str | None = None, attn: str | None = None, threads: int | None = None,
+                 adapter: str | None = None):
+        """adapter: a LoRA directory (poc/train_lora.py). It is merged into the weights, so every mode runs as before.
+        Needs peft (uv group "train")."""
         s = Settings.load() if None in (model, attn, threads) else Settings()
         model, attn, threads = model or s.model, attn or s.attn, threads or s.threads
         torch.set_num_threads(threads)
@@ -81,6 +86,13 @@ class Engine:
             model, torch_dtype=torch.float32, attn_implementation=attn
         ).eval()
         self.name = model
+        self.adapter = self.adapter_sha256 = None
+        if adapter:
+            from peft import PeftModel
+            self.model = PeftModel.from_pretrained(self.model, adapter).merge_and_unload().eval()
+            weights = next(p for p in (Path(adapter) / "adapter_model.safetensors", Path(adapter) / "adapter_model.bin")
+                           if p.exists())
+            self.adapter, self.adapter_sha256 = str(adapter), hashlib.sha256(weights.read_bytes()).hexdigest()
         self.state_cache = StateCache(0)  # off; the server sets the size from MINIJEV_STATE_CACHE
         self.yes = self._variants(YES)
         self.no = self._variants(NO)

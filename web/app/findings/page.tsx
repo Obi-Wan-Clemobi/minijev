@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
 import { IntervalRow } from "@/components/Charts";
+import { FineTune } from "@/components/FineTune";
 import { OrderBias } from "@/components/OrderBias";
 import { TemplateGrid } from "@/components/TemplateGrid";
 import { Tip } from "@/components/Tip";
@@ -131,6 +132,8 @@ export default function Findings() {
       <OrderBias data={res[size].order_bias ?? null} size={size} />
 
       <TemplateGrid data={res[size].template_sensitivity ?? null} size={size} />
+
+      <FineTune data={res[size].lora ?? null} size={size} />
 
       <div className="grid xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-6">
         <section className="rounded-xl border border-line bg-card p-6 flex flex-col gap-3">

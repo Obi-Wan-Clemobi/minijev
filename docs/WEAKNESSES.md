@@ -14,10 +14,10 @@ average gap between stated confidence and accuracy.
 
 | # | Weakness | Area | Severity | Status |
 |---|---|---|---|---|
-| W1 | The option order changes listwise answers | Method | High | Partly: the default is the order-robust mode chosen on val (E14); listwise still available |
+| W1 | The option order changes listwise answers | Method | High | Partly: order-robust default (E14); shuffle training, flips 22% → 9% (E20) |
 | W2 | Raw probabilities are overconfident | Calibration | High | Partly: fitted for Noul and Choice on train (E14); Score open |
 | W3 | Calibration does not transfer beyond its data, and Score has none | Calibration | High | Open |
-| W4 | The 0.5B model is at chance on BoolQ | Model | High | Use 1.5B or larger; open |
+| W4 | The 0.5B model is at chance on BoolQ | Model | High | Partly: LoRA lifts 0.5B to 0.770, as base 1.5B (E20) |
 | W5 | Pointwise items on small models say "yes" to the plausible item | Method | Medium | Open; contrastive levels tried and rejected (E16) |
 | W6 | Opposite questions are not consistent | Method | Medium | Measured (E17); opt-in pair step |
 | W7 | Answers depend on the prompt wording | Method | Medium | Measured (E15); template frozen |
@@ -53,11 +53,15 @@ average gap between stated confidence and accuracy.
     Flips only fall to 18% and 8%: the position effect depends on the content.
   - *Pointwise:* judge each option alone. 0% flips, by construction; one branch per option. Best at 1.5B:
     accuracy 0.908 and ECE 0.073, against 0.840 and 0.143 as-is.
+  - *Training with shuffled options (E20, Measured, 400 AG News test articles, each in 4 rotated orders, 0.5B):* a
+    LoRA fine-tune saw every train article in new option orders. Listwise flips fell from 0.223 [0.18–0.26] to
+    0.090 [0.06–0.12]. The letter picks moved from A 20% · D 29% to 24–26% each. It keeps one branch. Flips are not
+    at 0%, and the test articles come from the same dataset as the training articles (RESEARCH.md §7.3 R17).
 - **What Jev may do (Inferred):** Jev judges Score levels "separately", without "a level's number or its neighbours"
   (Stated, row 12): that removes position effects for Scores. Large Choices go through an independent scoring stage
   first (Stated, row 11). Jev's probability maps come back in a different key order from the request (Observed,
-  row 24), which fits internal option shuffling or averaging. Training on shuffled options (RESEARCH.md §3.9) would
-  also remove the bias. RESEARCH.md §8 test 1 can tell these apart with a Jev key.
+  row 24), which fits internal option shuffling or averaging. Training on shuffled options also reduces the bias
+  (E20, above). RESEARCH.md §8 test 1 can tell these apart with a Jev key.
 
 ### W5. Pointwise items on small models say "yes" to the plausible item
 - **What:** a pointwise branch asks "is this level right? yes/no" with no comparison. A small model says yes to
@@ -146,7 +150,13 @@ average gap between stated confidence and accuracy.
 
 ### W4. The 0.5B model is at chance on BoolQ
 - **Evidence (Measured):** accuracy 0.630 [0.565–0.695] against a 0.62 base rate (E11). 1.5B reaches 0.820.
-- **Candidate fix:** use 1.5B or a larger model; fine-tune (distillation, RESEARCH.md §3.9).
+  On the held-out test split (E14), 0.5B scores 0.693 [0.64–0.74] against a 0.620 base rate.
+- **Fine-tune (Measured, E20, BoolQ test, n = 300):** a LoRA adapter trained on the 500 BoolQ train questions (and
+  AG News) lifts 0.5B from 0.693 to 0.770 [0.72–0.82]. The paired change is +0.077 [+0.030, +0.127]. Base 1.5B scores
+  0.773 on the same items. Log loss falls from 0.695 to 0.494. The effect on other kinds of questions is unknown: the
+  adapter was trained and tested on the same two datasets (RESEARCH.md §7.3 R17).
+- **Candidate fix:** use 1.5B or a larger model; fine-tune on the target task; test on held-out domains; distillation
+  with soft labels (RESEARCH.md §3.9).
 - **What Jev may do (Inferred):** a larger model (≈15–20B active parameters, RESEARCH.md §3.9) trained for decisions.
 
 ### W8. Literal reading of vague questions

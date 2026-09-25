@@ -139,3 +139,14 @@ def test_state_cache_evicts_the_oldest():
         if c.get(k) is None:
             c.put(k, "kv")
     assert list(c.entries) == [(1,), (3,)] and c.hits == 1
+
+
+def test_untrained_adapter_keeps_the_logits(engine, tmp_path):
+    # A new LoRA adapter starts with B = 0, so merging it must not change a readout. Checks the --adapter load path.
+    peft = pytest.importorskip("peft")  # uv group "train"
+    model = peft.get_peft_model(Engine(MODEL, attn="eager", threads=6).model,
+                                peft.LoraConfig(r=8, target_modules=["q_proj", "v_proj"], task_type="CAUSAL_LM"))
+    model.save_pretrained(tmp_path)
+    tuned = Engine(MODEL, attn="eager", threads=6, adapter=str(tmp_path))
+    req = {"state": STATE, "questions": QUESTIONS}
+    assert tuned.adapter_sha256 and gap(raw_scores(engine, req)[0], raw_scores(tuned, req)[0]) < 1e-4

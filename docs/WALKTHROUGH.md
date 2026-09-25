@@ -876,16 +876,44 @@ The results show these points:
 
 `poc/calibration/<model>.json` stores these fitted values and choices. `ask()` and the web app use them by default.
 
+### 6.12 Teaching the model: a LoRA fine-tune (E20)
+
+Everything above changes how we ask the model. E20 changes the model. **Fine-tuning** means that we show the model
+examples with the right answer and move its weights a little after each one. **LoRA** (Low-Rank Adaptation) does this
+cheaply: the 494 M original weights stay frozen, and about 1 M new weights next to the attention layers learn.
+
+1. `uv run --group train python train_lora.py parity` checks that the training forward pass gives the same label
+   logits as the readout (largest difference 4e-5). Thus the loss is the log loss of the real answer.
+2. `uv run --group train python train_lora.py train` trains on BoolQ train and AG News train. Each news article comes
+   back in new option orders, so the model sees every topic at every letter. After each pass, val measures the loss.
+3. `uv run --group train python experiments.py lora --adapter adapters/Qwen2.5-0.5B-Instruct/epoch-1` compares the
+   base model and the adapter on the same test items.
+
+| Test (0.5B, raw) | Base | LoRA |
+|---|---:|---:|
+| BoolQ accuracy | 0.693 | 0.770 |
+| BoolQ ECE | 0.160 | 0.063 |
+| AG News listwise accuracy | 0.782 | 0.873 |
+| Listwise flips over 4 orders | 22% | 9% |
+
+The fine-tuned 0.5B model reaches base 1.5B on BoolQ. It is also more honest: val asks for a Noul temperature of 1.20,
+against 2.60 before (1.0 means no correction). E20 fits both temperatures on val, because the adapter has seen train;
+thus the base value differs from the 2.23 that E14 fitted on train (§6.11). A temperature does not help the adapter:
+its BoolQ test ECE is 0.063 raw and 0.076 with the val temperature. These are in-domain results: the training and test items come from the
+same two datasets. Full table and limits: RESEARCH.md §7.3 R17. The Findings page shows the same results.
+
 ## 7. Next steps
 
 1. **Fit a Score temperature.** SST-5 train (300) is frozen and unused; fit on it, choose on val, report on test.
 2. **Build the agent-routing data** under the rules of docs/DATA.md §9: redact session logs first, freeze the
    splits before any model sees them.
-3. **Test distillation** (RESEARCH.md §3.9). Fine-tune the 1.5B model with LoRA on soft labels, with option-shuffle
-   augmentation. This needs a GPU (PLAN.md 6.2).
-4. **Add the Claude baseline (E2).** Set `ANTHROPIC_API_KEY` and run TypeSafe's adapter on the same held-out data.
-5. **Add a two-stage Choice** for more than 25 options, when a labelled dataset with that many options exists.
-6. **With a Jev API key, run the cheap tests** in RESEARCH.md §8:
+3. **Test the fine-tune outside its training tasks.** Run the E20 adapter on SST-5 Scores and the GDPR questions. If
+   it is worse there, the gain is narrow.
+4. **Test distillation** (RESEARCH.md §3.9). Fine-tune with LoRA on soft labels from Claude, with option shuffles.
+   The hard-label step is done (§6.12); soft labels need an API budget (PLAN.md 6.2).
+5. **Add the Claude baseline (E2).** Set `ANTHROPIC_API_KEY` and run TypeSafe's adapter on the same held-out data.
+6. **Add a two-stage Choice** for more than 25 options, when a labelled dataset with that many options exists.
+7. **With a Jev API key, run the cheap tests** in RESEARCH.md §8:
    - A shuffle of the options shows whether Jev judges options together or one at a time.
    - The step in latency shows where the two-stage Choice starts.
    - A repeated state vs a nonce-prefixed state shows whether Jev caches states across requests.

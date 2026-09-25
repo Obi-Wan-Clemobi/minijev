@@ -1,1 +1,3 @@
 __pycache__/
+poc/adapters/*/state.pt
+poc/adapters/*.log

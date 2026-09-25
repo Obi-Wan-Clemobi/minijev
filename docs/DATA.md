@@ -19,9 +19,10 @@ confidence and accuracy. A **readout** takes the probabilities of the allowed an
 | Our sample | 1,000 questions: train 500 · val 200 · test 300 | 1,200 articles: train 600 · val 200 · test 400 | 800 sentences: train 300 · val 200 · test 300 |
 | Label balance | 62% "yes", as in the full split | 25% per topic in every split | 20% per level in every split |
 
-**What this data is not.** It is not training data for a model: minijev has not fine-tuned any model (Measured: the
-repository has no training code, and no adapter or fine-tuned model is on disk). The only thing fitted on this data
-is a handful of calibration temperatures, and val chooses between prompt variants. Training data for a real use case is future work (section 9).
+**What this data is not.** It is not training data for a product. It trained one research model: a LoRA adapter
+(a small set of extra weights) for Qwen2.5-0.5B, on the train splits only (E20, `poc/train_lora.py`). Apart from that,
+the only things fitted on this data are a handful of calibration temperatures, and val chooses between prompt
+variants. Training data for a real use case is future work (section 9).
 
 ## 2. Sources and provenance
 
@@ -39,8 +40,8 @@ re-checks each row; a changed row stops the run with an error (Measured, `data.p
 
 Why these datasets (Inferred): they are public, labelled, and widely used, so anyone can re-run our numbers; they
 match two of minijev's question types (yes/no and multiple choice). We use BoolQ's validation split and AG News's test
-split because those are the parts that the dataset authors kept for evaluation; the models we test were never
-fine-tuned on them by us.
+split because those are the parts that the dataset authors kept for evaluation; the base models were never
+fine-tuned on them by us, and the E20 adapter saw only our train split.
 
 ## 3. How the sample was drawn
 
@@ -64,7 +65,7 @@ to overwrite it. The splits file has SHA-256 `54bb491d210778dc…`. SST-5 came l
 
 | Split | Used for | Never used for |
 |---|---|---|
-| **train** | Fitting the calibration temperatures (Noul: temperature and Platt; Choice: one temperature per readout mode). SST-5 train is not used yet: it is kept for a Score temperature | Reporting results |
+| **train** | Fitting the calibration temperatures (Noul: temperature and Platt; Choice: one temperature per readout mode). Training the E20 LoRA adapter (BoolQ and AG News train). SST-5 train is not used yet: it is kept for a Score temperature | Reporting results |
 | **val** | Choosing between methods: temperature or Platt for Noul; listwise, averaged or pointwise for Choice; plain or contrastive Score levels (E16). Rule: the lowest negative log-likelihood (a proper scoring rule). Measuring the template grid (E15), which chooses nothing | Fitting |
 | **test** | Reporting the final numbers, once | Fitting or choosing anything |
 
@@ -119,6 +120,7 @@ each AG News and SST-5 split.
 | E16 contrastive Score levels | SST-5 (`splits_score_v1.json`) | **Yes**: chosen on val, reported on test |
 | E17 opposite Noul pairs | BoolQ | **Yes**: decided on val, reported on test |
 | E18 criteria library | The documented Jev cases | **No.** Exploratory: 13 cases, and the criteria were written after the cases were visible |
+| E20 LoRA fine-tune | `datasets/splits_v2.json` | **Yes**: trained on train, epoch and temperatures chosen on val, reported on test. In-domain only: the test items come from the same two datasets as the training items |
 
 Only held-out numbers should be used to defend a claim about calibration or accuracy.
 
@@ -144,7 +146,7 @@ Always answering "yes" gives 0.620 on BoolQ test; chance on AG News is 0.25.
 - **Score data is narrow.** SST-5 is one ordinal task: sentiment of short movie-review sentences. Score answers are
   not calibrated yet; SST-5 train is kept for that.
 - **Licence.** AG News is for non-commercial research only, and SST-5 has no stated licence. Neither may become
-  training data for a product.
+  training data for a product. The E20 adapter was trained on AG News, so it is for research only.
 - **Prompt.** The question template was chosen during E1–E13, while earlier samples were visible. It was not tuned on
   these splits; any future template change must be chosen on val only.
 

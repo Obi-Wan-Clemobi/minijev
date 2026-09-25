@@ -243,6 +243,28 @@ export const HELP = {
   hoodTemplate: { t: "Template tokens", e: "display", d: ["The fixed wrapper around your text (a system instruction and the word \"STATE:\"). The model reads it too, and it is the same for every request."] },
   hoodRun: { t: "Run for label mass", d: ["Asks the model once so that each branch can show how well it worked (its label mass). The picture itself only needs the text to be split into tokens."] },
 
+  // ---- fine-tune (E20)
+  ftWhat: { t: "Fine-tuning", e: "display", d: [
+    "Everything else on this page changes how we ask the model. Fine-tuning changes the model itself: we show it examples with the right answer, and nudge its weights after each one.",
+    "Example: the model reads a news article about a football match and puts 60% on \"Sports\". The right answer is Sports, so a training step moves its numbers a little, and next time it says perhaps 70%.",
+    "The model is not rewritten. After about 3,400 examples, its answers on new articles and questions are different." ] },
+  ftLora: { t: "LoRA", e: "display", d: [
+    "LoRA (Low-Rank Adaptation) is the cheap way to fine-tune. The model's own 494 million weights stay frozen. We add about 1 million new weights next to its attention layers and train only those.",
+    "That is why it runs on a laptop CPU: the memory and time go to 0.2% of the weights. The trained part (the \"adapter\") is a 4 MB file. The model is 2 GB.",
+    "To use it, we add the adapter into the weights once when the model loads. After that, a request costs the same as before.",
+    "The maths: each frozen matrix W (for example 896×896) gets an extra B·A, where A is 8×896 and B is 896×8. Only A and B learn. B starts at zero, so the untrained adapter changes nothing." ] },
+  ftShuffle: { t: "Option shuffles", e: "display", d: [
+    "The small model likes some letters more than others (see \"The order flaw\" above). If we always trained with World at A, it could learn \"A is often right\" instead of reading the article.",
+    "So every training article appears twice per pass, with the four topics in a new random order each time. The right answer is at A, B, C and D about equally often (22–27% each, checked before training).",
+    "What to look for: fewer answer flips after training, and letter picks closer to 25% each." ] },
+  ftLoss: { t: "Training loss", e: "display", d: [
+    "How wrong the model was on the training examples, step by step. Lower is better. Each point is the average over 8 examples.",
+    "It should fall and then level out. Noise is normal: each step sees different examples.",
+    "The maths: the loss is −log(probability the model gave to the right label). 0.69 is a coin flip between 2 labels; 1.39 is a uniform guess between 4. This \"log loss\" rewards honest probabilities, so training for it also trains calibration." ] },
+  ftSplits: { t: "Fair test", e: "display", d: [
+    "The model trained on the train split only. The val split chose which training pass to keep and fitted the temperatures. The test split was used once, at the end, to report these numbers.",
+    "Base and fine-tuned models answer exactly the same test items, so the difference column is a fair comparison. The brackets are 95% uncertainty intervals for that difference: if a bracket contains 0, the change is not clear." ] },
+
   // ---- findings
   fSize: { t: "Model size", e: "display", d: ["Show the results for the small (0.5B) or the larger (1.5B) model."] },
   fView: { t: "Before or after calibration", e: "display", d: ["Raw: the model's own confidence. Temperature: after calibration. Dots on the dashed line mean \"as sure as it is right\"."] },

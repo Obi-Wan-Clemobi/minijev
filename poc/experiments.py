@@ -16,6 +16,7 @@
                  answer or a probability: accuracy, ECE, parse failures, time per question
     same_format  E12, one request answered in minijev's JSON: read out vs the same model writing that JSON
     order_bias   E13, AG News in 4 option orders: listwise vs averaged vs debiased vs pointwise
+    lora         E20, base vs a LoRA adapter (--adapter, from train_lora.py) on the test split, with order flips
     all          everything above
 
 Results go to poc/results/<name>[-<model>].json. Downloads are cached in poc/data/.
@@ -1094,6 +1095,11 @@ CALIBRATION = HERE / "calibration"
 CHOICE_MODES = ("listwise", "averaged", "pointwise")
 
 
+def readout_dir(engine: Engine) -> Path:
+    name = tag(engine.name).lstrip('-') or 'Qwen2.5-0.5B-Instruct'
+    return RESULTS / "readouts" / (f"{name}-lora-{engine.adapter_sha256[:8]}" if engine.adapter else name)
+
+
 def readout_cache(engine: Engine, dataset: str, split: str) -> list[dict]:
     """Raw readout logits for one split, cached. A readout never uses the labels, so computing it for val and test
     is not tuning on them. The cache is keyed by model, prompt fingerprint and splits file."""
@@ -1104,7 +1110,9 @@ def readout_cache(engine: Engine, dataset: str, split: str) -> list[dict]:
            # AG News options are shown in a per-item random order (seeded by the source index), so that the one
            # order-sensitive mode, listwise, is judged under ordinary orders and not flattered by one fixed order.
            **({"option_order": "per-item shuffle, random.Random(source_index)"} if dataset == "ag_news" else {})}
-    path = RESULTS / "readouts" / f"{tag(engine.name).lstrip('-') or 'Qwen2.5-0.5B-Instruct'}" / f"{dataset}_{split}.json"
+    if engine.adapter:  # a fine-tuned model is a different model: never reuse the base readouts
+        key["adapter_sha256"] = engine.adapter_sha256
+    path = readout_dir(engine) / f"{dataset}_{split}.json"
     rows = data.load_split(dataset, split)
     if path.exists():
         saved = json.loads(path.read_text())
@@ -1553,12 +1561,125 @@ def needle(engine: Engine, lengths=(1000, 2000, 4000, 8000), positions=(0.05, 0.
             "haystack": "GDPR article, pinned revision", "needles": NEEDLES, "summary": summary, "rows": rows}
 
 
+# ---------------------------------------------------------------------------
+# E20: LoRA fine-tune with option-shuffle augmentation (PLAN Task 6.2, hard labels; poc/train_lora.py). The base
+# model and the adapter answer the same held-out items. Raw test numbers are the main comparison. Each model also gets
+# temperatures fitted on val (the adapter has seen train, so train would flatter it). Order flips: every AG News test
+# item in all 4 rotations of its option order, listwise.
+def rotation_readouts(engine: Engine) -> list[dict]:
+    """AG News test, listwise, in the 4 rotations of the per-item order: one packed pass per item, 4 branches."""
+    import data
+    key = {"model": engine.name, "adapter_sha256": engine.adapter_sha256, "prompt_sha1": prompt_fingerprint(engine),
+           "splits_sha256": data.splits_fingerprint(), "orders": "4 rotations of random.Random(source_index) order"}
+    path = readout_dir(engine) / "ag_news_test_rotations.json"
+    rows = data.load_split("ag_news", "test")
+    if path.exists() and json.loads(path.read_text())["key"] == key:
+        return json.loads(path.read_text())["items"]
+    keys, items, t0 = list(AG_OPTIONS), [], time.perf_counter()
+    for i, r in enumerate(rows):
+        base = random.Random(r["source_index"]).sample(range(len(keys)), len(keys))
+        orders = [base[j:] + base[:j] for j in range(len(keys))]
+        qs = {f"r{j}": {"type": "choice", "instructions": AG_QUESTION, "choice_mode": "listwise",
+                        "criteria": {keys[c]: AG_OPTIONS[keys[c]] for c in o}} for j, o in enumerate(orders)}
+        raw, _ = raw_scores(engine, {"state": r["text"], "questions": qs})
+        items.append({"source_index": r["source_index"], "y": r["y"], "orders": orders,
+                      "logits": [[raw[f"r{j}"]["logits"][o.index(c)] for c in range(len(keys))] for j, o in enumerate(orders)],
+                      "pos_logits": [raw[f"r{j}"]["logits"] for j in range(len(orders))]})
+        if (i + 1) % 100 == 0:
+            print(f"  rotations {i + 1}/{len(rows)}  ({time.perf_counter() - t0:.0f}s)", flush=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"key": key, "items": items}))
+    return items
+
+
+def flip_metrics(items: list[dict]) -> dict:
+    """Share of items whose listwise winner changes with the option order, accuracy over all orders, and how often
+    the model picks each letter position (the right answer is at each position 25% of the time)."""
+    winners = [[max(range(4), key=z.__getitem__) for z in it["logits"]] for it in items]
+    flips = [len(set(w)) > 1 for w in winners]
+    acc = [statistics.mean(w == it["y"] for w in ws) for ws, it in zip(winners, items)]
+    picks = [statistics.mean(max(range(4), key=z.__getitem__) == j for it in items for z in it["pos_logits"])
+             for j in range(4)]
+    return {"flip_rate": statistics.mean(flips), "flip_rate_ci95": bootstrap_ci(flips, statistics.mean),
+            "accuracy_all_orders": statistics.mean(acc), "accuracy_all_orders_ci95": bootstrap_ci(acc, statistics.mean),
+            "position_picks": dict(zip("ABCD", picks))}
+
+
+def paired_delta(a: list[float], b: list[float]) -> dict:
+    """Mean of b - a over the same items, with a 95% bootstrap interval over items."""
+    d = [y - x for x, y in zip(a, b)]
+    return {"mean": statistics.mean(d), "ci95": bootstrap_ci(d, statistics.mean)}
+
+
+def lora(engine: Engine) -> dict:
+    """E20. engine carries the adapter (--adapter); the base model is loaded next to it."""
+    import data
+    assert engine.adapter, "run with --adapter adapters/<model>/epoch-<n>"
+    data.ACCESS.clear()
+    base = Engine(engine.name, attn=engine.model.config._attn_implementation)
+    models = {"base": base, "lora": engine}
+    out: dict = {"adapter": engine.adapter, "adapter_sha256": engine.adapter_sha256}
+    per_item: dict = {}
+    for name, eng in models.items():
+        bv, bt = readout_cache(eng, "boolq", "val"), readout_cache(eng, "boolq", "test")
+        av, at = readout_cache(eng, "ag_news", "val"), readout_cache(eng, "ag_news", "test")
+        a_t, _ = fit_affine([it["z"] for it in bv], [it["y"] for it in bv], slope_only=True)
+        zs, ys = [it["z"] for it in bt], [it["y"] for it in bt]
+        noul = {"raw": binary_entry(zs, ys, [0.0] * len(ys), 0),
+                "val_temperature": binary_entry([a_t * v for v in zs], ys, [0.0] * len(ys), 0), "T": 1 / a_t}
+        for m in (noul["raw"], noul["val_temperature"]):
+            for k in ("mean_s", "mean_s_ci95", "output_tokens", "parse_failures", "has_probs"):
+                m.pop(k, None)
+        yat, choice = [it["y"] for it in at], {}
+        for m in CHOICE_MODES:
+            t = fit_temperature_multiclass([it[m] for it in av], [it["y"] for it in av])
+            choice[m] = {"raw": with_ci([softmax_list(it[m]) for it in at], yat),
+                         "val_temperature": with_ci([softmax_list([v / t for v in it[m]]) for it in at], yat),
+                         "nll_raw": nll_multi([it[m] for it in at], yat), "T": t}
+        rot = rotation_readouts(eng)
+        out[name] = {"noul": noul, "choice": choice, "order_flips": flip_metrics(rot)}
+        per_item[name] = {
+            "noul_correct": [float((z > 0) == bool(y)) for z, y in zip(zs, ys)],
+            "noul_nll": [math.log1p(math.exp(-z)) if y else math.log1p(math.exp(z)) for z, y in zip(zs, ys)],
+            "listwise_correct": [float(max(range(4), key=it["listwise"].__getitem__) == it["y"]) for it in at],
+            "flip": [float(len({max(range(4), key=z.__getitem__) for z in it["logits"]}) > 1) for it in rot]}
+    out["delta_lora_minus_base"] = {k: paired_delta(per_item["base"][k], per_item["lora"][k]) for k in per_item["base"]}
+    out["splits_accessed"] = list(data.ACCESS)
+    out["use_of_splits"] = {"train": "LoRA training (train_lora.py)", "val": "epoch choice and temperatures",
+                            "test": "report only"}
+    log = Path(engine.adapter).parent / "train_log.json"
+    if log.exists():
+        t = json.loads(log.read_text())
+        out["training"] = {k: v for k, v in t.items() if k != "epochs"} | {
+            "val_nll_per_epoch": [e["val_nll"] for e in t["epochs"]],
+            "loss_per_step": [x for e in t["epochs"] for x in e["train_loss_per_step"]],
+            "hours": t["epochs"][-1]["seconds"] / 3600}
+    out["base_val_nll"] = {  # the untrained model on the same val items, so the per-epoch values have a start point
+        "boolq": nll([it["z"] for it in readout_cache(base, "boolq", "val")], [it["y"] for it in readout_cache(base, "boolq", "val")], 1.0, 0.0),
+        "ag_news": nll_multi([it["listwise"] for it in readout_cache(base, "ag_news", "val")], [it["y"] for it in readout_cache(base, "ag_news", "val")])}
+
+    print(f"\n{engine.name} + LoRA ({engine.adapter}); test split. [..] = 95% bootstrap interval")
+    for name in models:
+        n, f = out[name]["noul"], out[name]["order_flips"]
+        print(f"{name:5s} BoolQ raw acc {n['raw']['accuracy']:.3f} ECE {n['raw']['ece']:.3f} NLL {n['raw']['nll']:.3f} | "
+              f"val-T {n['T']:.2f}: ECE {n['val_temperature']['ece']:.3f} NLL {n['val_temperature']['nll']:.3f}")
+        for m, r in out[name]["choice"].items():
+            print(f"      AG {m:9s} raw acc {r['raw']['accuracy']:.3f} ECE {r['raw']['ece']:.3f} NLL {r['nll_raw']:.3f} | "
+                  f"val-T {r['T']:.2f}: ECE {r['val_temperature']['ece']:.3f}")
+        print(f"      flips {f['flip_rate']:.3f} [{f['flip_rate_ci95'][0]:.2f},{f['flip_rate_ci95'][1]:.2f}]  "
+              f"acc over 4 orders {f['accuracy_all_orders']:.3f}  picks " +
+              " ".join(f"{k} {v:.2f}" for k, v in f["position_picks"].items()))
+    for k, d in out["delta_lora_minus_base"].items():
+        print(f"delta {k:16s} {d['mean']:+.3f} [{d['ci95'][0]:+.3f},{d['ci95'][1]:+.3f}]")
+    return out
+
+
 EXPERIMENTS = {"demo": demo, "tree": tree, "latency": latency, "jevdocs": jevdocs, "permutation": permutation,
                "calibration": calibration, "llm_vs_minijev": llm_vs_minijev,
                "fanout": lambda engine: {"rows": fan_out(engine, 500)}, "quality": quality, "same_format": same_format, "order_bias": order_bias, "heldout": heldout,
                "template_sensitivity": template_sensitivity, "contrastive_levels": contrastive_levels,
                "opposite_pairs": opposite_pairs, "criteria_ablation": criteria_ablation,
-               "needle": needle}
+               "needle": needle, "lora": lora}
 
 
 def tag(model: str) -> str:
@@ -1570,6 +1691,7 @@ def main() -> None:
     ap.add_argument("name", nargs="?", choices=[*EXPERIMENTS, "all"], help="Experiment to run")
     ap.add_argument("--model", default=MODEL)
     ap.add_argument("--attn", default="eager", choices=["eager", "sdpa"])
+    ap.add_argument("--adapter", help="LoRA directory from train_lora.py (E20 lora only)")
     ap.add_argument("--update-manifest", action="store_true",
                     help="Generate/update dataset manifest with checksums (W17)")
     args = ap.parse_args()
@@ -1581,9 +1703,11 @@ def main() -> None:
     if args.name is None:
         ap.error("experiment name is required (unless using --update-manifest)")
 
-    engine = Engine(args.model, attn=args.attn)
+    if args.adapter and args.name != "lora":
+        ap.error("--adapter is for the lora experiment only (the other experiments' caches do not key on it)")
+    engine = Engine(args.model, attn=args.attn, adapter=args.adapter)
     RESULTS.mkdir(exist_ok=True)
-    for name in EXPERIMENTS if args.name == "all" else [args.name]:
+    for name in [n for n in EXPERIMENTS if n != "lora"] if args.name == "all" else [args.name]:
         print(f"\n=== {name} ({args.model}) ===", flush=True)
         t0 = time.perf_counter()
         result = EXPERIMENTS[name](engine)

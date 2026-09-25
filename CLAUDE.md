@@ -42,3 +42,6 @@ Add a term here when a document defines it. Use the term exactly as written. The
 | readout | Take the probabilities of the label tokens at one position, from one forward pass. No tokens are generated. | read (for probabilities) |
 | generation baseline | An LLM that generates its answer as text, which code then parses. | "the LLM way" |
 | packed | The mode that runs the state and all branches as one sequence, with an attention mask between branches. | |
+| fine-tune | Train an existing model further on labelled examples, so that its weights change. | retrain |
+| LoRA | Low-Rank Adaptation: a fine-tune that freezes the model and trains small added matrices. | |
+| adapter | The trained LoRA weights, stored apart from the model and merged into it at load. | |
