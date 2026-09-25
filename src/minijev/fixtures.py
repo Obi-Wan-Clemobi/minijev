@@ -165,6 +165,8 @@ AG_OPTIONS = {  # AG News topics as a Choice, in label order 0..3
 
 
 AG_QUESTION = "What is the topic of this news article?"
+SST5_QUESTION = "How positive is the sentiment of this movie review?"
+SST5_LEVELS = ["very negative", "negative", "neutral", "positive", "very positive"]
 
 
 SUPPORT_TICKET = {

@@ -62,7 +62,7 @@ The model and the calibration dials are set in `poc/minijev.env`.
 
 ## What we have built so far
 
-Each item lists its main measured result. The experiment numbers (E1–E20) match
+Each item lists its main measured result. The experiment numbers (E1–E22) match
 [docs/RESEARCH.md](docs/RESEARCH.md) §7.3 and [docs/WALKTHROUGH.md](docs/WALKTHROUGH.md).
 
 1. **The readout engine and the playground** (E1–E13, exploratory). Three evaluation modes (naive, kv, packed) give
@@ -86,6 +86,13 @@ Each item lists its main measured result. The experiment numbers (E1–E20) matc
    - BoolQ accuracy goes from 0.693 to 0.770, the level of the base 1.5B model.
    - Answer flips when only the option order changes go from 22% to 9%.
    - The training took 2.4 h on the CPU.
+   - On SST-5 Scores, a task it was not trained on, it did not help: listwise accuracy fell from 0.340 to 0.250
+     (E21).
+   - A second adapter trained on SST-5 only (300 reviews, 14 min) raised SST-5 listwise accuracy from 0.340 to 0.443
+     (E22). But 6 numbers fitted on val with no training (one bias per level and a temperature) gave 0.440: the base
+     model put the scale too high. On AG News, the E20 adapter beats the same control (0.873 against 0.805).
+   - Result: fit the cheap correction first, and fine-tune only when a gain remains. A fine-tune did not help on
+     the one other task we measured.
 7. **The State machine page.** Flows of steps, with confidence conditions on the arrows, 2 templates, save and reload,
    and export and import. One step takes 0.6–1.4 s at 0.5B.
 
@@ -104,6 +111,9 @@ All commands run from `poc/`. Results go to `poc/results/`.
 | `uv run python data.py check` | Verify every claim of the data card |
 | `uv run --group train python train_lora.py train` | E20: train the LoRA adapter (about 2.4 h at 0.5B on a CPU) |
 | `uv run --group train python experiments.py lora --adapter adapters/Qwen2.5-0.5B-Instruct/epoch-1` | E20: base model vs adapter on test |
+| `uv run --group train python experiments.py transfer --adapter adapters/Qwen2.5-0.5B-Instruct/epoch-1` | E21: the E20 adapter on SST-5 Scores and the Jev cases |
+| `uv run --group train python train_lora.py train --task sst5` | E22: train a per-task SST-5 adapter (about 14 min at 0.5B on a CPU) |
+| `uv run --group train python experiments.py transfer --adapter adapters/Qwen2.5-0.5B-Instruct-sst5/epoch-1` | E22: base model vs the SST-5 adapter on SST-5, BoolQ and AG News test |
 
 `uv run python experiments.py --help` lists every experiment.
 

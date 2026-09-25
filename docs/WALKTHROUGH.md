@@ -902,6 +902,27 @@ thus the base value differs from the 2.23 that E14 fitted on train (§6.11). A t
 its BoolQ test ECE is 0.063 raw and 0.076 with the val temperature. These are in-domain results: the training and test items come from the
 same two datasets. Full table and limits: RESEARCH.md §7.3 R17. The Findings page shows the same results.
 
+**Does the training carry over to a new task? (E21)** We asked the E20 adapter to rate movie reviews (SST-5) on 5
+levels, from "very negative" to "very positive". It never trained on reviews. It got worse: 25.0% of reviews at the
+exact level, against 34.0% for the base model. A fine-tune on two tasks taught those two tasks and nothing more.
+
+**A fine-tune for one task (E22).** `train_lora.py train --task sst5` trains a second adapter on the 300 SST-5 train
+reviews only (14 min). On test, it rates 44.3% of reviews at the exact level, and 88.3% within 1 level (base: 34.0%
+and 72.0%). BoolQ and AG News did not change significantly.
+
+**The cheap check that changed the answer.** The base model rated reviews too positively: on average it said
+"positive" (level 3) when the true average was "neutral" (level 2). A shift like that needs no training to fix. We
+gave the base model one added number per level, plus a temperature, and fitted these 6 numbers on 200 val reviews.
+It then rated 44.0% at the exact level, the same as the adapter. The adapter was better only in log loss. On AG News
+the same check does not close the gap: the E20 adapter reaches 87.3%, the 4-number fix 80.5%.
+
+What we learned:
+1. Labelled examples of a task are what make a small model accurate on it.
+2. First fit a small correction (a bias per answer and a temperature) on the examples. It takes seconds.
+3. Fine-tune only if a gain remains after that correction. E20 kept one; E22 did not.
+4. A fine-tune for one task did not help on another. One model for many tasks, as Jev states, needs training on
+   many tasks and a test on tasks it has not seen. Full tables: RESEARCH.md §7.3 R18 and R19.
+
 ### 6.13 Chaining questions: the State machine page
 
 One request answers a fixed set of questions. Many real decisions need a chain: the second question depends on the
@@ -924,11 +945,12 @@ docs/superpowers/specs/2026-09-24-state-machine-flow-builder-design.md.
 
 ## 7. Next steps
 
-1. **Fit a Score temperature.** SST-5 train (300) is frozen and unused; fit on it, choose on val, report on test.
+1. **Put Score calibration in the calibration file.** `calibration/<model>.json` has no Score entry yet. On SST-5,
+   one bias per level and a temperature, fitted on val, gave the same accuracy as a fine-tune (RESEARCH.md R19).
 2. **Build the agent-routing data** under the rules of docs/DATA.md §9: redact session logs first, freeze the
    splits before any model sees them.
-3. **Test the fine-tune outside its training tasks.** Run the E20 adapter on SST-5 Scores and the GDPR questions. If
-   it is worse there, the gain is narrow.
+3. **Train one adapter on many tasks.** E21 showed that the E20 adapter does not help on SST-5 (RESEARCH.md R18).
+   Train on several tasks, and test on tasks held out of training. Compare each gain with a bias control.
 4. **Test distillation** (RESEARCH.md §3.9). Fine-tune with LoRA on soft labels from Claude, with option shuffles.
    The hard-label step is done (§6.12); soft labels need an API budget (PLAN.md 6.2).
 5. **Add the Claude baseline (E2).** Set `ANTHROPIC_API_KEY` and run TypeSafe's adapter on the same held-out data.

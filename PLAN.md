@@ -759,8 +759,11 @@ the live checks and the held-out results. Still open: a reliability diagram per 
 ### Task 6.2: LoRA Training with Option-Shuffle Augmentation (W1/W4)
 **Status:** Hard-label step done (E20, RESEARCH.md R17). `poc/train_lora.py` trains on the frozen train splits on the
 CPU (2.4 h at 0.5B); `experiments.py lora --adapter ...` reports on test.
-**Still requires:** soft labels (API budget for Claude labels), training data under docs/DATA.md §9, and a test on
-held-out domains.
+Held-out task (E21, R18): the E20 adapter did not help on SST-5 Scores. Per-task adapter (E22, R19,
+`train_lora.py train --task sst5`, 14 min): SST-5 listwise accuracy 0.340 → 0.443, but a bias control fitted on val
+with no training gives 0.440. E20 beats the same control on AG News (0.873 against 0.805).
+**Still requires:** soft labels (API budget for Claude labels), training data under docs/DATA.md §9, and one adapter
+trained on many tasks, tested on held-out tasks.
 
 ### Task 6.3: FlexAttention Block-Sparse Attention (W12)
 **Requires:** PyTorch 2.5+, GPU  
@@ -829,7 +832,7 @@ cd web && npm test && npm run lint
 | 4.6 Contrastive Criteria | - | Done | 2026-09-25 | 2026-09-25 | Library of 20; picker in the editor; E18 mixed at 0.5B (W8) |
 | 5.1 ClaudeJudge Baseline | - | Blocked | - | - | **Requires `ANTHROPIC_API_KEY`**; not set on this machine |
 | 6.1 Model Scaling 3B–7B | - | Blocked | - | - | Needs a GPU with 16 GB+ |
-| 6.2 LoRA + shuffle augmentation | - | Partly done | 2026-09-25 | 2026-09-25 | E20, hard labels, 0.5B: BoolQ 0.693 → 0.770, listwise flips 22% → 9%. Soft labels still blocked (API budget) |
+| 6.2 LoRA + shuffle augmentation | - | Partly done | 2026-09-25 | 2026-09-25 | E20, hard labels, 0.5B: BoolQ 0.693 → 0.770, listwise flips 22% → 9%. E21: no gain on SST-5 (held out). E22: SST-5 adapter 0.340 → 0.443, equal to a 6-number bias control. Soft labels still blocked (API budget) |
 | 6.3 FlexAttention | - | Blocked | - | - | Needs PyTorch 2.5+ and a GPU; torch is pinned to 2.2.2 (Intel Mac) |
 | 6.4 Two-Stage Choice | - | Blocked | - | - | Needs a labelled dataset with more than 25 options |
 | 6.5 Needle-in-Haystack | - | Done (to 8k) | 2026-09-25 | 2026-09-25 | E19 in kv mode on CPU; 32k still open (W11) |

@@ -803,11 +803,85 @@ pass. Test results, raw (`poc/results/lora.json`; paired 95% intervals):
 | Temperature fitted on val, Noul | 2.60 | 1.20 | — |
 
 The fine-tuned 0.5B model matches base 1.5B on BoolQ (0.773), and it is closer to calibrated without a temperature.
+The gain is more than a shift of the answers. A control gives the base model one bias per topic and a temperature,
+fitted on val with no training. It reaches 0.805 on AG News listwise; the adapter is +0.068 [+0.035, +0.100] above it.
+On BoolQ, Platt scaling (a slope and a bias, E14) reaches 0.720, against 0.770 for the adapter.
 Both temperatures were fitted on val, because the adapter has seen train (E14 fitted 2.23 for the base model on train).
 The val temperature does not help the adapter: its BoolQ test ECE is 0.063 raw and 0.076 with the temperature.
-Limits: the test items come from the same datasets as the training items, so this shows in-domain learning. The
-effect on other tasks (SST-5 Scores, the GDPR questions, Jev's documented cases) is not measured. The labels are hard
-(0 or 1), not the soft labels of DESIGN.md §7. Pretraining contamination is unknown (DATA.md §8).
+Limits: the test items come from the same datasets as the training items, so this shows in-domain learning. R18
+measures the adapter on a task it was not trained on. The labels are hard (0 or 1), not the soft labels of DESIGN.md
+§7. Pretraining contamination is unknown (DATA.md §8).
+
+**R18. The E20 adapter on a task it was not trained on (E21).** The same adapter (`epoch-1`, chosen by E20 val) on
+SST-5 Scores: 5 levels from "very negative" to "very positive". A temperature per model and Score mode is fitted on
+SST-5 train, which neither model has seen. "Within 1 level" counts answers that are exact or 1 level off. Test
+results (`poc/results/transfer.json`, n = 300; paired 95% intervals):
+
+| SST-5 test (0.5B) | Base | E20 adapter | Change |
+|---|---:|---:|---:|
+| Listwise accuracy | 0.340 | 0.250 | −0.090 [−0.160, −0.020] |
+| Listwise within 1 level | 0.720 | 0.717 | −0.003 [−0.053, +0.047] |
+| Listwise log loss, with temperature | 1.513 | 1.523 | +0.010 [−0.007, +0.026] |
+| Pointwise accuracy | 0.217 | 0.243 | +0.027 [−0.033, +0.087] |
+| Pointwise within 1 level | 0.590 | 0.483 | −0.107 [−0.153, −0.060] |
+| Pointwise log loss, with temperature | 1.558 | 1.538 | −0.020 [−0.028, −0.011] |
+
+The adapter did not make SST-5 more accurate. Listwise Scores use the same letter format as the listwise Choices
+that the adapter trained on, and their accuracy fell. Only the pointwise log loss improved, by a small amount. On the documented Jev cases (exploratory, not held out), agreement changed
+little: Noul mean gap to Jev 0.296 → 0.245 (n = 15), Score results the same or within 0.04 (n = 10). For minijev
+(Inferred): a fine-tune on two tasks teaches those two tasks. On SST-5, the one held-out task we measured, it gave no
+gain in accuracy.
+
+**R19. A per-task adapter for SST-5 (E22).** A second adapter, trained on SST-5 train only (300 reviews), with the
+listwise Score prompt. The target is the letter of the true level. Levels are an ordered scale, so they always appear
+in order, and there is no shuffle. The settings are the same as E20: rank 8, learning rate 2e-4, 2 passes, 75
+optimizer steps of 8 examples. It took 14 min on the laptop CPU. Val chose the second pass (val log loss 1.233 → 1.193).
+Temperatures are fitted on val for both models, because the adapter has seen train. Test results
+(`poc/results/transfer_sst5.json`, n = 300 for SST-5 and BoolQ, 400 for AG News; paired 95% intervals):
+
+| Test (0.5B) | Base | SST-5 adapter | Change |
+|---|---:|---:|---:|
+| SST-5 listwise accuracy | 0.340 | 0.443 | +0.103 [+0.040, +0.173] |
+| SST-5 listwise within 1 level | 0.720 | 0.883 | +0.163 [+0.113, +0.217] |
+| SST-5 listwise mean error of the expected level | 1.139 | 0.662 | — |
+| SST-5 listwise log loss, raw | 2.587 | 1.112 | — |
+| SST-5 listwise log loss, with temperature | 1.513 | 1.118 | −0.395 [−0.458, −0.328] |
+| Temperature fitted on val, listwise | 7.10 | 1.20 | — |
+| SST-5 pointwise accuracy (not trained) | 0.217 | 0.290 | +0.073 [+0.003, +0.143] |
+| BoolQ accuracy (not trained) | 0.693 | 0.657 | −0.037 [−0.093, +0.017] |
+| AG News listwise accuracy (not trained) | 0.783 | 0.778 | −0.005 [−0.020, +0.007] |
+
+A temperature cannot change the most probable level, so it is no control for accuracy. The base model's answers are
+too positive: its mean predicted level is 3.00, and the true mean is 2.00 (60 items per level). A second control gives
+the base model one bias per level and a temperature (6 numbers), fitted on val with no training:
+
+| SST-5 test (0.5B) | Base + bias control | SST-5 adapter | Adapter − control |
+|---|---:|---:|---:|
+| Listwise accuracy | 0.440 | 0.443 | +0.003 [−0.053, +0.060] |
+| Listwise within 1 level | 0.863 | 0.883 | +0.020 [−0.017, +0.053] |
+| Listwise log loss | 1.225 | 1.118 | −0.106 [−0.149, −0.061] |
+| Pointwise accuracy | 0.360 | 0.290 | −0.070 [−0.133, −0.013] |
+| Pointwise within 1 level | 0.837 | 0.640 | −0.197 [−0.253, −0.140] |
+| Mean predicted level, listwise (true: 2.00) | 2.13 | 2.12 | — |
+
+The per-task adapter improved every SST-5 measure against the base model. Against the bias control, it gained no
+listwise accuracy, and only its log loss is better. On pointwise Scores, which it did not train on, the control is
+better. It brought the 0.5B model close to base 1.5B on SST-5 (E16, 1.5B
+listwise: accuracy 0.493, within 1 level 0.940, log loss 1.186 with a temperature fitted on train). Its raw
+probabilities need almost no temperature (1.20 against 7.10). The change on BoolQ and AG News is not significant; both
+intervals include 0. On the documented Jev Score cases (exploratory, n = 10), the listwise mean gap to Jev went from
+0.603 to 0.657, and the same rounded level from 6 to 7 cases.
+
+R17, R18 and R19 together (Inferred):
+- Labelled examples of a task make a small model more accurate on that task. How much of the gain needs a fine-tune
+  depends on the task. On SST-5, 6 numbers fitted on 200 val items gave the same accuracy as the adapter: the base
+  model knew the order of the levels but put the scale too high. On BoolQ and AG News, the adapter learned more than
+  such a shift (R17).
+- Fit the cheap correction first. Fine-tune only when a gain remains after it.
+- A fine-tune on one task did not help on the one other task we measured (R18). Jev states one set of weights for all
+  accounts (§2 row 7). To match that, one model must train on many tasks and then be tested on tasks that were held out
+  of training.
+- The labels are hard, and the test items come from the same dataset as the training items.
 
 **What the POC does not show:**
 - Jev's accuracy, which comes from its model and training.
@@ -844,7 +918,10 @@ Experiments that do not need a Jev key:
 - **Distillation.** Fine-tune the 1.5B model with LoRA on soft labels from averaged Claude samples. Measure agreement
   and ECE against the base model (DESIGN.md §7). This tests the part of §3.9 that is easiest to copy.
 - **Invariance training.** Done with hard labels at 0.5B (R17): listwise flips fell from 22% to 9%. Still open: soft
-  labels, 1.5B, and a test on held-out domains.
+  labels and 1.5B. On a held-out task (SST-5, R18), the adapter did not help.
+- **Multi-task training.** Train one adapter on several tasks (BoolQ, AG News, SST-5 and more), and hold out whole
+  tasks for test. R18 and R19 show a gain on trained tasks and none on others; this tests whether breadth closes the
+  gap.
 
 ---
 

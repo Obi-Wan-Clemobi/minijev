@@ -153,10 +153,13 @@ average gap between stated confidence and accuracy.
   On the held-out test split (E14), 0.5B scores 0.693 [0.64–0.74] against a 0.620 base rate.
 - **Fine-tune (Measured, E20, BoolQ test, n = 300):** a LoRA adapter trained on the 500 BoolQ train questions (and
   AG News) lifts 0.5B from 0.693 to 0.770 [0.72–0.82]. The paired change is +0.077 [+0.030, +0.127]. Base 1.5B scores
-  0.773 on the same items. Log loss falls from 0.695 to 0.494. The effect on other kinds of questions is unknown: the
-  adapter was trained and tested on the same two datasets (RESEARCH.md §7.3 R17).
-- **Candidate fix:** use 1.5B or a larger model; fine-tune on the target task; test on held-out domains; distillation
-  with soft labels (RESEARCH.md §3.9).
+  0.773 on the same items. Log loss falls from 0.695 to 0.494. On SST-5 Scores, a task it did not train on, it gave no gain in
+  accuracy (E21, RESEARCH.md §7.3 R17, R18).
+- **Per-task fine-tune (Measured, E22, SST-5 test, n = 300):** an SST-5-only adapter raises listwise accuracy from
+  0.340 to 0.443. One bias per level and a temperature, fitted on val with no training, reach 0.440 (R19).
+- **Candidate fix:** use 1.5B or a larger model; fit a bias and a temperature on labelled examples of the target
+  task, and fine-tune only if a gain remains; train on many tasks and test on held-out tasks; distillation with soft
+  labels (RESEARCH.md §3.9).
 - **What Jev may do (Inferred):** a larger model (≈15–20B active parameters, RESEARCH.md §3.9) trained for decisions.
 
 ### W8. Literal reading of vague questions

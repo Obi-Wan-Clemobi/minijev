@@ -65,8 +65,8 @@ to overwrite it. The splits file has SHA-256 `54bb491d210778dc…`. SST-5 came l
 
 | Split | Used for | Never used for |
 |---|---|---|
-| **train** | Fitting the calibration temperatures (Noul: temperature and Platt; Choice: one temperature per readout mode). Training the E20 LoRA adapter (BoolQ and AG News train). SST-5 train is not used yet: it is kept for a Score temperature | Reporting results |
-| **val** | Choosing between methods: temperature or Platt for Noul; listwise, averaged or pointwise for Choice; plain or contrastive Score levels (E16). Rule: the lowest negative log-likelihood (a proper scoring rule). Measuring the template grid (E15), which chooses nothing | Fitting |
+| **train** | Fitting the calibration temperatures (Noul: temperature and Platt; Choice: one temperature per readout mode). Training the E20 LoRA adapter (BoolQ and AG News train). SST-5: the Score temperatures of E16 and E21, and training the E22 adapter | Reporting results |
+| **val** | Choosing between methods: temperature or Platt for Noul; listwise, averaged or pointwise for Choice; plain or contrastive Score levels (E16). Rule: the lowest negative log-likelihood (a proper scoring rule). Measuring the template grid (E15), which chooses nothing. For a fine-tuned model, which has seen train (E20, E22): the epoch choice, the temperatures and the bias controls | Fitting, except for a fine-tuned model and its controls |
 | **test** | Reporting the final numbers, once | Fitting or choosing anything |
 
 This is enforced, not only promised:
@@ -121,6 +121,8 @@ each AG News and SST-5 split.
 | E17 opposite Noul pairs | BoolQ | **Yes**: decided on val, reported on test |
 | E18 criteria library | The documented Jev cases | **No.** Exploratory: 13 cases, and the criteria were written after the cases were visible |
 | E20 LoRA fine-tune | `datasets/splits_v2.json` | **Yes**: trained on train, epoch and temperatures chosen on val, reported on test. In-domain only: the test items come from the same two datasets as the training items |
+| E21 E20 adapter on SST-5 | SST-5 (`splits_score_v1.json`) | **Yes**: SST-5 was not in training; temperatures fitted on SST-5 train, reported on test. The Jev-case part is exploratory |
+| E22 SST-5 LoRA fine-tune | SST-5, plus BoolQ and AG News test | **Yes**: trained on SST-5 train, epoch and temperatures chosen on val, reported on test. In-domain for SST-5 |
 
 Only held-out numbers should be used to defend a claim about calibration or accuracy.
 

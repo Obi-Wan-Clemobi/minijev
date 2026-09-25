@@ -3,11 +3,15 @@
     uv run --group train python train_lora.py parity            training forward == cached readout (train items)
     uv run --group train python train_lora.py time --steps 20   seconds per example, before a long run
     uv run --group train python train_lora.py train             the run; one checkpoint per epoch in adapters/
+    uv run --group train python train_lora.py train --task sst5  E22: a per-task adapter for SST-5 Scores only
 
 One adapter for both question types, as Jev uses one set of weights (RESEARCH.md row 7):
 - Noul: BoolQ train (500), the production Noul prompt, target Yes or No.
 - Choice: AG News train (600), the production listwise prompt. Each item appears in ORDERS random option orders per
   epoch, and the target is the letter where the true option now sits. The model sees every topic at every letter.
+
+--task sst5 (E22): a per-task adapter. SST-5 train (300), the production listwise Score prompt, target the letter of
+the true level. Levels are an ordered scale and always appear in order, so there is no shuffle. Same HYPER.
 
 Loss: log loss on the readout. The class logit is the logsumexp over the label variants at the last prompt token,
 exactly as minijev.primitives.class_logits builds it; the loss is cross-entropy over those class logits. Log loss is
@@ -30,8 +34,8 @@ import torch
 
 import data
 from minijev.engine import Engine
-from minijev.fixtures import AG_OPTIONS, AG_QUESTION
-from minijev.prompt import choice_block, noul_block
+from minijev.fixtures import AG_OPTIONS, AG_QUESTION, SST5_LEVELS, SST5_QUESTION
+from minijev.prompt import choice_block, noul_block, score_listwise_block
 from minijev.settings import MODEL
 
 HERE = Path(__file__).parent
@@ -55,6 +59,10 @@ def choice_question(order: list[int]) -> dict:
 
 def example(engine: Engine, kind: str, r: dict, order: list[int] | None = None) -> dict:
     """Token ids (state and question tokenized separately, as at inference), label classes and the target class."""
+    if kind == "sst5":
+        q = {"type": "score", "instructions": SST5_QUESTION, "criteria": SST5_LEVELS}
+        return {"ids": engine.prefix_ids(r["text"]) + engine.suffix_ids(score_listwise_block(q)),
+                "classes": engine.letters[:len(SST5_LEVELS)], "target": r["y"], "kind": kind}
     if kind == "boolq":
         return {"ids": engine.prefix_ids(r["passage"]) + engine.suffix_ids(noul_block(boolq_question(r))),
                 "classes": [engine.yes, engine.no], "target": 0 if r["y"] else 1, "kind": kind}
@@ -73,10 +81,14 @@ def loss_of(engine: Engine, ex: dict) -> torch.Tensor:
     return -torch.log_softmax(class_logits(engine, ex), -1)[ex["target"]]
 
 
-def train_stream(engine: Engine, epoch: int, orders: int) -> list[dict]:
-    """One epoch: every BoolQ train item once, every AG News train item in `orders` fresh random orders, mixed.
+def train_stream(engine: Engine, epoch: int, orders: int, task: str = "mixed") -> list[dict]:
+    """With task "sst5": every SST-5 train item once, shuffled. Otherwise: One epoch: every BoolQ train item once, every AG News train item in `orders` fresh random orders, mixed.
     The order RNG is seeded by epoch and item, independent of the per-item orders the test readouts use."""
     rng = random.Random(f"{HYPER['seed']}-epoch-{epoch}")
+    if task == "sst5":
+        out = [example(engine, "sst5", r) for r in data.load_split("sst5", "train")]
+        rng.shuffle(out)
+        return out
     out = [example(engine, "boolq", r) for r in data.load_split("boolq", "train")]
     for r in data.load_split("ag_news", "train"):
         for _ in range(orders):
@@ -92,9 +104,15 @@ def target_balance(stream: list[dict]) -> dict:
 
 
 @torch.no_grad()
-def val_nll(engine: Engine) -> dict:
-    """Mean log loss on val (BoolQ Noul; AG News listwise in the per-item order the E14 readouts use)."""
+def val_nll(engine: Engine, task: str = "mixed") -> dict:
+    """Mean log loss on val (BoolQ Noul; AG News listwise in the per-item order the E14 readouts use), or on SST-5
+    val (listwise Score) for task "sst5"."""
     engine.model.eval()
+    if task == "sst5":
+        with data.tuning():
+            exs = [example(engine, "sst5", r) for r in data.load_split("sst5", "val")]
+        out = {"sst5": sum(loss_of(engine, ex).item() for ex in exs) / len(exs)}
+        return out | {"mean": out["sst5"]}
     with data.tuning():
         bq = [example(engine, "boolq", r) for r in data.load_split("boolq", "val")]
         ag = [example(engine, "ag_news", r, random.Random(r["source_index"]).sample(range(4), 4))
@@ -135,11 +153,14 @@ def parity(args) -> None:
 def run(args, max_steps: int | None = None) -> None:
     torch.manual_seed(HYPER["seed"])
     engine = lora_engine(args.model, args.attn, args.threads)
-    out = ADAPTERS / args.model.split("/")[-1]
-    streams = [train_stream(engine, e, HYPER["orders_per_epoch"]) for e in range(HYPER["epochs"])]
-    balance = target_balance(streams[0])
+    out = ADAPTERS / (args.model.split("/")[-1] + ("" if args.task == "mixed" else f"-{args.task}"))
+    streams = [train_stream(engine, e, HYPER["orders_per_epoch"], args.task) for e in range(HYPER["epochs"])]
+    if args.task == "sst5":  # the splits are stratified: 60 items per level
+        balance = {"ABCDE"[k]: sum(ex["target"] == k for ex in streams[0]) / len(streams[0]) for k in range(5)}
+    else:
+        balance = target_balance(streams[0])
+        assert all(abs(v - 0.25) < 0.05 for v in balance.values()), "target letters are not balanced"
     print("target letters (epoch 0):", {k: round(v, 3) for k, v in balance.items()})
-    assert all(abs(v - 0.25) < 0.05 for v in balance.values()), "target letters are not balanced"
 
     params = [p for p in engine.model.parameters() if p.requires_grad]
     print(f"trainable parameters: {sum(p.numel() for p in params):,}")
@@ -148,7 +169,7 @@ def run(args, max_steps: int | None = None) -> None:
     warm = max(1, int(HYPER["warmup_fraction"] * total))
     sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: min((s + 1) / warm, max(0.0, (total - s) / (total - warm))))
 
-    log = {"hyper": HYPER, "model": args.model, "attn": args.attn, "target_balance_epoch0": balance,
+    log = {"hyper": HYPER, "task": args.task, "model": args.model, "attn": args.attn, "target_balance_epoch0": balance,
            "examples_per_epoch": len(streams[0]), "optimizer_steps": total, "epochs": []}
     start_epoch = 0
     state = out / "state.pt"
@@ -183,8 +204,8 @@ def run(args, max_steps: int | None = None) -> None:
                     print(f"{per:.2f} s per example; a full run is {per * sum(len(s) for s in streams) / 3600:.1f} h "
                           f"of training plus the val passes")
                     return
-        val = val_nll(engine)
-        print(f"epoch {epoch} val NLL: BoolQ {val['boolq']:.3f}  AG News {val['ag_news']:.3f}", flush=True)
+        val = val_nll(engine, args.task)
+        print(f"epoch {epoch} val NLL: " + "  ".join(f"{k} {v:.3f}" for k, v in val.items()), flush=True)
         engine.model.save_pretrained(out / f"epoch-{epoch}")
         log["epochs"].append({"epoch": epoch, "train_loss_per_step": losses, "val_nll": val,
                               "seconds": time.perf_counter() - t0})
@@ -194,7 +215,8 @@ def run(args, max_steps: int | None = None) -> None:
 
     best = min(log["epochs"], key=lambda e: e["val_nll"]["mean"])
     log["selected_epoch"] = best["epoch"]
-    log["selection_rule"] = "lowest mean val NLL (BoolQ, AG News listwise), inside data.tuning()"
+    log["selection_rule"] = ("lowest val NLL (SST-5 listwise Score)" if args.task == "sst5" else
+                             "lowest mean val NLL (BoolQ, AG News listwise)") + ", inside data.tuning()"
     log["splits_accessed"] = list(data.ACCESS)
     (out / "train_log.json").write_text(json.dumps(log, indent=1))
     print(f"selected epoch {best['epoch']} (val NLL {best['val_nll']['mean']:.3f}); adapter in {out}/epoch-{best['epoch']}")
@@ -212,6 +234,8 @@ def main() -> None:
     ap.add_argument("--attn", default="eager", choices=["eager", "sdpa"])
     ap.add_argument("--threads", type=int, default=12)
     ap.add_argument("--steps", type=int, default=20)
+    ap.add_argument("--task", default="mixed", choices=["mixed", "sst5"],
+                    help="mixed: BoolQ + AG News (E20). sst5: a per-task adapter for SST-5 Scores (E22)")
     args = ap.parse_args()
     if args.command == "parity":
         parity(args)

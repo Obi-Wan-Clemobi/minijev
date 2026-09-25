@@ -1,0 +1,516 @@
+{
+  "adapter": "adapters/Qwen2.5-0.5B-Instruct/epoch-1",
+  "adapter_sha256": "86b99413a88d6d69484e4b11d1c9ef1fc248bb0e7238b2d604555023d7810cd9",
+  "base": {
+    "sst5": {
+      "pointwise": {
+        "raw": {
+          "accuracy": 0.21666666666666667,
+          "adjacent_error": 0.37333333333333335,
+          "far_error": 0.41,
+          "mae_expected": 1.3282179181321454,
+          "nll": 2.043455067919772,
+          "mean_level_predicted": 3.1366666666666667,
+          "confusion": [
+            [
+              0,
+              8,
+              0,
+              28,
+              24
+            ],
+            [
+              0,
+              3,
+              0,
+              40,
+              17
+            ],
+            [
+              0,
+              1,
+              0,
+              45,
+              14
+            ],
+            [
+              0,
+              0,
+              0,
+              56,
+              4
+            ],
+            [
+              0,
+              0,
+              0,
+              54,
+              6
+            ]
+          ]
+        },
+        "train_temperature": {
+          "accuracy": 0.21666666666666667,
+          "adjacent_error": 0.37333333333333335,
+          "far_error": 0.41,
+          "mae_expected": 1.1500172971576508,
+          "nll": 1.5584635500852897,
+          "mean_level_predicted": 3.1366666666666667,
+          "confusion": [
+            [
+              0,
+              8,
+              0,
+              28,
+              24
+            ],
+            [
+              0,
+              3,
+              0,
+              40,
+              17
+            ],
+            [
+              0,
+              1,
+              0,
+              45,
+              14
+            ],
+            [
+              0,
+              0,
+              0,
+              56,
+              4
+            ],
+            [
+              0,
+              0,
+              0,
+              54,
+              6
+            ]
+          ]
+        },
+        "T": 5.111073843607239
+      },
+      "listwise": {
+        "raw": {
+          "accuracy": 0.34,
+          "adjacent_error": 0.38,
+          "far_error": 0.28,
+          "mae_expected": 1.1385014529883022,
+          "nll": 2.587063526124201,
+          "mean_level_predicted": 2.9966666666666666,
+          "confusion": [
+            [
+              2,
+              31,
+              0,
+              9,
+              18
+            ],
+            [
+              0,
+              32,
+              0,
+              14,
+              14
+            ],
+            [
+              0,
+              14,
+              0,
+              18,
+              28
+            ],
+            [
+              0,
+              1,
+              0,
+              13,
+              46
+            ],
+            [
+              0,
+              0,
+              0,
+              5,
+              55
+            ]
+          ]
+        },
+        "train_temperature": {
+          "accuracy": 0.34,
+          "adjacent_error": 0.38,
+          "far_error": 0.28,
+          "mae_expected": 1.0904414716810547,
+          "nll": 1.5127776166199847,
+          "mean_level_predicted": 2.9966666666666666,
+          "confusion": [
+            [
+              2,
+              31,
+              0,
+              9,
+              18
+            ],
+            [
+              0,
+              32,
+              0,
+              14,
+              14
+            ],
+            [
+              0,
+              14,
+              0,
+              18,
+              28
+            ],
+            [
+              0,
+              1,
+              0,
+              13,
+              46
+            ],
+            [
+              0,
+              0,
+              0,
+              5,
+              55
+            ]
+          ]
+        },
+        "T": 6.914068934603952
+      }
+    },
+    "jevdocs": {
+      "raw": {
+        "noul_mean_abs_diff": 0.2960467691125354,
+        "noul_same_side_of_0.5": 0.7333333333333333,
+        "noul_pearson": 0.5093126192157489,
+        "score_pointwise_mean_abs_diff": 0.6205126797515516,
+        "score_pointwise_same_rounded_level": 0.5,
+        "score_listwise_mean_abs_diff": 0.6031929850520911,
+        "score_listwise_same_rounded_level": 0.6,
+        "choice_listwise_same_argmax": 0.5,
+        "choice_pointwise_same_argmax": 0.75
+      },
+      "cc": {
+        "noul_mean_abs_diff": 0.37279043379189475,
+        "noul_same_side_of_0.5": 0.4666666666666667,
+        "noul_pearson": 0.5717875307124515,
+        "score_pointwise_mean_abs_diff": 0.6043045809903204,
+        "score_pointwise_same_rounded_level": 0.5,
+        "score_listwise_mean_abs_diff": 0.7141177396747616,
+        "score_listwise_same_rounded_level": 0.6,
+        "choice_listwise_same_argmax": 0.5,
+        "choice_pointwise_same_argmax": 0.625
+      },
+      "n": {
+        "noul": 15,
+        "score": 10,
+        "choice": 8
+      }
+    }
+  },
+  "lora": {
+    "sst5": {
+      "pointwise": {
+        "raw": {
+          "accuracy": 0.24333333333333335,
+          "adjacent_error": 0.24,
+          "far_error": 0.5166666666666667,
+          "mae_expected": 1.2383875392156392,
+          "nll": 1.7996579906736614,
+          "mean_level_predicted": 3.6366666666666667,
+          "confusion": [
+            [
+              4,
+              8,
+              0,
+              2,
+              46
+            ],
+            [
+              2,
+              4,
+              0,
+              5,
+              49
+            ],
+            [
+              0,
+              1,
+              0,
+              6,
+              53
+            ],
+            [
+              0,
+              0,
+              0,
+              19,
+              41
+            ],
+            [
+              0,
+              0,
+              0,
+              14,
+              46
+            ]
+          ]
+        },
+        "train_temperature": {
+          "accuracy": 0.24333333333333335,
+          "adjacent_error": 0.24,
+          "far_error": 0.5166666666666667,
+          "mae_expected": 1.118742040985017,
+          "nll": 1.5383857968370993,
+          "mean_level_predicted": 3.6366666666666667,
+          "confusion": [
+            [
+              4,
+              8,
+              0,
+              2,
+              46
+            ],
+            [
+              2,
+              4,
+              0,
+              5,
+              49
+            ],
+            [
+              0,
+              1,
+              0,
+              6,
+              53
+            ],
+            [
+              0,
+              0,
+              0,
+              19,
+              41
+            ],
+            [
+              0,
+              0,
+              0,
+              14,
+              46
+            ]
+          ]
+        },
+        "T": 3.5360456681842924
+      },
+      "listwise": {
+        "raw": {
+          "accuracy": 0.25,
+          "adjacent_error": 0.4666666666666667,
+          "far_error": 0.2833333333333333,
+          "mae_expected": 1.0624118694405,
+          "nll": 1.814887427480684,
+          "mean_level_predicted": 2.7533333333333334,
+          "confusion": [
+            [
+              1,
+              19,
+              0,
+              40,
+              0
+            ],
+            [
+              1,
+              14,
+              0,
+              45,
+              0
+            ],
+            [
+              0,
+              1,
+              0,
+              59,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              60,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              60,
+              0
+            ]
+          ]
+        },
+        "train_temperature": {
+          "accuracy": 0.25,
+          "adjacent_error": 0.4666666666666667,
+          "far_error": 0.2833333333333333,
+          "mae_expected": 1.10409979425203,
+          "nll": 1.5227193836732356,
+          "mean_level_predicted": 2.7533333333333334,
+          "confusion": [
+            [
+              1,
+              19,
+              0,
+              40,
+              0
+            ],
+            [
+              1,
+              14,
+              0,
+              45,
+              0
+            ],
+            [
+              0,
+              1,
+              0,
+              59,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              60,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              60,
+              0
+            ]
+          ]
+        },
+        "T": 3.731801742861076
+      }
+    },
+    "jevdocs": {
+      "raw": {
+        "noul_mean_abs_diff": 0.24475899564300183,
+        "noul_same_side_of_0.5": 0.8,
+        "noul_pearson": 0.5456955656229721,
+        "score_pointwise_mean_abs_diff": 0.5834141169234914,
+        "score_pointwise_same_rounded_level": 0.5,
+        "score_listwise_mean_abs_diff": 0.6088674749421913,
+        "score_listwise_same_rounded_level": 0.6,
+        "choice_listwise_same_argmax": 0.5,
+        "choice_pointwise_same_argmax": 0.75
+      },
+      "cc": {
+        "noul_mean_abs_diff": 0.34495890195998813,
+        "noul_same_side_of_0.5": 0.5333333333333333,
+        "noul_pearson": 0.6312255706119874,
+        "score_pointwise_mean_abs_diff": 0.5590340887738323,
+        "score_pointwise_same_rounded_level": 0.5,
+        "score_listwise_mean_abs_diff": 0.6005323110604066,
+        "score_listwise_same_rounded_level": 0.5,
+        "choice_listwise_same_argmax": 0.5,
+        "choice_pointwise_same_argmax": 0.625
+      },
+      "n": {
+        "noul": 15,
+        "score": 10,
+        "choice": 8
+      }
+    }
+  },
+  "delta_lora_minus_base": {
+    "pointwise_correct": {
+      "mean": 0.02666666666666667,
+      "ci95": [
+        -0.03333333333333333,
+        0.08666666666666667
+      ]
+    },
+    "pointwise_adjacent_or_exact": {
+      "mean": -0.10666666666666667,
+      "ci95": [
+        -0.15333333333333332,
+        -0.06
+      ]
+    },
+    "pointwise_nll_calibrated": {
+      "mean": -0.020077753248190354,
+      "ci95": [
+        -0.028372606277005784,
+        -0.011418309342705628
+      ]
+    },
+    "listwise_correct": {
+      "mean": -0.09,
+      "ci95": [
+        -0.16,
+        -0.02
+      ]
+    },
+    "listwise_adjacent_or_exact": {
+      "mean": -0.0033333333333333335,
+      "ci95": [
+        -0.05333333333333334,
+        0.04666666666666667
+      ]
+    },
+    "listwise_nll_calibrated": {
+      "mean": 0.009941767053250873,
+      "ci95": [
+        -0.0072576182902155395,
+        0.026314495929955852
+      ]
+    }
+  },
+  "splits_accessed": [
+    {
+      "dataset": "sst5",
+      "split": "train",
+      "n": 300
+    },
+    {
+      "dataset": "sst5",
+      "split": "test",
+      "n": 300
+    },
+    {
+      "dataset": "sst5",
+      "split": "train",
+      "n": 300
+    },
+    {
+      "dataset": "sst5",
+      "split": "test",
+      "n": 300
+    }
+  ],
+  "use_of_splits": {
+    "train": "temperature per model and variant",
+    "val": "not used",
+    "test": "report only"
+  },
+  "note": "Jev cases: exploratory, documented cases, not held out; agreement with Jev, not accuracy",
+  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "seconds_total": 859.3086349919904
+}

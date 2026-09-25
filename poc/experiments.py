@@ -40,7 +40,7 @@ from transformers import DynamicCache
 from minijev.calibrate import (cross_fit, cross_fit_multiclass, fit_affine, fit_temperature_multiclass, logit, nll,
                                nll_multi, sigmoid, softmax_list)
 from minijev.engine import MODES, Branch, Engine
-from minijev.fixtures import (AG_OPTIONS, AG_QUESTION, GDPR_JEV, GDPR_QUESTIONS, JEV_DOC_CASES,
+from minijev.fixtures import (AG_OPTIONS, AG_QUESTION, SST5_LEVELS, SST5_QUESTION, GDPR_JEV, GDPR_QUESTIONS, JEV_DOC_CASES,
                               SHOES, SUPPORT_TICKET, fetch, gdpr_state, gdpr_text)
 from minijev.generation import (generate, generate_batched, generate_logprobs,
                                 match_option, number, options_text, parse_json,
@@ -1313,8 +1313,6 @@ def template_sensitivity(engine: Engine, n: int = 200) -> dict:
 
 # E16: contrastive Score levels (W5, PLAN Task 4.4) on SST-5, a labelled 5-level set (docs/DATA.md). Each pointwise
 # level can name its neighbours: "positive (not neutral; not very positive)". Chosen on val, reported on test.
-SST5_QUESTION = "How positive is the sentiment of this movie review?"
-SST5_LEVELS = ["very negative", "negative", "neutral", "positive", "very positive"]
 SCORE_VARIANTS = {"pointwise": {"score_mode": "pointwise"},
                   "contrastive": {"score_mode": "pointwise", "contrastive": True},
                   "listwise": {"score_mode": "listwise"}}
@@ -1343,7 +1341,9 @@ def score_readouts(engine: Engine, split: str) -> list[dict]:
     q = {"type": "score", "instructions": SST5_QUESTION, "criteria": SST5_LEVELS}
     key = {"model": engine.name, "prompt_sha1": prompt_fingerprint(engine), "splits_sha256": data.splits_fingerprint("sst5"),
            "question": q, "variants": SCORE_VARIANTS}
-    path = RESULTS / "readouts" / (tag(engine.name).lstrip("-") or "Qwen2.5-0.5B-Instruct") / f"sst5_{split}.json"
+    if engine.adapter:  # a fine-tuned model is a different model: never reuse the base readouts
+        key["adapter_sha256"] = engine.adapter_sha256
+    path = readout_dir(engine) / f"sst5_{split}.json"
     rows = data.load_split("sst5", split)
     if path.exists() and (saved := json.loads(path.read_text()))["key"] == key:
         return saved["items"]
@@ -1644,8 +1644,14 @@ def lora(engine: Engine) -> dict:
             "listwise_correct": [float(max(range(4), key=it["listwise"].__getitem__) == it["y"]) for it in at],
             "flip": [float(len({max(range(4), key=z.__getitem__) for z in it["logits"]}) > 1) for it in rot]}
     out["delta_lora_minus_base"] = {k: paired_delta(per_item["base"][k], per_item["lora"][k]) for k in per_item["base"]}
+    # Control: the base model with one bias per topic and a temperature, fitted on val (E22 has the same control).
+    av, at = readout_cache(base, "ag_news", "val"), readout_cache(base, "ag_news", "test")
+    t, bias = fit_bias_temperature([it["listwise"] for it in av], [it["y"] for it in av])
+    ctrl = [float(max(range(4), key=lambda c: it["listwise"][c] / t + bias[c]) == it["y"]) for it in at]
+    out["base_bias_control"] = {"ag_news_listwise_accuracy": statistics.mean(ctrl), "T": t, "bias": bias,
+                                "delta_lora_minus_control": paired_delta(ctrl, per_item["lora"]["listwise_correct"])}
     out["splits_accessed"] = list(data.ACCESS)
-    out["use_of_splits"] = {"train": "LoRA training (train_lora.py)", "val": "epoch choice and temperatures",
+    out["use_of_splits"] = {"train": "LoRA training (train_lora.py)", "val": "epoch choice, temperatures, bias control",
                             "test": "report only"}
     log = Path(engine.adapter).parent / "train_log.json"
     if log.exists():
@@ -1671,6 +1677,102 @@ def lora(engine: Engine) -> dict:
               " ".join(f"{k} {v:.2f}" for k, v in f["position_picks"].items()))
     for k, d in out["delta_lora_minus_base"].items():
         print(f"delta {k:16s} {d['mean']:+.3f} [{d['ci95'][0]:+.3f},{d['ci95'][1]:+.3f}]")
+    c = out["base_bias_control"]
+    d = c["delta_lora_minus_control"]
+    print(f"base + val bias AG listwise acc {c['ag_news_listwise_accuracy']:.3f}; "
+          f"lora - control {d['mean']:+.3f} [{d['ci95'][0]:+.3f},{d['ci95'][1]:+.3f}]")
+    return out
+
+
+def fit_bias_temperature(logits: list[list[float]], labels: list[int]) -> tuple[float, list[float]]:
+    """T and one bias per class that minimize the NLL of softmax(z / T + b); b[0] = 0. A no-training control: it can
+    move the argmax (a temperature alone cannot), so it corrects a shift of the whole scale, such as "too positive"."""
+    z, y = torch.tensor(logits, dtype=torch.float64), torch.tensor(labels)
+    log_t = torch.zeros(1, dtype=torch.float64, requires_grad=True)
+    b = torch.zeros(z.shape[1] - 1, dtype=torch.float64, requires_grad=True)
+    opt = torch.optim.LBFGS([log_t, b], max_iter=500, line_search_fn="strong_wolfe")
+
+    def closure():
+        opt.zero_grad()
+        loss = torch.nn.functional.cross_entropy(z / log_t.exp() + torch.cat([b.new_zeros(1), b]), y)
+        loss.backward()
+        return loss
+    opt.step(closure)
+    return log_t.exp().item(), [0.0] + b.tolist()
+
+
+def transfer(engine: Engine) -> dict:
+    """E21 and E22: base model against an adapter on SST-5 Scores (test) and the documented Jev cases (agreement with
+    Jev, not accuracy). engine carries the adapter.
+    E21, the E20 adapter (BoolQ + AG News): SST-5 is a task it was not trained on; temperatures are fitted on SST-5 train.
+    E22, a per-task SST-5 adapter: it has seen SST-5 train, so temperatures are fitted on val for both models, and
+    BoolQ and AG News test show what the adapter costs on the tasks it was not trained on."""
+    import data
+    assert engine.adapter, "run with --adapter adapters/<model>/epoch-<n>"
+    log = Path(engine.adapter).parent / "train_log.json"
+    task = json.loads(log.read_text()).get("task", "mixed") if log.exists() else "mixed"
+    fit_split = "val" if task == "sst5" else "train"
+    data.ACCESS.clear()
+    base = Engine(engine.name, attn=engine.model.config._attn_implementation)
+    models = {"base": base, "lora": engine}
+    variants = ("pointwise", "listwise")
+    out: dict = {"adapter": engine.adapter, "adapter_sha256": engine.adapter_sha256, "adapter_task": task}
+    per_item: dict = {}
+    for name, eng in models.items():
+        train, test = score_readouts(eng, fit_split), score_readouts(eng, "test")
+        y = [it["y"] for it in test]
+        res, per_item[name] = {}, {}
+        for v in variants:
+            t = fit_temperature_multiclass([it[v] for it in train], [it["y"] for it in train])
+            raw = [softmax_list(it[v]) for it in test]
+            cal = [softmax_list([z / t for z in it[v]]) for it in test]
+            res[v] = {"raw": ordinal_metrics(raw, y), "train_temperature": ordinal_metrics(cal, y), "T": t}
+            pred = [max(range(len(p)), key=p.__getitem__) for p in raw]
+            per_item[name][f"{v}_correct"] = [float(a == b) for a, b in zip(pred, y)]
+            per_item[name][f"{v}_adjacent_or_exact"] = [float(abs(a - b) <= 1) for a, b in zip(pred, y)]
+            per_item[name][f"{v}_nll_calibrated"] = [-math.log(max(p[b], 1e-12)) for p, b in zip(cal, y)]
+        out[name] = {"sst5": res, "jevdocs": jevdocs(eng)["summary"]}
+        if task == "sst5":  # the tasks this adapter was not trained on
+            bt, at = readout_cache(eng, "boolq", "test"), readout_cache(eng, "ag_news", "test")
+            per_item[name]["boolq_correct"] = [float((it["z"] > 0) == bool(it["y"])) for it in bt]
+            per_item[name]["ag_news_listwise_correct"] = [float(max(range(4), key=it["listwise"].__getitem__) == it["y"])
+                                                          for it in at]
+            out[name]["other_tasks"] = {k: statistics.mean(per_item[name][k])
+                                        for k in ("boolq_correct", "ag_news_listwise_correct")}
+    out["delta_lora_minus_base"] = {k: paired_delta(per_item["base"][k], per_item["lora"][k]) for k in per_item["base"]}
+    if task == "sst5":  # control: the base model with one bias per level and a temperature, fitted on val, no training
+        val, test = score_readouts(base, "val"), score_readouts(base, "test")
+        y, ctrl, per_ctrl = [it["y"] for it in test], {}, {}
+        for v in variants:
+            t, b = fit_bias_temperature([it[v] for it in val], [it["y"] for it in val])
+            probs = [softmax_list([z / t + bi for z, bi in zip(it[v], b)]) for it in test]
+            ctrl[v] = {**{k: m for k, m in ordinal_metrics(probs, y).items()}, "T": t, "bias": b}
+            pred = [max(range(len(p)), key=p.__getitem__) for p in probs]
+            per_ctrl[f"{v}_correct"] = [float(a == c) for a, c in zip(pred, y)]
+            per_ctrl[f"{v}_adjacent_or_exact"] = [float(abs(a - c) <= 1) for a, c in zip(pred, y)]
+            per_ctrl[f"{v}_nll_calibrated"] = [-math.log(max(p[c], 1e-12)) for p, c in zip(probs, y)]
+        out["base_bias_control"] = ctrl
+        out["delta_lora_minus_bias_control"] = {k: paired_delta(per_ctrl[k], per_item["lora"][k]) for k in per_ctrl}
+    out["splits_accessed"] = list(data.ACCESS)
+    out["use_of_splits"] = ({"train": "adapter training", "val": "epoch choice; temperature per model and variant; "
+                             "the bias control",
+                             "test": "report only"} if task == "sst5" else
+                            {"train": "temperature per model and variant", "val": "not used", "test": "report only"})
+    out["note"] = "Jev cases: exploratory, documented cases, not held out; agreement with Jev, not accuracy"
+
+    print(f"\n{engine.name} + LoRA ({engine.adapter}); SST-5 test. [..] = 95% bootstrap interval")
+    for name in models:
+        for v, r in out[name]["sst5"].items():
+            print(f"{name:5s} {v:9s} raw acc {r['raw']['accuracy']:.3f} MAE {r['raw']['mae_expected']:.3f} "
+                  f"NLL {r['raw']['nll']:.3f} | {fit_split}-T {r['T']:.2f}: acc {r['train_temperature']['accuracy']:.3f} "
+                  f"NLL {r['train_temperature']['nll']:.3f}")
+    for k, d in out["delta_lora_minus_base"].items():
+        print(f"delta {k:28s} {d['mean']:+.3f} [{d['ci95'][0]:+.3f},{d['ci95'][1]:+.3f}]")
+    for v, m in out.get("base_bias_control", {}).items():
+        print(f"base + val bias {v:9s} acc {m['accuracy']:.3f} within-1 {1 - m['far_error']:.3f} NLL {m['nll']:.3f} "
+              f"mean level {m['mean_level_predicted']:.2f}")
+    for k, d in out.get("delta_lora_minus_bias_control", {}).items():
+        print(f"lora - control {k:28s} {d['mean']:+.3f} [{d['ci95'][0]:+.3f},{d['ci95'][1]:+.3f}]")
     return out
 
 
@@ -1679,7 +1781,9 @@ EXPERIMENTS = {"demo": demo, "tree": tree, "latency": latency, "jevdocs": jevdoc
                "fanout": lambda engine: {"rows": fan_out(engine, 500)}, "quality": quality, "same_format": same_format, "order_bias": order_bias, "heldout": heldout,
                "template_sensitivity": template_sensitivity, "contrastive_levels": contrastive_levels,
                "opposite_pairs": opposite_pairs, "criteria_ablation": criteria_ablation,
-               "needle": needle, "lora": lora}
+               "needle": needle, "lora": lora, "transfer": transfer}
+# transfer writes transfer.json (E21) or transfer_sst5.json (E22), by the adapter's task: see main()
+ADAPTER_EXPERIMENTS = ("lora", "transfer")  # these need --adapter; the other experiments' caches do not key on it
 
 
 def tag(model: str) -> str:
@@ -1691,7 +1795,7 @@ def main() -> None:
     ap.add_argument("name", nargs="?", choices=[*EXPERIMENTS, "all"], help="Experiment to run")
     ap.add_argument("--model", default=MODEL)
     ap.add_argument("--attn", default="eager", choices=["eager", "sdpa"])
-    ap.add_argument("--adapter", help="LoRA directory from train_lora.py (E20 lora only)")
+    ap.add_argument("--adapter", help="LoRA directory from train_lora.py (E20 lora, E21 transfer)")
     ap.add_argument("--update-manifest", action="store_true",
                     help="Generate/update dataset manifest with checksums (W17)")
     args = ap.parse_args()
@@ -1703,16 +1807,17 @@ def main() -> None:
     if args.name is None:
         ap.error("experiment name is required (unless using --update-manifest)")
 
-    if args.adapter and args.name != "lora":
-        ap.error("--adapter is for the lora experiment only (the other experiments' caches do not key on it)")
+    if args.adapter and args.name not in ADAPTER_EXPERIMENTS:
+        ap.error(f"--adapter is for {', '.join(ADAPTER_EXPERIMENTS)} only (the other experiments' caches do not key on it)")
     engine = Engine(args.model, attn=args.attn, adapter=args.adapter)
     RESULTS.mkdir(exist_ok=True)
-    for name in [n for n in EXPERIMENTS if n != "lora"] if args.name == "all" else [args.name]:
+    for name in [n for n in EXPERIMENTS if n not in ADAPTER_EXPERIMENTS] if args.name == "all" else [args.name]:
         print(f"\n=== {name} ({args.model}) ===", flush=True)
         t0 = time.perf_counter()
         result = EXPERIMENTS[name](engine)
         result["model"], result["seconds_total"] = args.model, time.perf_counter() - t0
-        (RESULTS / f"{name}{tag(args.model)}.json").write_text(json.dumps(result, indent=2, ensure_ascii=False))
+        suffix = f"_{result['adapter_task']}" if result.get("adapter_task", "mixed") != "mixed" else ""
+        (RESULTS / f"{name}{suffix}{tag(args.model)}.json").write_text(json.dumps(result, indent=2, ensure_ascii=False))
 
 
 if __name__ == "__main__":
