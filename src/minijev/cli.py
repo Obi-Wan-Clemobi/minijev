@@ -5,6 +5,7 @@
     minijev ask "…" "How upset?" --type score --levels calm annoyed angry
     minijev ask --json request.json                  # a full {state, questions} request
     minijev serve --port 8000                         # the HTTP API for the web app
+    minijev sessions --help                           # training data from your Claude Code sessions
 
 Settings come from ./minijev.env and MINIJEV_* variables (run from poc/ to use its calibration).
 """
@@ -17,6 +18,10 @@ import sys
 
 
 def main(argv: list[str] | None = None) -> None:
+    argv = sys.argv[1:] if argv is None else argv
+    if argv[:1] == ["sessions"]:
+        from .sessions.cli import main as sessions_main
+        return sessions_main(argv[1:])
     ap = argparse.ArgumentParser(prog="minijev", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     a = sub.add_parser("ask", help="answer one question (or a JSON request) with one forward pass")
@@ -30,6 +35,8 @@ def main(argv: list[str] | None = None) -> None:
     s = sub.add_parser("serve", help="start the HTTP API")
     s.add_argument("--port", type=int, default=8000)
     s.add_argument("--host", default="127.0.0.1")
+    # Listed here only for `minijev --help`; the check at the top of main() dispatches `sessions`.
+    sub.add_parser("sessions", help="training data from your Claude Code sessions (minijev sessions --help)")
     args = ap.parse_args(argv)
 
     if args.cmd == "serve":

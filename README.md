@@ -132,6 +132,8 @@ All commands run from `poc/`. Results go to `poc/results/`.
 | [docs/RESEARCH.md](docs/RESEARCH.md) | What is known about Jev, with sources and evidence levels, and our results |
 | [docs/DATA.md](docs/DATA.md) | The data card: sources, licences, frozen splits, and what each split is for |
 | [docs/WEAKNESSES.md](docs/WEAKNESSES.md) | Every known weakness, with evidence and a candidate fix |
+| [docs/SESSIONS.md](docs/SESSIONS.md) | Train minijev on your own Claude Code sessions (`minijev sessions`) |
+| [docs/SESSIONS_METHOD.md](docs/SESSIONS_METHOD.md) | Session data: method, checks, measurements and threats to validity |
 | [PLAN.md](PLAN.md) | The implementation plan and task tracker |
 | [src/minijev/](src/minijev/) | The package, the HTTP API (`api/`) and the flow executor (`flows.py`) |
 | [poc/](poc/) | Experiments, data, splits, results, calibration files, the LoRA adapter and flow templates |

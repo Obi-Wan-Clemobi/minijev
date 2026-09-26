@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import random
 
 
 def sigmoid(t: float) -> float:
@@ -99,3 +100,44 @@ def nll_multi(logits: list[list[float]], y: list[int], t: float = 1.0) -> float:
         m = max(v / t for v in z)
         total -= z[yi] / t - m - math.log(sum(math.exp(v / t - m) for v in z))
     return total / len(y)
+
+
+def bootstrap_ci(values: list, stat, n_boot: int = 2000, seed: int = 0) -> list[float]:
+    """95% percentile interval of stat(sample) over resamples of the items."""
+    rng = random.Random(seed)
+    stats = sorted(stat([values[rng.randrange(len(values))] for _ in values]) for _ in range(n_boot))
+    return [stats[int(0.025 * n_boot)], stats[int(0.975 * n_boot) - 1]]
+
+
+def multiclass_metrics(probs: list[list[float]], labels: list[int]) -> dict:
+    """Accuracy, top-label ECE (10 equal-width bins on [0, 1]) and multiclass Brier."""
+    bins = [[0, 0.0, 0.0] for _ in range(10)]
+    for p, y in zip(probs, labels):
+        conf, pred = max(p), max(range(len(p)), key=p.__getitem__)
+        b = bins[min(int(conf * 10), 9)]
+        b[0], b[1], b[2] = b[0] + 1, b[1] + conf, b[2] + (pred == y)
+    n = len(labels)
+    return {
+        "accuracy": sum(max(range(len(p)), key=p.__getitem__) == y for p, y in zip(probs, labels)) / n,
+        "ece": sum(abs(c[1] - c[2]) for c in bins if c[0]) / n,
+        "brier": sum(sum((pk - (k == y)) ** 2 for k, pk in enumerate(p)) for p, y in zip(probs, labels)) / n,
+    }
+
+
+def fit_bias_temperature(logits: list[list[float]], labels: list[int]) -> tuple[float, list[float]]:
+    """T and one bias per class that minimize the NLL of softmax(z / T + b); b[0] = 0. A no-training control: it can
+    move the argmax (a temperature alone cannot), so it corrects a shift of the whole scale, such as "too positive"."""
+    import torch   # only here: the rest of this module is pure Python
+
+    z, y = torch.tensor(logits, dtype=torch.float64), torch.tensor(labels)
+    log_t = torch.zeros(1, dtype=torch.float64, requires_grad=True)
+    b = torch.zeros(z.shape[1] - 1, dtype=torch.float64, requires_grad=True)
+    opt = torch.optim.LBFGS([log_t, b], max_iter=500, line_search_fn="strong_wolfe")
+
+    def closure():
+        opt.zero_grad()
+        loss = torch.nn.functional.cross_entropy(z / log_t.exp() + torch.cat([b.new_zeros(1), b]), y)
+        loss.backward()
+        return loss
+    opt.step(closure)
+    return log_t.exp().item(), [0.0] + b.tolist()

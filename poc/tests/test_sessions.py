@@ -1,0 +1,206 @@
+"""minijev.sessions on synthetic logs: parsing, no future results in a state, scrub, labels, freeze."""
+
+import json
+import re
+from pathlib import Path
+
+import pytest
+
+from minijev.sessions import Paths, Question, check, extract, freeze, load_split, register, rows, state, stats
+from minijev.sessions import dataset, logs, questions, scrub
+
+
+def _use(msg, uid, name, command):
+    return {"type": "assistant", "timestamp": "2026-01-01T00:00:01Z", "message": {"id": msg, "content": [
+        {"type": "tool_use", "id": uid, "name": name, "input": {"command": command}}]}}
+
+
+def _result(uid, error):
+    return {"type": "user", "message": {"content": [
+        {"type": "tool_result", "tool_use_id": uid, "is_error": error, "content": "x"}]}}
+
+
+def _entries(cwd="/work/app", day="01"):
+    return [
+        {"type": "user", "cwd": cwd, "message": {"content": "<command-name>/clear</command-name>"}},
+        {"type": "user", "cwd": cwd, "timestamp": f"2026-01-{day}T00:00:00Z", "message": {"content": "fix the test"}},
+        _use("m1", "a", "Bash", "cd /x && ls"),   # two parallel calls: one message, two entries
+        _use("m1", "b", "Bash", "pytest"),
+        _result("a", False),
+        _result("b", True),
+        _use("m2", "c", "Edit", "unused"),
+    ]
+
+
+def _write(path: Path, entries) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(json.dumps(e) for e in entries))
+    return path
+
+
+def test_meta_entries_are_not_turns(tmp_path):
+    s = logs.parse(_write(tmp_path / "s.jsonl", _entries()))
+    assert [t["text"] for t in s["turns"]] == ["fix the test"]
+    assert [c["status"] for c in s["calls"]] == ["ok", "error", "unknown"]
+    assert s["calls"][0]["summary"] == "ls" and s["calls"][0]["kind"] == "inspect" and s["calls"][1]["kind"] == "run"
+    assert s["project"] == "app"
+
+
+def test_parallel_call_status_is_pending(tmp_path):
+    s = logs.parse(_write(tmp_path / "s.jsonl", _entries()))
+    turn, calls = s["turns"][0], s["calls"]
+    second = state(s, turn, calls[:1], calls[1], msg=calls[1]["msg"])
+    assert "[Bash] ls -> pending" in second and "error" not in second
+    third = state(s, turn, calls[:2], msg=calls[2]["msg"])
+    assert "[Bash] ls -> ok" in third and "[Bash] pytest -> error" in third
+
+
+def test_state_holds_no_own_call(tmp_path):
+    s = logs.parse(_write(tmp_path / "s.jsonl", _entries()))
+    for q in questions.QUESTIONS.values():
+        for rid, text, _ in q.rows(s):
+            k = int(rid.split(":")[1])
+            listed = [l for l in text.split("\nNext call:")[0].split("\n") if l.startswith("- [")]
+            assert len(listed) == sum(c["turn"] == s["calls"][k]["turn"] for c in s["calls"][:k])
+
+
+def test_project_name():
+    home = Path.home()
+    assert logs.project_name(str(home / "Code" / "app")) == "app"
+    assert logs.project_name(str(home / "Code" / "app" / "web")) == "app/web"
+    assert logs.project_name(str(home)) == "home" and logs.project_name("/srv/tool") == "tool"
+
+
+def test_scrub_removes_secrets():
+    text = scrub.scrub(f"key sk-{'a' * 30} API_KEY=abcdefgh123 me@example.com {scrub.HOME}/x ABC123-DEF456-789ABC "
+                       "/tmp/claude-501/-a-b/c/scratchpad/q.sql")
+    assert scrub.hits(text) == [] and "~/x" in text and "<scratch>/q.sql" in text
+
+
+def test_literals_match_whole_words_only():
+    pattern = scrub.literal_pattern(frozenset({"dev", "Wanda"}))
+    assert scrub.scrub("dev ran device check for Wanda", pattern) == "<private> ran device check for <private>"
+
+
+def test_env_values_are_literals(tmp_path):
+    (tmp_path / ".env").write_text("TOKEN=abcdefgh12345\nSHORT=abc\n# X=commentedout123\nNODE_ENV=development\n"
+                                   "API=http://localhost:3000/api\nPORT=80800000\n")
+    assert scrub.env_values({str(tmp_path)}) == {"abcdefgh12345"}
+
+
+def test_git_guard(tmp_path):
+    (tmp_path / ".git").mkdir()
+    with pytest.raises(SystemExit):
+        Paths(tmp_path / "private")
+    assert Paths(tmp_path / "private", allow_git=True).root == tmp_path / "private"
+
+
+def _root(tmp_path) -> Paths:
+    paths = Paths(tmp_path / "root")
+    for i, day in enumerate(["01", "02", "03", "04"]):
+        _write(paths.raw / "proj" / f"s{i}.jsonl", _entries(day=day))
+    (paths.raw / "proj" / "subagents").mkdir()
+    _write(paths.raw / "proj" / "subagents" / "x.jsonl", _entries())   # left out
+    paths.private_strings.write_text("# private\nfix\n")
+    return paths
+
+
+def test_extract_check_freeze(tmp_path):
+    paths = _root(tmp_path)
+    diag = extract(paths)
+    assert diag["sessions written"] == 4 and diag["files"] == 4
+    assert all(t["text"] == "<private> the test" for s in dataset.sessions(paths) for t in s["turns"])
+    assert check(paths, quiet=True)
+    split = dataset.split_of(dataset.sessions(paths))
+    assert [split[f"s{i}"] for i in range(4)] == ["train", "train", "train", "val"]   # 9 of 12 calls seen < 85%
+    assert sum(stats(paths)["next_tool"]["train"].values()) == 9
+    freeze(paths, "v1")
+    assert len(load_split("will_fail", "train", "v1", paths)) == 6
+    with pytest.raises(SystemExit):
+        freeze(paths, "v1")
+    (paths.out / "v1" / "will_fail.jsonl").write_text("{}")
+    with pytest.raises(ValueError):
+        load_split("will_fail", "train", "v1", paths)
+
+
+def test_external_labels_join(tmp_path):
+    paths = _root(tmp_path)
+    extract(paths)
+    q = questions.QUESTIONS["needs_approval"]
+    assert rows(paths, q) == []
+    todo = dataset.points(paths, q, 100)
+    assert len(todo) == 12 and all("\nNext call:\n" in p["text"] for p in todo)
+    paths.labels.mkdir()
+    (paths.labels / "needs_approval.jsonl").write_text(json.dumps({"id": "s0:1", "y": 1, "by": "person"}))
+    [r] = rows(paths, q)
+    assert (r["id"], r["y"], r["by"]) == ("s0:1", 1, "person") and "[Bash] pytest" in r["text"]
+    (paths.labels / "needs_approval.jsonl").write_text(json.dumps({"id": "s0:1", "y": 1, "status": "contested"}))
+    assert rows(paths, q) == []   # a contested label is left out
+    assert len(dataset.points(paths, q, 100)) == 11
+
+
+def test_custom_question(tmp_path):
+    def runs_tests(s):
+        for k, c in enumerate(s["calls"]):
+            if c["tool"] == "Bash":
+                yield f"{s['session']}:{k}", state(s, s["turns"][c["turn"]], s["calls"][:k], c, c["msg"]), \
+                    int(bool(re.match("pytest", c["summary"])))
+    register(Question("runs_tests", "noul", ["no", "yes"], {"instructions": "Is this call a test run?"}, runs_tests))
+    try:
+        paths = _root(tmp_path)
+        extract(paths)
+        assert [r["y"] for r in rows(paths, questions.QUESTIONS["runs_tests"])][:2] == [0, 1]
+    finally:
+        del questions.QUESTIONS["runs_tests"]
+
+
+def test_consensus_rules(tmp_path):
+    from minijev.sessions import consensus
+
+    def put(stage, name, rows):
+        (tmp_path / stage).mkdir(exist_ok=True)
+        (tmp_path / stage / f"{name}.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    ids = [f"s:{k}" for k in range(20)]
+    put("round1", "A0", [{"id": i, "y": 0, "by": "a"} for i in ids])
+    put("round1", "B0", [{"id": i, "y": int(i == "s:0"), "by": "b", "unsure": i == "s:1"} for i in ids])
+    r = consensus.decide(tmp_path, {})
+    audit = set(r["queues"]["review"]) - {"s:0", "s:1"}
+    assert r["counts"]["disputed_round1"] == 2 and len(audit) == 2 and not r["queues"]["adjudicate"]
+    assert all(r["final"][i]["status"] == "agreed" for i in r["final"])
+    # reviewers: agree on s:0 (yes), split on s:1, confirm the audited items
+    rev = lambda name, y1: [{"id": "s:0", "y": 1, "by": name}, {"id": "s:1", "y": y1, "by": name}] + \
+        [{"id": i, "y": 0, "by": name} for i in audit]
+    put("review", "R0", rev("r0", 0)); put("review", "R1", rev("r1", 1))
+    r = consensus.decide(tmp_path, {})
+    assert r["final"]["s:0"]["y"] == 1 and r["final"]["s:0"]["status"] == "reviewed"
+    assert r["queues"]["adjudicate"] == ["s:1"] and not r["counts"]["second_round"]
+    put("adjudicate", "J", [{"id": "s:1", "y": 1, "by": "j"}])
+    put("adjudicate", "K", [{"id": "s:1", "y": 0, "by": "k"}])   # adjudicators split: contested, majority of all
+    r = consensus.decide(tmp_path, {})
+    assert r["final"]["s:1"]["status"] == "contested" and not any(r["queues"].values())
+    assert r["final"]["s:1"]["y"] == 0   # opinions on s:1: 0, 0 (round 1), 0, 1 (review), 1, 0 (adjudication)
+    assert r["counts"]["final_positive"] == 1 and r["counts"]["changed_from_round1_majority"] == 1   # s:0 was a tie
+
+
+def test_consensus_fact_rule(tmp_path):
+    from minijev.sessions import consensus
+    (tmp_path / "round1").mkdir()
+    for name, ys in (("A0", {"s:0": 1, "s:1": 0}), ("B0", {"s:0": 1, "s:1": 0})):
+        (tmp_path / "round1" / f"{name}.jsonl").write_text("".join(json.dumps({"id": i, "y": y, "by": name}) + "\n"
+                                                                   for i, y in ys.items()))
+    (tmp_path / "facts.json").write_text(json.dumps([{"pattern": r"^\[guide\]", "fact": "git-tracked"}]))
+    texts = {"s:0": "x\nNext call:\n[guide] remove", "s:1": "x\nNext call:\n[guide] remove"}
+    r = consensus.decide(tmp_path, {}, texts)
+    assert r["queues"]["adjudicate"] == ["s:0"]           # a yes on a fact item goes to the adjudicator
+    assert "s:1" not in r["queues"]["adjudicate"]         # all-no items already fit the fact
+    (tmp_path / "adjudicate").mkdir()
+    for name in ("J", "K"):
+        (tmp_path / "adjudicate" / f"{name}.jsonl").write_text(json.dumps({"id": "s:0", "y": 0, "by": name}) + "\n")
+    r = consensus.decide(tmp_path, {}, texts)
+    assert r["final"]["s:0"] == r["final"]["s:0"] | {"y": 0, "status": "adjudicated"}
+
+
+def test_training_cannot_read_test():
+    import train_lora
+    with pytest.raises(AssertionError):
+        train_lora.sessions_split("sessions-next_tool", "test")

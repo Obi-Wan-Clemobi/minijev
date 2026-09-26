@@ -4,6 +4,7 @@
     uv run --group train python train_lora.py time --steps 20   seconds per example, before a long run
     uv run --group train python train_lora.py train             the run; one checkpoint per epoch in adapters/
     uv run --group train python train_lora.py train --task sst5  E22: a per-task adapter for SST-5 Scores only
+    uv run --group train python train_lora.py train --task sessions-next_tool --version v2   (docs/SESSIONS.md)
 
 One adapter for both question types, as Jev uses one set of weights (RESEARCH.md row 7):
 - Noul: BoolQ train (500), the production Noul prompt, target Yes or No.
@@ -12,6 +13,10 @@ One adapter for both question types, as Jev uses one set of weights (RESEARCH.md
 
 --task sst5 (E22): a per-task adapter. SST-5 train (300), the production listwise Score prompt, target the letter of
 the true level. Levels are an ordered scale and always appear in order, so there is no shuffle. Same HYPER.
+
+--task sessions-<question>: a per-question adapter on frozen Claude Code session data (minijev.sessions). The prompt
+comes from minijev.sessions.evaluate.prompt_ids, as the baselines use. Options are always in the same order (as SST-5).
+The adapter goes to ~/.minijev-private/adapters/, never to poc/adapters/: it can memorize text from the sessions.
 
 Loss: log loss on the readout. The class logit is the logsumexp over the label variants at the last prompt token,
 exactly as minijev.primitives.class_logits builds it; the loss is cross-entropy over those class logits. Log loss is
@@ -59,6 +64,11 @@ def choice_question(order: list[int]) -> dict:
 
 def example(engine: Engine, kind: str, r: dict, order: list[int] | None = None) -> dict:
     """Token ids (state and question tokenized separately, as at inference), label classes and the target class."""
+    if kind.startswith("sessions-"):
+        from minijev.sessions import QUESTIONS
+        from minijev.sessions.evaluate import prompt_ids
+        ids, classes = prompt_ids(engine, QUESTIONS[kind.removeprefix("sessions-")], r["text"])
+        return {"ids": ids, "classes": classes, "target": r["y"], "kind": kind}
     if kind == "sst5":
         q = {"type": "score", "instructions": SST5_QUESTION, "criteria": SST5_LEVELS}
         return {"ids": engine.prefix_ids(r["text"]) + engine.suffix_ids(score_listwise_block(q)),
@@ -85,6 +95,10 @@ def train_stream(engine: Engine, epoch: int, orders: int, task: str = "mixed") -
     """With task "sst5": every SST-5 train item once, shuffled. Otherwise: One epoch: every BoolQ train item once, every AG News train item in `orders` fresh random orders, mixed.
     The order RNG is seeded by epoch and item, independent of the per-item orders the test readouts use."""
     rng = random.Random(f"{HYPER['seed']}-epoch-{epoch}")
+    if task.startswith("sessions-"):
+        out = [example(engine, task, r) for r in sessions_split(task, "train")]
+        rng.shuffle(out)
+        return out
     if task == "sst5":
         out = [example(engine, "sst5", r) for r in data.load_split("sst5", "train")]
         rng.shuffle(out)
@@ -108,6 +122,10 @@ def val_nll(engine: Engine, task: str = "mixed") -> dict:
     """Mean log loss on val (BoolQ Noul; AG News listwise in the per-item order the E14 readouts use), or on SST-5
     val (listwise Score) for task "sst5"."""
     engine.model.eval()
+    if task.startswith("sessions-"):
+        exs = [example(engine, task, r) for r in sessions_split(task, "val")]
+        out = {task: sum(loss_of(engine, ex).item() for ex in exs) / len(exs)}
+        return out | {"mean": out[task]}
     if task == "sst5":
         with data.tuning():
             exs = [example(engine, "sst5", r) for r in data.load_split("sst5", "val")]
@@ -120,6 +138,15 @@ def val_nll(engine: Engine, task: str = "mixed") -> dict:
     out = {k: sum(loss_of(engine, ex).item() for ex in exs) / len(exs) for k, exs in (("boolq", bq), ("ag_news", ag))}
     out["mean"] = (out["boolq"] + out["ag_news"]) / 2
     return out
+
+
+SESSIONS_VERSION = ["v1"]   # set by --version
+
+
+def sessions_split(task: str, split: str) -> list[dict]:
+    from minijev.sessions import load_split
+    assert split != "test", "the test split is for reporting only"
+    return load_split(task.removeprefix("sessions-"), split, SESSIONS_VERSION[0])
 
 
 def lora_engine(model: str, attn: str, threads: int) -> Engine:
@@ -154,8 +181,14 @@ def run(args, max_steps: int | None = None) -> None:
     torch.manual_seed(HYPER["seed"])
     engine = lora_engine(args.model, args.attn, args.threads)
     out = ADAPTERS / (args.model.split("/")[-1] + ("" if args.task == "mixed" else f"-{args.task}"))
+    if args.task.startswith("sessions-"):
+        from minijev.sessions import Paths
+        out = Paths().root / "adapters" / f"{args.model.split('/')[-1]}-{args.task}-{args.version}"
     streams = [train_stream(engine, e, HYPER["orders_per_epoch"], args.task) for e in range(HYPER["epochs"])]
-    if args.task == "sst5":  # the splits are stratified: 60 items per level
+    if args.task.startswith("sessions-"):  # the labels keep their natural balance (docs/SESSIONS.md)
+        k = len(streams[0][0]["classes"])
+        balance = {j: sum(ex["target"] == j for ex in streams[0]) / len(streams[0]) for j in range(k)}
+    elif args.task == "sst5":  # the splits are stratified: 60 items per level
         balance = {"ABCDE"[k]: sum(ex["target"] == k for ex in streams[0]) / len(streams[0]) for k in range(5)}
     else:
         balance = target_balance(streams[0])
@@ -169,7 +202,7 @@ def run(args, max_steps: int | None = None) -> None:
     warm = max(1, int(HYPER["warmup_fraction"] * total))
     sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: min((s + 1) / warm, max(0.0, (total - s) / (total - warm))))
 
-    log = {"hyper": HYPER, "task": args.task, "model": args.model, "attn": args.attn, "target_balance_epoch0": balance,
+    log = {"hyper": HYPER, "task": args.task, "sessions_version": args.version, "model": args.model, "attn": args.attn, "target_balance_epoch0": balance,
            "examples_per_epoch": len(streams[0]), "optimizer_steps": total, "epochs": []}
     start_epoch = 0
     state = out / "state.pt"
@@ -215,9 +248,11 @@ def run(args, max_steps: int | None = None) -> None:
 
     best = min(log["epochs"], key=lambda e: e["val_nll"]["mean"])
     log["selected_epoch"] = best["epoch"]
-    log["selection_rule"] = ("lowest val NLL (SST-5 listwise Score)" if args.task == "sst5" else
+    log["selection_rule"] = ("lowest val NLL (sessions)" if args.task.startswith("sessions-") else
+                             "lowest val NLL (SST-5 listwise Score)" if args.task == "sst5" else
                              "lowest mean val NLL (BoolQ, AG News listwise)") + ", inside data.tuning()"
-    log["splits_accessed"] = list(data.ACCESS)
+    from minijev.sessions.dataset import ACCESS as SESSIONS_ACCESS
+    log["splits_accessed"] = list(data.ACCESS) + list(SESSIONS_ACCESS)
     (out / "train_log.json").write_text(json.dumps(log, indent=1))
     print(f"selected epoch {best['epoch']} (val NLL {best['val_nll']['mean']:.3f}); adapter in {out}/epoch-{best['epoch']}")
 
@@ -234,9 +269,14 @@ def main() -> None:
     ap.add_argument("--attn", default="eager", choices=["eager", "sdpa"])
     ap.add_argument("--threads", type=int, default=12)
     ap.add_argument("--steps", type=int, default=20)
-    ap.add_argument("--task", default="mixed", choices=["mixed", "sst5"],
-                    help="mixed: BoolQ + AG News (E20). sst5: a per-task adapter for SST-5 Scores (E22)")
+    ap.add_argument("--task", default="mixed",
+                    help="mixed: BoolQ + AG News (E20). sst5: a per-task adapter for SST-5 Scores (E22). "
+                         "sessions-<question>: a Claude Code session question (docs/SESSIONS.md)")
+    ap.add_argument("--version", default="v1", help="the frozen sessions version, for --task sessions-<question>")
     args = ap.parse_args()
+    if args.task not in ("mixed", "sst5") and not args.task.startswith("sessions-"):
+        ap.error(f"unknown task {args.task}")
+    SESSIONS_VERSION[0] = args.version
     if args.command == "parity":
         parity(args)
     else:
