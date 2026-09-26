@@ -1,10 +1,11 @@
 "use client";
 // The side panel after (or during) a run: every decision in order, with probabilities and what the model read.
 import { Tip } from "@/components/Tip";
-import { answerLabel, type Decision, type Flow, type RunEnd } from "@/lib/flow";
+import { answerLabel, conditionLabel, isOwn, type Decision, type Flow, type RunEnd, type Step } from "@/lib/flow";
 
 const STATUS: Record<RunEnd["status"], [string, string]> = {
   completed: ["Reached DONE", "text-ok"],
+  escalated: ["Handed off to the large model (ESCALATE)", "text-accent"],
   no_transition: ["Stopped: no arrow matched", "text-warn"],
   max_steps: ["Stopped: too many steps (a loop?)", "text-warn"],
   invalid: ["Not run: the flow has errors", "text-warn"],
@@ -19,17 +20,21 @@ export function RunTrace({ flow, decisions, end, running, onSelect }: {
       Type a request above the canvas and press Run. Each step will light up when the model decides it, and its decision appears here.
     </p>
   );
-  const total = decisions.reduce((s, d) => s + d.ms, 0);
+  const own = decisions.filter(isOwn);
+  const total = own.reduce((s, d) => s + d.ms, 0);
   return (
     <div className="flex flex-col gap-3">
       <h2 className="text-[15px] font-semibold m-0 flex items-center gap-1">Decisions <Tip k="smAnswer" /></h2>
       {decisions.map((d, i) => {
-        const s = flow.steps[d.step];
+        const step = flow.steps[d.step];
+        const fan = !isOwn(d);   // a fan-out question: answered in the same forward pass as its step
+        const s = (fan ? step?.fanout?.find((q) => q.id === d.question_id) : step) as Step | undefined;
+        const probs = d.ranked ?? (d.probabilities ? Object.entries(d.probabilities) : null);
         return (
           <div key={i} className="rounded-lg border border-line p-3 flex flex-col gap-2">
             <button className="text-left flex items-baseline gap-2" onClick={() => onSelect(d.step)}>
-              <span className="text-xs text-muted font-mono">{i + 1}. {d.step}</span>
-              <span className="ml-auto text-xs text-muted font-mono">{(d.ms / 1000).toFixed(2)} s</span>
+              <span className="text-xs text-muted font-mono">{i + 1}. {d.step}{fan && <> · fan-out <span className="text-fg">{d.question_id}</span></>}</span>
+              <span className="ml-auto text-xs text-muted font-mono">{fan ? "same pass" : `${(d.ms / 1000).toFixed(2)} s`}</span>
             </button>
             <p className="m-0 text-[13px]">{d.question}</p>
             <div className="flex items-center gap-2 text-xs">
@@ -38,9 +43,9 @@ export function RunTrace({ flow, decisions, end, running, onSelect }: {
               <div className="flex-1 h-2 rounded-sm bg-track relative"><div className="absolute inset-y-0 left-0 rounded-sm bg-accent" style={{ width: `${d.confidence * 100}%` }} /></div>
               <span className="font-mono w-9 text-right">{d.confidence.toFixed(2)}</span>
             </div>
-            {d.probabilities && (
+            {probs && (
               <div className="flex flex-col gap-1">
-                {Object.entries(d.probabilities).map(([k, p]) => (
+                {probs.map(([k, p]) => (
                   <div key={k} className="grid grid-cols-[110px_minmax(0,1fr)_40px] items-center gap-2 text-[11px]">
                     <span className="truncate text-muted">{s?.type === "score" ? answerLabel(s, Number(k)) : k}</span>
                     <div className="h-1.5 rounded-sm bg-track relative"><div className="absolute inset-y-0 left-0 rounded-sm bg-accent2" style={{ width: `${p * 100}%` }} /></div>
@@ -49,9 +54,11 @@ export function RunTrace({ flow, decisions, end, running, onSelect }: {
                 ))}
               </div>
             )}
-            <p className="m-0 text-xs text-muted">
-              {d.next ? <>→ arrow {d.transition! + 1} to <span className="font-mono text-fg">{d.next}</span></> : "no arrow matched"}
-            </p>
+            {!fan && (
+              <p className="m-0 text-xs text-muted">
+                {d.next ? <>→ arrow {d.transition! + 1} to <span className="font-mono text-fg">{d.next}</span></> : "no arrow matched"}
+              </p>
+            )}
             <details className="text-xs">
               <summary className="text-muted cursor-pointer flex items-center gap-1">What the model read <Tip k="smHistory" /></summary>
               <pre className="mt-1.5 p-2 rounded-md bg-surface border border-line overflow-x-auto text-[11px] whitespace-pre-wrap">{JSON.stringify(d.state, null, 2)}</pre>
@@ -65,7 +72,9 @@ export function RunTrace({ flow, decisions, end, running, onSelect }: {
           <span className={`font-medium ${STATUS[end.status][1]}`}>{STATUS[end.status][0]}</span>
           {end.message && <span className="text-xs text-muted">{end.message}</span>}
           {end.errors?.map((e, i) => <span key={i} className="text-xs text-warn">{e.step ? `${e.step}: ` : ""}{e.message}</span>)}
-          {end.status === "completed" && <span className="text-xs text-muted">Path: {end.path?.join(" → ")} → DONE · {decisions.length} step{decisions.length === 1 ? "" : "s"} · {(total / 1000).toFixed(1)} s</span>}
+          {end.status === "completed" && <span className="text-xs text-muted">Path: {end.path?.join(" → ")} → DONE · {own.length} step{own.length === 1 ? "" : "s"} · {(total / 1000).toFixed(1)} s</span>}
+          {end.status === "escalated" && <span className="text-xs text-muted">At <span className="font-mono">{end.step}</span>: sure {end.confidence?.toFixed(2)}{end.condition ? ` (arrow: ${conditionLabel(end.condition)})` : ""}. The large model decides from here.</span>}
+          {end.usage && <span className="text-xs text-muted">{end.usage.requests} request{end.usage.requests === 1 ? "" : "s"} · {end.usage.input_tokens.toLocaleString()} input tokens</span>}
         </div>
       )}
     </div>

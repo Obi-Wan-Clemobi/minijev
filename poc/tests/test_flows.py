@@ -300,3 +300,16 @@ def test_check_fails_when_options_come_from_the_step_itself():
     f = json.loads(json.dumps(LADDER))
     f["steps"]["tool"]["options_from"]["step"] = "tool"
     assert any("from this step itself" in e["message"] for e in check(Flow.model_validate(f))["errors"])
+
+
+def test_options_from_a_yes_no_step_uses_json_keys():
+    f = json.loads(json.dumps(LADDER))
+    f["steps"]["gate"] = {"id": "gate", "type": "noul", "instructions": "Simple?", "transitions": [{"target": "tool"}]}
+    f["start"] = "gate"
+    f["steps"]["tool"]["options_from"] = {"step": "gate", "map": {"true": {"Read": None, "Bash": None},
+                                                                "false": {"Agent": None, "Skill": None}}}
+    flow = Flow.model_validate(f)
+    assert check(flow)["errors"] == []                 # the page writes String(true) == "true"
+    ask, seen = multi({"gate": {"type": "noul", "noul": 0.2}, "tool": choice("Agent", ["Agent", "Skill"], 0.9)})
+    list(run(flow, "x", ask))
+    assert seen[1]["questions"]["tool"]["criteria"] == {"Agent": None, "Skill": None}

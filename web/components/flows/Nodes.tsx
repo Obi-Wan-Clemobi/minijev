@@ -1,5 +1,6 @@
 "use client";
-// The boxes on the State machine canvas: one per step (with one output dot per answer), and DONE.
+// The boxes on the State machine canvas: one per step (with one output dot per answer, and per answer of each
+// fan-out question), DONE, and ESCALATE (the hand-off to the large model) when an arrow goes there.
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { ANY, answerLabel, answersOf, handleId, type NodeData } from "@/lib/flow";
 
@@ -15,8 +16,9 @@ const ring: Record<NodeData["status"], string> = {
 export function StepNode({ data, selected }: NodeProps) {
   const { step, start, status, decision, problem } = data as NodeData;
   if (!step) return null;
-  const outs = [...answersOf(step).map((a) => ({ id: handleId(a), label: answerLabel(step, a) })), { id: ANY, label: "any answer" }];
-  const usedHandles = new Set(step.transitions.map((t) => handleId(t.from_answer)));
+  const outs = [...answersOf(step).map((a) => ({ id: handleId(a), label: answerLabel(step, a) })), { id: ANY, label: "any answer" },
+    ...(step.fanout ?? []).flatMap((q) => answersOf(q).map((a) => ({ id: handleId(a, q.id), label: `${q.id}: ${answerLabel(q, a)}` })))];
+  const usedHandles = new Set(step.transitions.map((t) => handleId(t.from_answer, t.from_question)));
   return (
     <div className={`w-[250px] rounded-xl border-2 bg-card text-fg shadow-sm ${ring[status]} ${selected ? "outline outline-2 outline-offset-2 outline-accent" : ""}`}>
       <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-fg !border-2 !border-card" />
@@ -24,6 +26,8 @@ export function StepNode({ data, selected }: NodeProps) {
         <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider">
           <span className="px-1.5 py-0.5 rounded bg-track text-muted">{TYPE[step.type]}</span>
           {start && <span className="px-1.5 py-0.5 rounded bg-ok/15 text-ok font-semibold">start</span>}
+          {!!step.fanout?.length && <span className="px-1.5 py-0.5 rounded bg-track text-muted">+{step.fanout.length} fan-out</span>}
+          {step.options_from && <span className="px-1.5 py-0.5 rounded bg-track text-muted">options from {step.options_from.step}</span>}
           <span className="ml-auto font-mono normal-case tracking-normal text-muted">{step.id}</span>
         </div>
         <p className="m-0 text-[13px] leading-snug line-clamp-3">{step.instructions || <span className="text-warn">(no question)</span>}</p>
@@ -55,6 +59,17 @@ export function DoneNode({ data }: NodeProps) {
     <div className={`w-[110px] h-[56px] rounded-full border-2 grid place-items-center font-mono text-sm font-semibold bg-card text-fg ${status === "visited" ? "border-ok text-ok" : "border-line"}`}>
       <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-fg !border-2 !border-card" />
       DONE
+    </div>
+  );
+}
+
+export function EscalateNode({ data }: NodeProps) {
+  const { status } = data as NodeData;
+  return (
+    <div className={`w-[130px] h-[56px] rounded-full border-2 border-dashed grid place-items-center font-mono text-sm font-semibold bg-card text-fg ${status === "visited" ? "border-accent text-accent" : "border-line"}`}
+      title="Hand-off: the large model makes this decision">
+      <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-fg !border-2 !border-card" />
+      ESCALATE
     </div>
   );
 }

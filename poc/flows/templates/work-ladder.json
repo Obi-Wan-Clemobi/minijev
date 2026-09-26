@@ -1,0 +1,142 @@
+{
+ "id": "work-ladder",
+ "name": "Kind of work, then tool (with hand-off)",
+ "description": "The decision ladder of add-decision-patterns: the kind of work, then only the tools for that kind. A kind with one tool (run, remote: Bash; browse: the browser; ask: AskUserQuestion) goes straight to DONE; its entry in the options map is never used, and exists because check() needs an entry for every answer. A fan-out question asks, in the same pass, whether the next calls can run together. Below 0.4 confidence, the decision goes to the large model.",
+ "version": "1.0",
+ "start": "kind",
+ "steps": {
+  "kind": {
+   "id": "kind",
+   "type": "choice",
+   "instructions": "What kind of work will the coding agent do next?",
+   "criteria": {
+    "inspect": "Read or search without changing anything",
+    "change": "Change local files or local app data",
+    "run": "Run a program, tests or a build",
+    "remote": "Act on a remote machine or cloud service",
+    "research": "Find information outside the project",
+    "browse": "Act in a web browser",
+    "publish": "Make something visible to other people",
+    "ask": "Ask the user a question",
+    "orchestrate": "Manage its own work: agents, skills, tool search, monitors"
+   },
+   "fanout": [
+    {
+     "id": "parallel",
+     "type": "noul",
+     "instructions": "Can the next calls run together, in one message?"
+    }
+   ],
+   "position": {
+    "x": 0,
+    "y": 0
+   },
+   "transitions": [
+    {
+     "from_answer": null,
+     "target": "ESCALATE",
+     "condition": {
+      "confidence_lt": 0.4
+     }
+    },
+    {
+     "from_answer": "run",
+     "target": "DONE"
+    },
+    {
+     "from_answer": "remote",
+     "target": "DONE"
+    },
+    {
+     "from_answer": "browse",
+     "target": "DONE"
+    },
+    {
+     "from_answer": "ask",
+     "target": "DONE"
+    },
+    {
+     "from_answer": null,
+     "target": "tool"
+    }
+   ]
+  },
+  "tool": {
+   "id": "tool",
+   "type": "choice",
+   "instructions": "Which tool will the coding agent use for this work?",
+   "options_from": {
+    "step": "kind",
+    "map": {
+     "inspect": {
+      "Read": "Read one file",
+      "Grep": "Search file contents",
+      "Glob": "Find files by name",
+      "Bash": "A shell command",
+      "mcp": "A tool of a connected service",
+      "browser": "The web browser"
+     },
+     "change": {
+      "Edit": "Change part of a file",
+      "Write": "Write a whole file",
+      "Bash": "A shell command",
+      "mcp": "A tool of a connected service"
+     },
+     "run": {
+      "Bash": "A shell command",
+      "other": "Another tool"
+     },
+     "remote": {
+      "Bash": "A shell command",
+      "other": "Another tool"
+     },
+     "research": {
+      "WebSearch": "Search the web",
+      "WebFetch": "Fetch one web page",
+      "mcp": "A tool of a connected service"
+     },
+     "browse": {
+      "browser": "The web browser",
+      "other": "Another tool"
+     },
+     "publish": {
+      "Bash": "A shell command",
+      "mcp": "A tool of a connected service",
+      "Artifact": "Publish a page",
+      "SendUserFile": "Send a file to the user",
+      "PushNotification": "Notify the user"
+     },
+     "ask": {
+      "AskUserQuestion": "Ask the user",
+      "other": "Another tool"
+     },
+     "orchestrate": {
+      "Agent": "Start a subagent",
+      "SendMessage": "Message an agent",
+      "Skill": "Load a skill",
+      "ToolSearch": "Find a tool",
+      "Monitor": "Watch a process",
+      "other": "Another tool"
+     }
+    }
+   },
+   "position": {
+    "x": 380,
+    "y": 0
+   },
+   "transitions": [
+    {
+     "from_answer": null,
+     "target": "ESCALATE",
+     "condition": {
+      "confidence_lt": 0.4
+     }
+    },
+    {
+     "from_answer": null,
+     "target": "DONE"
+    }
+   ]
+  }
+ }
+}

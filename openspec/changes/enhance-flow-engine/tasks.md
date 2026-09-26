@@ -11,14 +11,17 @@
 ## 2. API and page
 
 - [x] 2.1 API: accept and return the new step fields and events
-- [ ] 2.2 State machine page: fan-out steps, option maps, ranked options, the ESCALATE target
+- [x] 2.2 State machine page: fan-out steps, option maps, ranked options, the ESCALATE target (canvas and editor
+      checked in the browser; the run trace of a real run is checked in 3.2, after the pilot training)
 
 ## 3. Example
 
-- [ ] 3.1 A flow template for "kind of work, then tool" with a hand-off exit, using the `work_kind` table of
+- [x] 3.1 A flow template for "kind of work, then tool" with a hand-off exit, using the `work_kind` table of
       `add-decision-patterns`
 - [ ] 3.2 Measure prefill tokens and latency of that flow, before and after 1.1 and 1.3
 
 ## 4. Docs
 
 - [ ] 4.1 Add "fan-out step" and "hand-off" to the CLAUDE.md glossary, and define them in the flow docs
+- [ ] 4.2 Follow-up: when a step is removed, or its answers change, update the options_from maps that use it (check()
+      already reports the mismatch)

@@ -56,8 +56,13 @@ class SubQuestion(BaseModel):
     criteria: dict | list | None = None
 
 
+def answer_key(a) -> str:
+    """The key of an answer in an options map: JSON spelling, so the page (JavaScript String()) and Python agree."""
+    return ("true" if a else "false") if isinstance(a, bool) else str(a)
+
+
 class OptionsFrom(BaseModel):
-    """A Choice step's options, from an earlier step's answer: map[str(answer)] is the options dict of that answer."""
+    """A Choice step's options, from an earlier step's answer: map[answer_key(answer)] is the options of that answer."""
     step: str
     map: dict[str, dict]
 
@@ -185,7 +190,7 @@ def check(flow: Flow) -> dict:
             elif src.id == sid:
                 errors.append({"step": sid, "message": "options come from this step itself, which has not answered yet"})
             else:
-                missing = [a for a in answers_of(src) if str(a) not in s.options_from.map]
+                missing = [a for a in answers_of(src) if answer_key(a) not in s.options_from.map]
                 if missing:
                     errors.append({"step": sid, "message": f"no options for the answer(s) {missing} of {src.id!r}"})
                 if reachable_without(flow, sid, src.id):
@@ -265,7 +270,7 @@ def run(flow: Flow, query: str, ask: Callable[[dict], dict]) -> Iterator[dict]:
                 yield {"event": "end", "status": "invalid", "step": step.id, "decisions": decisions, "usage": cost,
                        "message": f"{step.options_from.step!r} did not run, so {step.id!r} has no options"}
                 return
-            criteria = step.options_from.map[str(source["answer"])]
+            criteria = step.options_from.map[answer_key(source["answer"])]
         asked = [(step.id, step, criteria)] + [(q.id, q, None) for q in step.fanout]
         req = {"state": query, "questions": {qid: question(q, c, decisions) for qid, q, c in asked}}
         t0 = time.perf_counter()

@@ -6,17 +6,17 @@ import {
   type Connection, type Edge, type Node, type NodeChange,
 } from "@xyflow/react";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { DoneNode, StepNode } from "@/components/flows/Nodes";
+import { DoneNode, EscalateNode, StepNode } from "@/components/flows/Nodes";
 import { RunTrace } from "@/components/flows/RunTrace";
 import { StepEditor } from "@/components/flows/StepEditor";
 import { Tip } from "@/components/Tip";
 import { API, api, type FlowCheck } from "@/lib/api";
 import {
-  addStep, connect, type Decision, DONE, emptyFlow, type Flow, moveStep, parseLines, removeEdge, removeStep,
+  addStep, connect, type Decision, DONE, emptyFlow, type Flow, isOwn, moveStep, parseLines, removeEdge, removeStep, TERMINALS,
   type RunEnd, type RunEvent, type StepType, toEdges, toNodes,
 } from "@/lib/flow";
 
-const nodeTypes = { step: StepNode, done: DoneNode };
+const nodeTypes = { step: StepNode, done: DoneNode, escalate: EscalateNode };
 const DRAFT = "mj-flow-draft";
 const btn = "h-8 px-3 rounded-md border border-line text-[13px] hover:bg-track disabled:opacity-50";
 const PALETTE: [StepType, string, string][] = [
@@ -121,7 +121,7 @@ function Builder() {
         events.forEach((e: RunEvent) => {
           if (e.event === "decision") {
             setDecisions((ds) => [...ds, e]);
-            setRunning(e.next && e.next !== DONE ? e.next : null);
+            if (isOwn(e)) setRunning(e.next && !TERMINALS.includes(e.next) ? e.next : null);   // fan-out answers keep it
           } else { setEnd(e); setRunning(null); ended = true; }
         });
       }
@@ -249,7 +249,7 @@ function Builder() {
 
         <aside className="rounded-xl border border-line bg-card p-4 lg:max-h-[680px] lg:overflow-y-auto">
           {step
-            ? <StepEditor flow={flow} step={step} focus={focusArrow} onChange={setFlow}
+            ? <StepEditor key={step.id} flow={flow} step={step} focus={focusArrow} onChange={setFlow}
               onDelete={() => { setFlow(removeStep(flow, step.id)); setSelected(null); }} onClose={() => setSelected(null)} />
             : <RunTrace flow={flow} decisions={decisions} end={end} running={running} onSelect={(id) => setSelected(id)} />}
         </aside>
