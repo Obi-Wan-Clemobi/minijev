@@ -1,16 +1,16 @@
 ## 1. Engine
 
-- [ ] 1.1 Cached request: state is the request; decisions go into the question block; count prefill tokens per run
-- [ ] 1.2 Re-run the existing flow templates; list the answers that change
-- [ ] 1.3 Fan-out steps: several questions per step, one request; transitions test any of them; `check` rules
-- [ ] 1.4 `options_from` for Choice steps; `check` fails on a missing map entry
-- [ ] 1.5 Ranked options in Choice decision events
-- [ ] 1.6 `ESCALATE` terminal and `escalated` status
-- [ ] 1.7 Tests for 1.1 to 1.6 in `poc/tests/test_flows.py`
+- [x] 1.1 Cached request: state is the request; decisions go into the question block; count prefill tokens per run
+- [ ] 1.2 Re-run the existing flow templates; list the answers that change (needs the model; after the pilot training)
+- [x] 1.3 Fan-out steps: several questions per step, one request; transitions test any of them; `check` rules
+- [x] 1.4 `options_from` for Choice steps; `check` fails on a missing map entry
+- [x] 1.5 Ranked options in Choice decision events
+- [x] 1.6 `ESCALATE` terminal and `escalated` status
+- [x] 1.7 Tests for 1.1 to 1.6 in `poc/tests/test_flows.py`
 
 ## 2. API and page
 
-- [ ] 2.1 API: accept and return the new step fields and events
+- [x] 2.1 API: accept and return the new step fields and events
 - [ ] 2.2 State machine page: fan-out steps, option maps, ranked options, the ESCALATE target
 
 ## 3. Example
