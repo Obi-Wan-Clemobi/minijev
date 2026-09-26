@@ -41,7 +41,7 @@ Row = tuple[str, str, "int | None"]
 @dataclass(frozen=True)
 class Question:
     name: str
-    type: str                                   # "noul" or "choice"
+    type: str                                   # "noul", "choice" or "score" (levels in order, lowest first)
     labels: list[str]
     prompt: dict                                # the minijev question for the zero-shot readout
     rows: Callable[[dict], Iterable[Row]]
@@ -56,7 +56,7 @@ QUESTIONS: dict[str, Question] = {}
 
 
 def register(q: Question) -> Question:
-    assert q.type in ("noul", "choice") and (q.type != "noul" or len(q.labels) == 2), q.name
+    assert q.type in ("noul", "choice", "score") and (q.type != "noul" or len(q.labels) == 2), q.name
     QUESTIONS[q.name] = q
     return q
 

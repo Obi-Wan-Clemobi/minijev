@@ -1,7 +1,7 @@
 ## Why
 
 The tokens of the user's Claude Code work are concentrated in a few long turns. In the 34 interactive sessions, the
-34 turns with 31 or more assistant messages (13% of 257 turns) hold 61.7% of all cache reads; the 72 turns with at most
+33 turns with 31 or more assistant messages (12.9% of 256 turns) hold 61.7% of all cache reads; the 72 turns with at most
 2 messages hold 1.9% (Measured, 2026-09-26). Every assistant message reads the whole context again from the cache
 (Measured, docs/SESSIONS_METHOD.md §7.2), so the cost of a turn grows with its number of messages. A hint given once,
 when the user message arrives, can change a whole turn (Inferred). Predicting the next tool (add-decision-patterns)
@@ -19,7 +19,7 @@ of a minijev API call is a different thing).
 - Baselines that use only what exists when the user message arrives, and a deployed predictor chosen by a rule fixed
   now.
 - An offline upper bound on the cache reads that routing could change.
-- A go or no-go rule: simple features raise P(long turn) to at most 1.7 times the base rate (Measured), so the pilot
+- A go or no-go rule: simple features raise P(long turn) to at most 1.5 times the base rate (Measured), so the pilot
   runs only if the deployed predictor's pooled precision beats the base rate with an interval that excludes it.
 - If it goes, a feasibility pilot through a Claude Code `UserPromptSubmit` hook: it measures whether routing works in daily use
   (latency, timeouts, flag rate, false flags, hint tokens). It does not measure savings: at about 2 long turns per week,

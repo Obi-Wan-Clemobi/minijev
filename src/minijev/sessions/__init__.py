@@ -15,6 +15,7 @@
 from .dataset import Paths, check, extract, freeze, load_split, manifest, rows, sessions, split_of, stats
 from .questions import QUESTIONS, Question, load, register, state
 from . import patterns  # noqa: F401  (registers the decision-pattern questions)
+from . import turns  # noqa: F401  (registers turn_cost)
 
 __all__ = ["Paths", "QUESTIONS", "Question", "check", "extract", "freeze", "load", "load_split", "manifest", "register",
            "rows", "sessions", "split_of", "state", "stats"]

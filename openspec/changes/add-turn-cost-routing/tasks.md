@@ -4,7 +4,7 @@
       file, or both); compact summaries are not turns; interrupted turns are marked; check whether messages typed while
       Claude works split turns, and merge them if so; keep the last assistant text of each turn, and add it to the
       scrub and to `check()`; tests
-- [ ] 1.2 `turn_cost` question: one row per interactive turn, state as specified (including the previous assistant text,
+- [x] 1.2 `turn_cost` question: one row per interactive turn, state as specified (including the previous assistant text,
       scrubbed, and the context size), label from the message count; tests
 - [ ] 1.3 Audit a random sample of 200 last-assistant texts for residual private data (a new reviewer, as for v3), add
       what it finds to `private-strings.txt`; then freeze versions: time per project (primary) and leave one project out (secondary), interactive only, no

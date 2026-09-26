@@ -414,3 +414,26 @@ def test_last_text_is_scrubbed_and_checked(tmp_path):
     extract(paths)
     [t] = dataset.sessions(paths)[0]["turns"]
     assert scrub.hits(t["last_text"]) == [] and "~/x" in t["last_text"] and check(paths, quiet=True)
+
+
+def test_turn_cost_levels_and_state(tmp_path):
+    from minijev.sessions import QUESTIONS
+    from minijev.sessions.turns import level_of
+    assert [level_of(n) for n in (0, 2, 3, 8, 9, 30, 31, 200)] == [0, 0, 1, 1, 2, 2, 3, 3]
+    say = lambda msg, text, cr: {"type": "assistant", "message": {"id": msg, "usage": {"cache_read_input_tokens": cr},
+                                                                  "content": [{"type": "text", "text": text}]}}
+    entries = [{"type": "user", "cwd": "/w/app", "entrypoint": "cli", "timestamp": "2026-01-01T00:00:00Z",
+                "message": {"content": "plan the refactor"}}]
+    entries += [say(f"m{k}", f"step {k}", 1000 * k) for k in range(1, 5)]        # 4 messages: level 3-8
+    entries += [{"type": "user", "timestamp": "2026-01-01T00:05:00Z", "message": {"content": "go"}},
+                say("m9", "done", 9000)]                                         # 1 message: level 0-2
+    s = logs.parse(_write(tmp_path / "s.jsonl", entries))
+    rows = list(QUESTIONS["turn_cost"].rows(s))
+    assert [(r[0], r[2]) for r in rows] == [("s:t0", 1), ("s:t1", 0)]
+    first, second = rows[0][1], rows[1][1]
+    assert "Earlier turns: none" in first and "Context size: 0 thousand" in first and "Project:" not in first
+    assert "Previous user message:\nplan the refactor" in second and "End of the previous answer:\nstep 4" in second
+    assert "Previous turn: 3-8 assistant messages" in second and "Context size: 4 thousand" in second
+    assert "done" not in second and "go\n" in second                             # nothing of the turn itself
+    entries[0]["entrypoint"] = "sdk-py"
+    assert list(QUESTIONS["turn_cost"].rows(logs.parse(_write(tmp_path / "t.jsonl", entries)))) == []

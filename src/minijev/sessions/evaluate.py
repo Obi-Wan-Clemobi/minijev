@@ -40,9 +40,11 @@ def counted(q: Question, train: list[dict]) -> tuple[list[float], dict]:
 def prompt_ids(engine, q: Question, text: str) -> tuple[list[int], list[list[int]]]:
     """(token ids of state + question block, label token variants per class). Training (poc/train_lora.py) and the
     readout use this one function, so they see the same prompt."""
-    from ..prompt import choice_block, noul_block
+    from ..prompt import choice_block, noul_block, score_listwise_block
     if q.type == "noul":
         block, classes = noul_block({"type": "noul", **q.prompt}), [engine.no, engine.yes]
+    elif q.type == "score":   # all levels in one prompt, lowest first (the listwise Score of SST-5)
+        block, classes = score_listwise_block({"type": "score", **q.prompt}), engine.letters[:len(q.prompt["criteria"])]
     else:
         block, classes = choice_block({"type": "choice", **q.prompt}), engine.letters[:len(q.prompt["criteria"])]
     return engine.prefix_ids(text) + engine.suffix_ids(block), classes

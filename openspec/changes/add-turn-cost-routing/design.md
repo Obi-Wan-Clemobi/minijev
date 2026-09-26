@@ -1,7 +1,7 @@
 ## Context
 
-Measured on the 34 interactive sessions (257 turns, one run, 2026-09-26): assistant messages per turn have a median of
-6, a p75 of 15 and a p90 of 37 (maximum 193); one turn has 0 messages. Messages and cache reads per turn have a
+Measured on the 34 interactive sessions (256 turns, one run on the extract of task 1.1, 2026-09-26): assistant
+messages per turn have a median of 6, a p75 of 15 and a p90 of 36 (linear interpolation; maximum 231); one turn has 0 messages. Messages and cache reads per turn have a
 Spearman correlation of 0.90.
 
 | Messages in the turn | Turns | Share of cache reads |
@@ -9,20 +9,20 @@ Spearman correlation of 0.90.
 | 0–2 | 72 | 1.9% |
 | 3–8 | 84 | 7.4% |
 | 9–30 | 67 | 29.1% |
-| 31 or more | 34 | 61.7% |
+| 31 or more | 33 | 61.7% |
 
-A **long turn** has 31 or more assistant messages. A second cutoff, 21 or more messages, gives 54 turns and 74.4% of
-cache reads. P(long | previous turn long) is 7/32
-(22%), against a base rate of 34/257 (13%). 14 of the 34 long turns start with a user message of 20 characters or
-fewer (for example "go"); 80 of all 257 turns do.
+A **long turn** has 31 or more assistant messages. A second cutoff, 21 or more messages, gives 53 turns and 74.4% of
+cache reads. P(long | previous turn long) is 6/31
+(19%), against a base rate of 33/256 (12.9%). 14 of the 33 long turns start with a user message of 20 characters or
+fewer (for example "go"); 80 of all 256 turns do.
 
-**The signal is weak.** No simple feature raises P(long) far above the base rate of 13% (Measured on all 257 turns):
-previous turn long 22% (7/32); user message of 20 characters or fewer 17.5% (14/80); user message length terciles 17%,
-8%, 14%; context-size terciles 12%, 14%, 14%. The best lift is 1.7 times the base rate. Routing on these features would
+**The signal is weak.** No simple feature raises P(long) far above the base rate of 12.9% (Measured on all 256 turns):
+previous turn long 19% (6/31); user message of 20 characters or fewer 17.5% (14/80); user message length terciles 18%,
+8%, 13%; context-size terciles 11%, 15%, 13%. The best lift is 1.5 times the base rate. Routing on these features would
 flag many turns that are not long. This change measures whether any predictor does better, and the pilot runs only if
 one does (the go or no-go rule below).
 
-The time-per-project split holds train 176 turns (28 long), val 40 (5 long) and test 41 (1 long). The leave-one-
+The time-per-project split holds train 175 turns (27 long), val 40 (5 long) and test 41 (1 long). The leave-one-
 project-out folds hold 3 to 7 long turns in val and 1 to 13 in test (Measured).
 
 ## Goals / Non-Goals
@@ -56,7 +56,7 @@ project-out folds hold 3 to 7 long turns in val and 1 to 13 in test (Measured).
 ### The question, its state and its label
 
 - `turn_cost` is a Score on 4 levels: 0–2, 3–8, 9–30, 31 or more assistant messages. The levels hold 1.9%, 7.4%, 29.1%
-  and 61.7% of cache reads. The thresholds come from the distribution of all 257 turns, before any model or baseline
+  and 61.7% of cache reads. The thresholds come from the distribution of all turns, before any model or baseline
   result; a sensitivity row repeats the routing results at 21 or more.
 - One row per turn of an interactive session. The state holds: the user message (at most 600 characters); the
   previous user message; the last assistant text of the previous turn (at most 300 characters, scrubbed); the number
@@ -83,10 +83,10 @@ project-out folds hold 3 to 7 long turns in val and 1 to 13 in test (Measured).
    split. So the time split gives log loss and ordinal accuracy only (1 long test turn).
    **Routing claims** come from pooled out-of-fold predictions over the leave-one-project-out folds: every turn of a
    fold project is predicted by a model that did not train on its project. The pooled set is the union of the 4 fold
-   test sets, so it is computed only inside the final report (step 5). The pooled set holds 252 turns in 31
-   sessions, with 34 long turns (base rate 0.135); the 5 turns of the 3 projects below 50 calls are always in train
+   test sets, so it is computed only inside the final report (step 5). The pooled set holds 251 turns in 31
+   sessions, with 33 long turns (base rate 0.131); the 5 turns of the 3 projects below 50 calls are always in train
    (Measured; these are label counts only, no model result). The pooled numbers are labelled pooled. This deviates from the v9 rule "never pooled" because every fold
-   has fewer than 10 long turns in val, and 3 of 4 have fewer than 10 in test.
+   has fewer than 10 long turns in val, and 2 of 4 have fewer than 10 in test.
 5. **Test is read once** per split and fold, by one final report. The final report also computes the pooled routing
    numbers, the upper bound and the go or no-go decision, because all three use the fold test sets. Everything before
    it (baselines, the choice of the deployed predictor, its threshold) uses train and val only.
@@ -100,22 +100,22 @@ project-out folds hold 3 to 7 long turns in val and 1 to 13 in test (Measured).
   model replaces it only if it beats that baseline on val: the paired session bootstrap (below) of the log-loss
   difference has a 95% interval below zero. A model that could replace the baseline also runs per fold, so that it
   has pooled out-of-fold predictions for the go or no-go test.
-- The chosen predictor is refitted on all 257 turns for the pilot.
+- The chosen predictor is refitted on all 256 turns for the pilot.
 - Threshold rule: a turn is **flagged** when the predictor's score P(31 or more) is at or above the score of the
   train turn at the 80th percentile of its train scores (nearest rank: the score of a real train turn, never an
   interpolated value) (the top 20%; the report also gives the top 10%). Ties are flagged
   together, so the real flag rate can differ from 20%; the report gives the real flag rate. For the pooled numbers,
-  each fold computes its threshold from its own train; for the pilot, from all 257 refitted turns. A fixed quantile
+  each fold computes its threshold from its own train; for the pilot, from all 256 refitted turns. A fixed quantile
   flags turns; a fixed probability (for example 2 times the base rate) flags none with these baselines (see Context).
 - A predictor without spread (one score for every turn, such as the class prior) cannot rank turns: it is a no go.
 - **Go or no go:** the pilot runs only if the deployed predictor's pooled precision at the top 20% is above the pooled
-  base rate (0.135), by a one-sided 95% interval from a session bootstrap: 2000 resamples of the 31 sessions with
+  base rate (0.131), by a one-sided 95% interval from a session bootstrap: 2000 resamples of the 31 sessions with
   replacement (seed 2026), precision recomputed on the pooled predictions of each resample, the fold thresholds kept
   as fixed. Otherwise the change ends with the offline report. Inferred: about 50 flags need a precision of roughly
-  23% to 25% to pass, and the best single feature reaches 22%, so a no go is the expected result.
+  23% to 25% to pass, and the best single feature reaches 19%, so a no go is the expected result.
 - **Session bootstrap:** every interval in this change resamples sessions, not turns, because turns of one session
   depend on each other (momentum): 2000 resamples with replacement, seed 2026, percentile intervals. The go or no-go
-  bound is the one-sided 5th percentile of the resampled precision, against the fixed pooled base rate (0.135); the
+  bound is the one-sided 5th percentile of the resampled precision, against the fixed pooled base rate (0.131); the
   predictor choice uses the two-sided 95% interval of the paired log-loss difference.
 
 ### Feasibility pilot
@@ -149,8 +149,8 @@ project-out folds hold 3 to 7 long turns in val and 1 to 13 in test (Measured).
 
 ### Why the pilot cannot measure savings
 
-With the standard deviation of log(cache reads) over long turns (0.81, Measured), detecting a 30% drop with 80% power
-at a 0.05 level needs about 81 long turns per arm. The user has about 2 long turns per week (34 in about 4 months), so
+With the standard deviation of log(cache reads) over long turns (0.83, Measured), detecting a 30% drop with 80% power
+at a 0.05 level needs about 86 long turns per arm. The user has about 2 long turns per week (33 in 17 weeks), so
 the pilot would need more than 80 weeks (Measured inputs, Inferred result). A **paired replay** can measure savings with
 fewer turns: replay logged user messages of long turns twice, with and without the hint, on a checkout of the logged
 commit, through `claude -p`, and compare cache reads per episode. It costs API tokens, the replay differs from live
@@ -158,7 +158,7 @@ work (no user in the loop), and it is a separate decision for the user.
 
 ## Risks / Trade-offs
 
-- [257 turns; 34 long ones] → counts only below 10 long turns per split; pooled out-of-fold numbers are labelled.
+- [256 turns; 33 long ones] → counts only below 10 long turns per split; pooled out-of-fold numbers are labelled.
 - [Thresholds of the levels chosen on all turns] → they use only the label distribution, not any feature; the
   sensitivity row at 21 or more shows whether a conclusion depends on the cutoff.
 - [Momentum: a long turn follows a long turn] → the previous-turn baseline measures how much momentum alone predicts.
