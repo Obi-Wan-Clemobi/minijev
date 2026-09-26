@@ -8,7 +8,7 @@ whether a model learned patterns or domains.
 
 ## What Changes
 
-- A split strategy parameter, with a new strategy: leave one project out. Frozen as v8.
+- A split strategy parameter, with a new strategy: leave one project out. Frozen as v13 (v9 until the pilot report).
 - States without the `Project:` line.
 - A measured token breakdown of the logs, per kind of work and per chain pattern.
 - New log-label questions: `work_kind` (from a fixed table on the next call), `tool_<kind>` (the tool, one question
@@ -30,6 +30,6 @@ whether a model learned patterns or domains.
 
 - `src/minijev/sessions/dataset.py` (`split_of`), `questions.py` (state and new questions), `evaluate.py` (per-fold
   reports), a new `tokens.py` for the breakdown.
-- A new frozen version v8. v6 stays for the `needs_approval` work.
+- New frozen versions for the leave-one-project-out split (v13 now). v12 serves the `needs_approval` work.
 - Compute: count baselines are cheap; zero-shot readouts take about 1 hour per fold; an adapter takes about 12 hours
   per fold, so only one pilot fold is trained first.

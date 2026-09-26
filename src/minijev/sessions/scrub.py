@@ -21,7 +21,7 @@ HOME = str(Path.home())
 MIN_NAME, MIN_ENV_VALUE = 3, 8   # shorter literals would replace parts of normal words
 
 SECRETS = [  # (name, pattern)
-    ("email", re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")),
+    ("email", re.compile(r"[A-Za-z0-9._%+-]+(?:@|%40)[A-Za-z0-9.-]+\.[A-Za-z]{2,}")),
     ("anthropic/openai key", re.compile(r"\bsk-[A-Za-z0-9_-]{16,}")),
     ("github token", re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})")),
     ("slack token", re.compile(r"\bxox[abprs]-[A-Za-z0-9-]{10,}")),
@@ -33,11 +33,15 @@ SECRETS = [  # (name, pattern)
                                    r"(?!<redacted>)[^\s'\"<]{6,}")),
     ("billing account", re.compile(r"\b[0-9A-F]{6}-[0-9A-F]{6}-[0-9A-F]{6}\b")),
     ("home path", re.compile(re.escape(HOME))),
+    # a scrub marker still glued to part of the value it replaced (for example "<private>@example.org")
+    ("marker fragment", re.compile(r"(<(?:private|email|redacted|anthropic|github|slack|aws|google|jwt|bearer|billing|long|random)>)"
+                                   r"(?:@[A-Za-z0-9.-]+|\.[A-Za-z0-9-]+\.[A-Za-z]{2,})")),
     ("long hex", re.compile(r"\b[0-9a-fA-F]{40,}\b")),
     ("random string", re.compile(r"\b(?=[A-Za-z0-9+_-]*\d)(?=[A-Za-z0-9+_-]*[A-Z])(?=[A-Za-z0-9+_-]*[a-z])"
                                  r"[A-Za-z0-9+_-]{32,}")),
 ]
 LITERAL = "literal (private string)"
+SECRETS_BY_NAME = dict(SECRETS)
 
 
 def _git(key: str) -> str:
@@ -92,20 +96,28 @@ def scrub(text: str, literal: re.Pattern | None = None, counts: Counter | None =
     """The text with secrets, private strings and home paths replaced. counts, if given, counts each replaced literal."""
     text = re.sub(r"(?:/private)?/tmp/claude-\d+/[^\s'\"]*?/scratchpad", "<scratch>", text)
     text = text.replace(HOME, "~")
-    if literal is not None:
+    # Literals, then patterns, then literals again. A literal that holds a pattern match (a database URL with a password)
+    # is replaced whole by the first pass. A literal inside a longer pattern match (a name in an email address) leaves
+    # "<private>@domain", which the email pattern no longer sees: the last step removes such a marker fragment.
+    def literals_pass(t: str) -> str:
+        if literal is None:
+            return t
+
         def replace(m):
             if counts is not None:
                 counts[m.group(0)] += 1
             return "<private>"
-        text = literal.sub(replace, text)
+        return literal.sub(replace, t)
+    text = literals_pass(text)
     for name, pattern in SECRETS:
-        if name == "home path":
+        if name in ("home path", "marker fragment"):
             continue
         if name == "assigned secret":
             text = pattern.sub(r"\1<redacted>", text)
         else:
             text = pattern.sub(f"<{name.split()[0]}>", text)
-    return text
+    text = literals_pass(text)
+    return SECRETS_BY_NAME["marker fragment"].sub(lambda m: m.group(1), text)
 
 
 def hits(text: str, literal: re.Pattern | None = None) -> list[str]:

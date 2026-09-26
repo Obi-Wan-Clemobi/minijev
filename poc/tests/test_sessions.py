@@ -437,3 +437,16 @@ def test_turn_cost_levels_and_state(tmp_path):
     assert "done" not in second and "go\n" in second                             # nothing of the turn itself
     entries[0]["entrypoint"] = "sdk-py"
     assert list(QUESTIONS["turn_cost"].rows(logs.parse(_write(tmp_path / "t.jsonl", entries)))) == []
+
+
+def test_scrub_hides_a_private_name_inside_an_email_whole():
+    pattern = scrub.literal_pattern(frozenset({"jdoe"}))
+    out = scrub.scrub("grant jdoe@club.example.org and write to jdoe", pattern)
+    assert out == "grant <private> and write to <private>" and scrub.hits(out, pattern) == []
+    assert scrub.hits("<private>@club.example.org") == ["marker fragment"]      # check() catches a leftover
+    assert scrub.scrub("<private>@club.example.org") == "<private>"              # and scrub removes it
+    for normal in ("<private>.py", "see <email>.", "`<private>`.", "<private>.md"):
+        assert scrub.scrub(normal) == normal                                    # normal text next to a marker stays
+    url = scrub.literal_pattern(frozenset({"postgresql://app:S3cretPassw0rd@db.example.io:5432/billing"}))
+    assert scrub.scrub("connect postgresql://app:S3cretPassw0rd@db.example.io:5432/billing now", url) == "connect <private> now"
+    assert scrub.scrub("mailto:jdoe%40example.com") == "mailto:<email>"

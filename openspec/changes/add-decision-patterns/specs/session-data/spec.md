@@ -2,7 +2,7 @@
 
 ### Requirement: The split strategy is a parameter
 
-`split_of` SHALL take a split strategy. The strategies are `time-per-project` (the v1 to v6 split) and
+`split_of` SHALL take a split strategy. The strategies are `time-per-project` (the split of v1 to v6 and v12) and
 `leave-one-project-out` with a named held-out project. For `leave-one-project-out`, the held-out project SHALL be the
 test split; in each training project, the sessions whose calls reach into the newest 15% of the project's calls SHALL
 be val, except the project's first session; and projects with fewer than 50 calls SHALL always be in train. The manifest SHALL record the strategy and the held-out project.

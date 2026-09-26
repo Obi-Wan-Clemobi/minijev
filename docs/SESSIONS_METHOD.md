@@ -12,7 +12,7 @@ pattern** is a mapping from a request and the work so far to the next kind of st
 **domain** is what a project is about (board games, travel). A **fold** is one leave-one-project-out split: one
 held-out project is test, and the other projects give train and val.
 
-## 1. Summary of our data (version v6)
+## 1. Summary of our data (version v12)
 
 | | Value | Evidence |
 |---|---|---|
@@ -20,9 +20,9 @@ held-out project is test, and the other projects give train and val.
 | Log files used | 233 main-thread files (subagent transcripts left out); 232 with at least one turn | Measured |
 | Turns / calls | 504 turns; 4156 calls: 4032 ok, 118 error, 5 rejected, 1 unknown status | Measured |
 | Sessions per split | train 135 · val 54 · test 43 | Measured |
-| Questions | `next_tool`, `bash_kind`, `will_fail` (labels from the log); `needs_approval` (consensus labels of Claude models) | |
-| Where it is | `~/.minijev-private/sessions/v6/`, never in git | |
-| Code | git commit 266780f plus uncommitted `src/minijev/sessions/` with sha256 f3573f9b… (v6 manifest) | Measured |
+| Questions | 13 in v12: `next_tool`, `bash_kind`, `will_fail`, the decision-pattern questions (`work_kind`, `tool_inspect`, `tool_change`, `tool_research`, `tool_publish`, `tool_orchestrate`, `waste`) and `turn_cost` (labels from the log); `needs_approval` and `area` (consensus labels of Claude models) | |
+| Where it is | `~/.minijev-private/sessions/v12/`, never in git | |
+| Code | git commit 2ce4b99 plus uncommitted `src/minijev/sessions/` with sha256 e335c9d5… (v12 manifest) | Measured |
 
 **What this data is not.** It is not a sample of "good agent behaviour". Three of the four questions teach a model
 to predict what Claude did in our sessions, right or wrong (section 9, threat T1).
@@ -134,7 +134,7 @@ The rules are code (`minijev/sessions/consensus.py`, run by `minijev sessions co
 | Deliberation | 4 | 1 deliberated, 3 contested |
 | v2.1 sweep | 101 | 90 revised, 11 split; 15 labels changed from v5 (14 from no to yes, most of them guide edits before the file's first commit) |
 | Second deliberation | 11 | 5 deliberated, 6 contested |
-| **Final (v6)** | 782 | 773 labelled (48 yes), 9 contested |
+| **Final (v6, v12)** | 782 | 773 labelled (48 yes), 9 contested |
 
 21 final labels differ from the round-1 majority or break a round-1 tie (Measured). The 9 contested items are of two
 kinds. In some, a labeller stays unsure because the state lacks what the decision needs: a reply that names a menu
@@ -143,7 +143,7 @@ a short reply to a request the state does not show. In the others, the two final
 differently (for example, whether "fix it for everyone affected" covers running a repair on the live database). Both
 kinds are limits of the state design (section 3) or of the rubric, not of one labeller (Inferred).
 
-A rerun of `minijev sessions consensus needs_approval` wrote a byte-identical label file, whose sha256 matches the v6
+A rerun of `minijev sessions consensus needs_approval` wrote a byte-identical label file, whose sha256 matches the v12
 manifest (Measured).
 
 | | Random sample | Risk-pattern sample |
@@ -181,15 +181,19 @@ write that log into their results.
 | v1 | Deleted | State text before the private-strings pass (it held personal details); budget 1500/8 |
 | v2 | Deleted | `needs_approval` rows lack sample kind and unsure flag; no provenance |
 | v3 | Deleted | The privacy audit found router details in 2 of 200 rows (section 6) |
-| v4 | Superseded | `needs_approval` has the rubric v1 labels. Its other three question files are byte-identical to v5 (Measured: same sha256) |
-| v5 | Superseded | Consensus before the v2.1 sweep and the corrected tool fact |
-| v6 | Current | Final consensus labels. `next_tool`, `bash_kind` and `will_fail` are byte-identical to v4 and v5 (Measured) |
+| v4, v5, v6, v8 | Deleted | Scrub order bug: email addresses kept their domain after `<private>` (section 6). v4 held the rubric v1 labels, v5 the consensus before the v2.1 sweep, v6 the final labels, v8 the decision patterns before `--interactive-only` |
+| v7 | Deleted | Frozen before the decision-pattern questions existed |
+| v9 | Kept until the pilot report | Decision patterns (leave one project out, interactive only). It has the scrub order bug; the pilot adapter was trained on it, so its one final report must read it. Deleted after that report |
+| v10, v11 | Deleted | Frozen with an intermediate scrub (patterns, then literals); v12 and v13 run the literals before and after the patterns |
+| v12 | Current | The settings of v6 with the current scrub. For the four questions of v6 (`next_tool`, `bash_kind`, `will_fail`, `needs_approval`), the same row ids and labels; it adds the later questions |
+| v13 | Current | The settings of v9 with the current scrub: the same row ids, labels and splits for the 12 questions of v9, except one `area` row that labelled a compact summary (Measured); it adds `turn_cost` |
 
-**Claims measured on deleted versions**, and what still supports them: the v1 baselines
-(`results/baselines-v1-*.json`); the v3 privacy audit (`labels/privacy-audit-result.jsonl` and `-summary.json`); the
-rubric-v1 agreement check (`labels/agreement-opus.jsonl`, `labels/needs_approval-rubric-v1.jsonl`). The training
-times (12 s per example on v1 with eager attention, 6.7 s on v2 with sdpa) come from short timing runs whose output
-was not kept: Measured, but not reproducible from a file.
+**Claims measured on deleted versions**, and what still supports them: the v1 and v4 baselines
+(`results/baselines-v1-*.json`, `results/baselines-v4-*.json`); the v8 count baselines (`results/baselines-v8-*-counts.json`); the v3
+privacy audit (`labels/privacy-audit-result.jsonl` and `-summary.json`); the rubric-v1 agreement check
+(`labels/agreement-opus.jsonl`, `labels/needs_approval-rubric-v1.jsonl`); the `splits_accessed` logs of the v4 runs
+(in their results files). The training times (12 s per example on v1 with eager attention, 6.7 s on v2 with sdpa)
+come from short timing runs whose output was not kept: Measured, but not reproducible from a file.
 
 **Test is untouched.** No baseline and no training run has read a test split of any version. For v4 runs, the
 `splits_accessed` log in each result shows it (Measured). The v1 baseline runs came before that log; their code read
@@ -199,12 +203,12 @@ only train and val (Observed, in the code). `train_lora.py` asserts it for sessi
 
 Two independent scrub layers run before any row is written.
 
-| Layer | What | Count in v4 |
+| Layer | What | Count in v12 |
 |---|---|---|
-| Patterns | Emails, key and token formats, bearer headers, `KEY=value`, cloud billing IDs, home paths, scratch paths, long hex and random strings | 13 patterns |
-| Literals: user | Username, git name and email | 5 strings, 164 replacements |
-| Literals: env | Values in `.env` files of every folder a session worked in (plain words, numbers and local URLs excluded) | 5 strings, 7 replacements |
-| Literals: file | `private-strings.txt`, written after a review and an audit (below) | 53 strings, 399 replacements |
+| Patterns | Emails, key and token formats, bearer headers, `KEY=value`, cloud billing IDs, home paths, scratch paths, long hex and random strings | 14 patterns (including the marker fragment) |
+| Literals: user | Username, git name and email | 5 strings, 165 replacements |
+| Literals: env | Values in `.env` files of every folder a session worked in (plain words, numbers and local URLs excluded) | 5 strings, 8 replacements |
+| Literals: file | `private-strings.txt`, written after a review and an audit (below) | 60 strings, 1235 replacements |
 
 **What `check` proves, and what it does not.** `check` counts pattern and literal hits in every text of the
 extract and of every row, and `freeze` refuses to write unless all counts are zero. For patterns this only shows
@@ -216,19 +220,33 @@ summaries. It proposed 44 strings in 6 classes: people's names, Wi-Fi names, rou
 router context, account and budget IDs, and fragments of the user's own name. We checked that each matches the data as
 a whole word, and we added 1 street address that a travel guide is anchored on.
 
+**Scrub order.** The literals run first, then the patterns, then the literals again; a last pattern removes any
+**marker fragment**: a marker still joined to a piece of the value it replaced (for example `<private>@example.org`),
+and `check()` counts marker fragments. The pattern also removes a two-part file suffix after a marker
+(`<private>.config.ts` becomes `<private>`): text is lost there, not leaked. A literal that is only the domain of an
+email leaves the local part (`alice@<private>.com`); v12 and v13 hold no such case (Measured). v9 was frozen with an
+earlier order and holds 82 `<private>@…` fragments (Measured); v12 and v13 hold none (Measured).
+
+**Assistant text.** Turns keep the end of their last assistant text for `turn_cost`. Two agents that had not seen the earlier reviews read all 255 such
+texts of interactive turns (the 300-character tail that a state uses): 7 held residual private data: 5 a word next to
+a marker (a surname, an account or server name), 2 an email domain (the scrub order bug). The strings are now in
+`private-strings.txt`.
+
 **Residual rate** (Measured). A second Claude Sonnet 5 agent, which had not seen the first review, read 200 random
 v3 `next_tool` states in full. It found private data in 2 rows (1.0%; 95% Wilson interval 0.3% to 3.6%): router model
 names and router admin paths in file names, from one home-network session. It found no names, addresses, account IDs
 or credentials. We added those 4 strings and 4 stems of the router model to `private-strings.txt` and froze v4; none
-of the 4 strings is in v4 (Measured). v4 has not had a fresh audit. The v3 rate is our best estimate of what a single
-review leaves behind, and a fresh sample of v4 would give its own rate.
+of the 4 strings is in v12 (Measured). The user text of v12 has not had a fresh audit. The v3 rate is our best estimate
+of what a single review leaves behind, and a fresh sample of v12 would give its own rate.
 
 Adapters trained on this data can memorize parts of it. They go to `~/.minijev-private/adapters/`, never to `poc/`.
 
 ## 7. Baselines (val)
 
-The `next_tool`, `bash_kind` and `will_fail` files of v4, v5 and v6 are byte-identical, so these v4 numbers are the
-v6 numbers (Measured, Qwen2.5-0.5B-Instruct, bootstrap 95% intervals, 2000 resamples). Every run read only train and val
+The baselines below ran on v4 (deleted). v12 has the same row ids and labels for these questions, but its texts
+differ in 20% to 28% of the rows (Measured on v9 against v13, the same change): mostly because of 7 new private
+strings from the assistant-text audit, some because of the scrub order. A rerun on v12 can give slightly different
+numbers. These are the v4 numbers (Measured, Qwen2.5-0.5B-Instruct, bootstrap 95% intervals, 2000 resamples). Every run read only train and val
 (Measured: `splits_accessed`).
 
 | Question (val n) | Baseline | Log loss [95% CI] | Accuracy | ECE |
@@ -265,8 +283,8 @@ before any adapter result existed:
    the 95% interval of the delta is below zero.
 5. Results are also given per project (threat T4) and are labelled "predicts Claude" (threat T1).
 
-**`needs_approval` has no val baseline.** Its v6 val split has 1 positive in 57 rows, so no metric on it means
-anything. On the random sample (all splits, v6 labels), "yes if the risk regex matches" finds 6 of 21 positives with
+**`needs_approval` has no val baseline.** Its v12 val split has 1 positive in 57 rows, so no metric on it means
+anything. On the random sample (all splits, v12 labels), "yes if the risk regex matches" finds 6 of 21 positives with
 precision 6/35 (Measured); it misses the guide edits of threat T14. This is the bar for a future model. The regex was written after the first labels
 (threat T6).
 
@@ -282,7 +300,7 @@ about how the user works (area, preferences) use interactive sessions only.
 `minijev sessions tokens --interactive-only` (`sessions/tokens.py`) sums the usage that every assistant message
 records, per kind of work (`sessions/patterns.py`) and per chain pattern. A message's tokens are split evenly over its
 calls; a message without calls counts as "answer". A **chain pattern** is the sequence of the kinds of work of a
-turn's calls, with repeats merged. Measured on the 34 interactive sessions (257 turns, 3764 assistant messages):
+turn's calls, with repeats merged. Measured on the 34 interactive sessions (256 turns, 255 with messages; 3764 assistant messages):
 
 | Kind of work | Calls | Cache read | Cache write | Output |
 |---|---|---|---|---|
@@ -302,7 +320,7 @@ Fresh (uncached) input is 7.8 thousand tokens in total.
 
 - **Round trips drive the volume.** Every assistant message reads the whole context again from the cache: the median
   message reads 196 thousand cached tokens. A turn has a median of 6 messages, and the longest 10% of turns have 38 or
-  more (maximum 193). The tokens of a turn grow with its number of messages more than with its answer length.
+  more (maximum 231). The tokens of a turn grow with its number of messages more than with its answer length.
 - **Inspection is the largest share:** 40% of cache reads and 60% of cache writes. 1587 of the 1723 inspect calls use
   Bash (`cat`, `grep`, `sed` and so on) rather than Read, Grep or Glob.
 - **Calls are rarely batched:** 186 of the 3373 messages with calls make 2 or more calls. The most expensive turns
@@ -337,7 +355,7 @@ convert the counts into cost.
 | T7 | Claude labels Claude's own actions | Shared blind spots | Two model families, blind rounds, audits and adjudication (section 4.2). No human labels, by the user's choice |
 | T8 | `is_error` mixes command failures with harness denials and hook blocks | `will_fail` is "did not succeed" | Stated in section 4 |
 | T9 | Near-duplicate states across sessions are not removed | A small train-to-test overlap can inflate scores | Not measured yet |
-| T10 | Residual private data after the scrub | Privacy risk for the data and any adapter | Measured residual rate: 1.0% of rows in v3, fixed in v4; v4 not re-audited (section 6); all data outside git |
+| T10 | Residual private data after the scrub | Privacy risk for the data and any adapter | Measured residual rates: 1.0% of user-text rows (v3 audit), 2.7% of assistant-text tails (7 of 255, all read); the strings found are in `private-strings.txt`; v12 not re-audited; all data outside git |
 | T11 | The state can lack what a decision needs (Claude's text is left out; call summaries are cut at 200 characters) | Some labels cannot be decided from the state | 3 contested items left out (section 4.2) |
 | T12 | Rules 4 (second adjudicator), 6, 7 and 8 and rubric v2.1 were added after we saw round-1 and review results | The process was tuned on the data it labels, as in T6 | Every rule is code with a test; every stage's files are hashed in the manifest; the counts per stage are reported |
 | T13 | Agents are not strictly independent: one deliberator consulted an advisor model before answering | "Two model families" overstates independence | Later rounds forbid consulting other agents; still both families are Claude (T7) |
