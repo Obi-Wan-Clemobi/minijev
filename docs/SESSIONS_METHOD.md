@@ -7,7 +7,10 @@ RESEARCH.md: **Stated**, **Observed**, **Inferred**, **Measured**. This page hol
 Terms: a **session** is one Claude Code conversation, stored as one `.jsonl` log. A **call** is one tool use in a
 session. A **turn** is one message that the user typed, with the calls that follow it. A **decision point** is the
 moment before one call, with the state that existed then. **train**, **val** and **test** are the three disjoint
-parts of a version. A **version** (v1, v2, …) is a frozen set of rows with a manifest of hashes.
+parts of a version. A **version** (v1, v2, …) is a frozen set of rows with a manifest of hashes. A **decision
+pattern** is a mapping from a request and the work so far to the next kind of step, that holds across projects. The
+**domain** is what a project is about (board games, travel). A **fold** is one leave-one-project-out split: one
+held-out project is test, and the other projects give train and val.
 
 ## 1. Summary of our data (version v6)
 

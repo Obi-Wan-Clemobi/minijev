@@ -51,6 +51,11 @@ Add a term here when a document defines it. Use the term exactly as written. The
 | session | One Claude Code conversation, stored as one `.jsonl` log. | conversation, transcript (for the log) |
 | call | One tool use in a session. | tool call (after first use), action |
 | turn | One message that the user typed, with the calls that follow it. | |
+| decision pattern | A mapping from a request and the work so far to the next kind of step, that holds across projects. | habit, heuristic |
+| domain | What a project is about (board games, travel). | topic, subject |
+| fold | One leave-one-project-out split: one held-out project is test, and the other projects give train and val. | |
+| fan-out step | A flow step that asks several independent questions, answered in one forward pass. | parallel step, branch step |
+| hand-off | Ending a flow at `ESCALATE`, so that the large model makes the decision. | fallback, delegation |
 
 ## Specs (OpenSpec)
 

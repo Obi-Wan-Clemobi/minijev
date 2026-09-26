@@ -29,4 +29,4 @@
 
 ## 5. Docs
 
-- [ ] 5.1 Add "decision pattern", "domain" and "fold" to the CLAUDE.md glossary, and define them in `docs/SESSIONS_METHOD.md`
+- [x] 5.1 Add "decision pattern", "domain" and "fold" to the CLAUDE.md glossary, and define them in `docs/SESSIONS_METHOD.md`

@@ -22,6 +22,6 @@
 
 ## 4. Docs
 
-- [ ] 4.1 Add "fan-out step" and "hand-off" to the CLAUDE.md glossary, and define them in the flow docs
+- [x] 4.1 Add "fan-out step" and "hand-off" to the CLAUDE.md glossary, and define them in the flow docs
 - [ ] 4.2 Follow-up: when a step is removed, or its answers change, update the options_from maps that use it (check()
       already reports the mismatch)

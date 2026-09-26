@@ -52,7 +52,7 @@ The model and the calibration dials are set in `poc/minijev.env`.
 |---|---|
 | Playground | Write a state and questions, run them, and turn the calibration dials. The dials change the answers at once, with no new model run. |
 | Compare | Compare a readout with the same model generating its answer: speed, format errors and quality. |
-| State machine | Chain questions into a flow: each answer picks the next step. Build it on a canvas, run it on a request, and watch each step decide. |
+| State machine | Chain questions into a flow: each answer picks the next step. Build it on a canvas, run it on a request, and watch each step decide. A **fan-out step** asks several independent questions in one forward pass; a **hand-off** ends the flow at ESCALATE, so that the large model makes the decision. |
 | Under the hood | See the prefix tree, the attention mask and the tokens of each branch. |
 | Findings | Charts of the measurements, from `poc/results/*.json`, including the LoRA fine-tune. |
 | Data | The data card, with its checks run again on each load. |
