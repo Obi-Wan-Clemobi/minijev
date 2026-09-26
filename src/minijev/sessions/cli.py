@@ -55,6 +55,9 @@ def main(argv: list[str]) -> None:
     s.add_argument("--model", help="default: MINIJEV_MODEL")
     s.add_argument("--no-readout", action="store_true", help="count baselines only; do not load a model")
     s.add_argument("--fold", help="one fold of a leave-one-project-out version (default: every fold)")
+    s = sub.add_parser("turn-baselines", help="the turn_cost baselines on val (turn_eval.py)")
+    s.add_argument("version")
+    s.add_argument("--fold", help="one fold of a leave-one-project-out version (default: every fold)")
     args = ap.parse_args(argv)
 
     for path in args.questions:
@@ -114,3 +117,8 @@ def main(argv: list[str]) -> None:
         engine = None if args.no_readout else load_engine(args.model)   # one model load for every fold
         for fold in folds:
             baselines(args.version, names, args.model, paths, readouts=not args.no_readout, fold=fold, engine=engine)
+    elif args.cmd == "turn-baselines":
+        from . import turn_eval
+        m = dataset.manifest(args.version, paths)
+        for fold in [args.fold] if args.fold else (m.get("split", {}).get("folds") or [None]):
+            turn_eval.baselines(args.version, fold, paths)

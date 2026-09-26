@@ -22,8 +22,16 @@ previous turn long 19% (6/31); user message of 20 characters or fewer 17.5% (14/
 flag many turns that are not long. This change measures whether any predictor does better, and the pilot runs only if
 one does (the go or no-go rule below).
 
-The time-per-project split holds train 175 turns (27 long), val 40 (5 long) and test 41 (1 long). The leave-one-
-project-out folds hold 3 to 7 long turns in val and 1 to 13 in test (Measured).
+The time-per-project split (v12) holds train 175 turns (27 long), val 25 (3 long) and test 56 (3 long). The leave-one-
+project-out folds (v13) hold 3 to 7 long turns in val and 1 to 13 in test (Measured, label counts only).
+
+| Split or held-out project | Train (long) | Val (long) | Test (long) |
+|---|---|---|---|
+| Time per project (v12) | 175 (27) | 25 (3) | 56 (3) |
+| board-game-event-planner (v13) | 127 (19) | 40 (7) | 89 (7) |
+| home (v13) | 158 (25) | 64 (7) | 34 (1) |
+| minijev (v13) | 143 (18) | 65 (3) | 48 (12) |
+| travel-planner (v13) | 114 (16) | 62 (4) | 80 (13) |
 
 ## Goals / Non-Goals
 
@@ -73,14 +81,15 @@ project-out folds hold 3 to 7 long turns in val and 1 to 13 in test (Measured).
    in known projects. **Secondary: leave one project out** (v9 rules), for transfer to a new project. This deviates
    from the v9 rule "leave one project out is primary" for the reason above.
 2. **Baselines**, counted on train: class prior; user message length (level distribution per length tercile); short-reply
-   keywords (a fixed list: go, yes, ok, continue, sure, do it, implement, apply, fix all, push, deploy); previous turn
+   keywords (a user message of 20 characters or fewer that holds one of a fixed list as a whole word or phrase: go, yes,
+   ok, continue, sure, do it, implement, apply, fix all, push, deploy); previous turn
    (level given the previous level); context size (level per context-size tercile). Plus the zero-shot readout with a
    val-fitted bias and temperature.
 3. **Measures:** log loss; ordinal accuracy (the share of rows whose predicted level is within one level of the true
    level); and for the routing decision "31 or more", recall and precision.
 4. **Small splits:** routing measures (recall, precision, flag rate) of a split with fewer than 10 long turns are
    counts only, no claim (as `waste` in add-decision-patterns). Log loss and ordinal accuracy are reported for every
-   split. So the time split gives log loss and ordinal accuracy only (1 long test turn).
+   split. So the time split gives log loss and ordinal accuracy only (3 long val turns, 3 long test turns).
    **Routing claims** come from pooled out-of-fold predictions over the leave-one-project-out folds: every turn of a
    fold project is predicted by a model that did not train on its project. The pooled set is the union of the 4 fold
    test sets, so it is computed only inside the final report (step 5). The pooled set holds 251 turns in 31

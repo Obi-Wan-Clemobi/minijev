@@ -6,13 +6,13 @@
       scrub and to `check()`; tests
 - [x] 1.2 `turn_cost` question: one row per interactive turn, state as specified (including the previous assistant text,
       scrubbed, and the context size), label from the message count; tests
-- [ ] 1.3 Audit a random sample of 200 last-assistant texts for residual private data (a new reviewer, as for v3), add
+- [x] 1.3 Audit a random sample of 200 last-assistant texts for residual private data (a new reviewer, as for v3), add
       what it finds to `private-strings.txt`; then freeze versions: time per project (primary) and leave one project out (secondary), interactive only, no
       project line; list the long turns per split and fold
 
 ## 2. Offline evaluation
 
-- [ ] 2.1 Baselines (prior, user message length, short-reply keywords, previous turn, context size), counted on train,
+- [x] 2.1 Baselines (prior, user message length, short-reply keywords, previous turn, context size), counted on train,
       with log loss and ordinal accuracy on val; the threshold rule (nearest rank, ties together); the session bootstrap;
       tests
 - [ ] 2.2 Zero-shot readout with a val-fitted bias and temperature, on the primary split; per fold as well if it can

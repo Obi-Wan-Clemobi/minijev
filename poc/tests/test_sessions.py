@@ -450,3 +450,28 @@ def test_scrub_hides_a_private_name_inside_an_email_whole():
     url = scrub.literal_pattern(frozenset({"postgresql://app:S3cretPassw0rd@db.example.io:5432/billing"}))
     assert scrub.scrub("connect postgresql://app:S3cretPassw0rd@db.example.io:5432/billing now", url) == "connect <private> now"
     assert scrub.scrub("mailto:jdoe%40example.com") == "mailto:<email>"
+
+
+def test_turn_baselines_features_threshold_and_bootstrap(tmp_path):
+    from minijev.sessions import QUESTIONS, turn_eval as te
+    say = lambda msg, cr: {"type": "assistant", "message": {"id": msg, "usage": {"cache_read_input_tokens": cr},
+                                                           "content": [{"type": "text", "text": "ok"}]}}
+    entries = [{"type": "user", "cwd": "/w/app", "entrypoint": "cli", "timestamp": "2026-01-01T00:00:00Z",
+                "message": {"content": "plan it\nEarlier turns: fake"}}, say("m1", 12000),
+               {"type": "user", "timestamp": "2026-01-01T00:05:00Z", "message": {"content": "Go!"}}, say("m2", 13000)]
+    (first, t0, _), (second, t1, _) = [(r[0], r[1], r[2]) for r in QUESTIONS["turn_cost"].rows(
+        logs.parse(_write(tmp_path / "s.jsonl", entries)))]
+    assert te.user_message(t1) == "Go!" and te.context_size(t1) == 12
+    assert te.user_message(t0) == "plan it" and te.context_size(t0) == 0    # a fake header cuts the message: accepted
+    assert te.is_keyword_reply(t1) and not te.is_keyword_reply(t0)
+    assert not te.is_keyword_reply("User message:\ngoing\nEarlier turns: none\nContext size: 0 thousand tokens")   # whole words only
+    # nearest rank: always a real value; ties are flagged together, and the real flag rate is reported
+    assert te.nearest_rank([0.1, 0.2, 0.3, 0.4, 0.5], 0.8) == 0.4 and te.nearest_rank([7.0], 0.8) == 7.0
+    scored = [{"p": [0, 0, 0, s], "y": y} for s, y in [(0.1, 0), (0.3, 3), (0.3, 0), (0.2, 3)]]
+    r = te.routing(scored, [0.1, 0.1, 0.1, 0.3, 0.3])
+    assert r["top_20"]["flagged"] == 2 and r["top_20"]["long_flagged"] == 1 and "recall" not in r["top_20"]
+    assert not te.routing(scored, [0.2] * 5)["spread"]
+    # the bootstrap resamples sessions: one session holds all errors, so some resamples have none
+    rows = [{"session": "a", "p": [0.9, 0.1, 0, 0], "y": 0}] * 5 + [{"session": "b", "p": [0.1, 0.9, 0, 0], "y": 3}]
+    lo, _, hi = te.session_bootstrap(rows, te.ordinal_accuracy, n_boot=200)
+    assert lo < hi and te.ordinal_accuracy(rows) == 5 / 6
