@@ -42,11 +42,15 @@ project-out folds hold 3 to 7 long turns in val and 1 to 13 in test (Measured).
 
 - A turn is one user message and the assistant messages until the next user message. A rejected tool call with a
   reason stays inside its turn (it is a tool result, `logs.parse`).
-- `/clear` starts a new context: the turn after it has no previous user message and no previous level, as a session
-  start. A compact summary entry is not a user message and is not a turn.
-- Interrupted turns (2 in the raw logs) are marked; results are reported with and without them.
-- Messages typed while Claude works: whether the log stores them as separate user entries is unknown. Task 1.1 checks
-  it; if they split turns, they are merged into the running turn.
+- `/clear` starts a new session file: in all 6 cases its command entry comes before the first turn of its file
+  (Measured), so the turn after it has no previous user message and no previous level, as any session start. A compact
+  summary entry is not a user message and is not a turn (`logs.user_text`).
+- Interrupted turns (2) are marked (`interrupted`); results are reported with and without them.
+- Messages typed while Claude works are queue operations in the log: of 272 queued messages, 9 later appear as a user
+  turn, none right after a tool call (Measured). They do not split turns, so no merge is needed.
+- Each turn keeps the end of its last assistant text (at most 1000 characters); the extract scrubs it and `check()`
+  scans it. It holds more private strings than user text (private-string replacements rose from 399 to 622, Measured),
+  so a residual-privacy audit of a sample of it comes before any freeze (task 1.3).
 - A turn with 0 assistant messages belongs to the level 0–2.
 
 ### The question, its state and its label

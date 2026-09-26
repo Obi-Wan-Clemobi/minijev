@@ -21,6 +21,8 @@ CLAUDE_PROJECTS = Path(os.environ.get("CLAUDE_CONFIG_DIR", Path.home() / ".claud
 SKIP_PREFIXES = ("<command-", "<local-command", "<system-reminder", "Caveat:", "<task-notification",
                  "[Request interrupted", "<bash-", "<user-prompt-submit-hook")
 REJECTED = "The user doesn't want to proceed with this tool use"
+INTERRUPTED = "[Request interrupted"
+LAST_TEXT_CHARS = 1000   # kept per turn; a state cuts it further (the plan that a short "go" approves)
 CALL_CHARS = 200
 INTERACTIVE = {"cli", "claude-desktop"}   # a person types the turns; "sdk-py", "sdk-cli", … are programs
 TOKEN_FIELDS = ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens", "output_tokens")
@@ -84,9 +86,18 @@ def call_summary(name: str, inp: dict) -> str:
     return s[:CALL_CHARS] + (" …" if len(s) > CALL_CHARS else "")
 
 
+def is_interrupt(entry: dict) -> bool:
+    """True for the note Claude Code writes when the user stops a turn: a text block that starts with the marker. A
+    tool result that only contains the marker (a grep of this file) is not one."""
+    content = (entry.get("message") or {}).get("content")
+    texts = [content] if isinstance(content, str) else [b.get("text", "") for b in content or []
+                                                        if isinstance(b, dict) and b.get("type") == "text"]
+    return any(t.lstrip().startswith(INTERRUPTED) for t in texts)
+
+
 def user_text(entry: dict) -> str | None:
-    """The real text a person typed, or None for meta entries, tool results and command wrappers."""
-    if entry.get("type") != "user" or entry.get("isMeta") or entry.get("isSidechain"):
+    """The real text a person typed, or None for meta entries, compact summaries, tool results and command wrappers."""
+    if entry.get("type") != "user" or entry.get("isMeta") or entry.get("isSidechain") or entry.get("isCompactSummary"):
         return None
     content = (entry.get("message") or {}).get("content")
     parts = [content] if isinstance(content, str) else [b.get("text", "") for b in content or []
@@ -145,6 +156,9 @@ def parse(path: Path, diag: Diagnostics | None = None) -> dict:
             turn = {"i": len(turns), "text": text, "ts": e.get("timestamp", "")}
             turns.append(turn)
             continue
+        if e.get("type") == "user" and turn is not None and is_interrupt(e):
+            turn["interrupted"] = True   # the user stopped this turn: its message count is cut short
+            continue
         if e.get("type") != "assistant":
             continue
         mid = (e.get("message") or {}).get("id") or e.get("uuid")
@@ -153,6 +167,8 @@ def parse(path: Path, diag: Diagnostics | None = None) -> dict:
         for k in TOKEN_FIELDS:   # a repeated entry carries the same or a later count: keep the largest
             m["tokens"][k] = max(m["tokens"].get(k, 0), usage.get(k) or 0)
         for b in (e.get("message") or {}).get("content") or []:
+            if turn is not None and isinstance(b, dict) and b.get("type") == "text" and b.get("text", "").strip():
+                turn["last_text"] = b["text"].strip()[-LAST_TEXT_CHARS:]   # the end of the turn's last answer
             if not (isinstance(b, dict) and b.get("type") == "tool_use") or b.get("id") in seen:
                 continue
             seen.add(b.get("id"))   # a streamed assistant message can repeat in several entries

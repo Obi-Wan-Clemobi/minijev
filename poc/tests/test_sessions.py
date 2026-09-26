@@ -377,3 +377,40 @@ def test_compare_checks_adapter_and_ledger(tmp_path):
     evaluate.test_reads(paths).write_text(json.dumps({"version": "v9", "fold": "app", "question": "next_tool"}) + "\n")
     with pytest.raises(SystemExit, match="already read"):     # the ladder already read next_tool's test in this fold
         evaluate.compare("v9", "work_kind", str(ad), paths, fold="app")
+
+
+def test_turn_fixes_compact_summary_interrupt_and_last_text(tmp_path):
+    say = lambda msg, text: {"type": "assistant", "message": {"id": msg, "content": [{"type": "text", "text": text}]}}
+    entries = [
+        {"type": "user", "cwd": "/w/app", "entrypoint": "cli", "timestamp": "2026-01-01T00:00:00Z", "message": {"content": "plan it"}},
+        say("m1", "Plan: step one, then step two."),
+        {"type": "user", "isCompactSummary": True, "message": {"content": "This session is being continued: summary"}},
+        {"type": "user", "timestamp": "2026-01-01T00:01:00Z", "message": {"content": "go"}},
+        _use("m2", "a", "Bash", "pytest"),
+        {"type": "user", "message": {"content": [{"type": "text", "text": "[Request interrupted by user]"}]}},
+    ]
+    s = logs.parse(_write(tmp_path / "s.jsonl", entries))
+    assert [t["text"] for t in s["turns"]] == ["plan it", "go"]          # the compact summary is not a turn
+    assert s["turns"][0]["last_text"] == "Plan: step one, then step two."
+    assert s["turns"][1].get("interrupted") is True and not s["turns"][0].get("interrupted")
+
+
+def test_a_tool_result_that_shows_the_marker_is_not_an_interrupt(tmp_path):
+    entries = [
+        {"type": "user", "cwd": "/w/app", "timestamp": "2026-01-01T00:00:00Z", "message": {"content": "do the grep"}},
+        _use("m1", "a", "Bash", "grep Request logs.py"),
+        {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "a", "is_error": False,
+                                                  "content": 'INTERRUPTED = "[Request interrupted"'}]}},
+    ]
+    s = logs.parse(_write(tmp_path / "s.jsonl", entries))
+    assert not s["turns"][0].get("interrupted")
+
+
+def test_last_text_is_scrubbed_and_checked(tmp_path):
+    paths = Paths(tmp_path / "root")
+    entries = [{"type": "user", "cwd": "/w/app", "entrypoint": "cli", "timestamp": "2026-01-01T00:00:00Z", "message": {"content": "hi"}},
+               {"type": "assistant", "message": {"id": "m1", "content": [{"type": "text", "text": f"see {scrub.HOME}/x and me@example.com"}]}}]
+    _write(paths.raw / "p" / "s.jsonl", entries)
+    extract(paths)
+    [t] = dataset.sessions(paths)[0]["turns"]
+    assert scrub.hits(t["last_text"]) == [] and "~/x" in t["last_text"] and check(paths, quiet=True)

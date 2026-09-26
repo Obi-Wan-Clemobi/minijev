@@ -80,7 +80,9 @@ def extract(paths: Paths) -> logs.Diagnostics:
             if not s["turns"]:
                 continue
             s["cwd"], s["project"] = scrub.scrub(s["cwd"], literal, replaced), scrub.scrub(s["project"], literal, replaced)
-            s["turns"] = [{**t, "text": scrub.scrub(t["text"], literal, replaced)} for t in s["turns"]]
+            s["turns"] = [{**t, "text": scrub.scrub(t["text"], literal, replaced),
+                           **({"last_text": scrub.scrub(t["last_text"], literal, replaced)} if "last_text" in t else {})}
+                          for t in s["turns"]]
             s["calls"] = [{**c, "summary": scrub.scrub(c["summary"], literal, replaced)} for c in s["calls"]]
             f.write(json.dumps(s, ensure_ascii=False) + "\n")
             diag["sessions written"] += 1
@@ -169,7 +171,8 @@ def check(paths: Paths, quiet: bool = False) -> bool:
     all_sessions = sessions(paths)
     counts = Counter()
     for s in all_sessions:
-        for text in [s["cwd"], s["project"], *(t["text"] for t in s["turns"]), *(c["summary"] for c in s["calls"])]:
+        for text in [s["cwd"], s["project"], *(t["text"] for t in s["turns"]), *(t.get("last_text", "") for t in s["turns"]),
+                     *(c["summary"] for c in s["calls"])]:
             counts.update(scrub.hits(text, literal))
     for q in QUESTIONS.values():
         for r in rows(paths, q, all_sessions):
