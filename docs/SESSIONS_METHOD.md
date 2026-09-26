@@ -15,7 +15,7 @@ parts of a version. A **version** (v1, v2, …) is a frozen set of rows with a m
 |---|---|---|
 | Source | Our own Claude Code logs, 2026-05-30 to 2026-09-25, 9 project folders | Measured |
 | Log files used | 233 main-thread files (subagent transcripts left out); 232 with at least one turn | Measured |
-| Turns / calls | 505 turns; 4156 calls: 4032 ok, 118 error, 5 rejected, 1 unknown status | Measured |
+| Turns / calls | 504 turns; 4156 calls: 4032 ok, 118 error, 5 rejected, 1 unknown status | Measured |
 | Sessions per split | train 135 · val 54 · test 43 | Measured |
 | Questions | `next_tool`, `bash_kind`, `will_fail` (labels from the log); `needs_approval` (consensus labels of Claude models) | |
 | Where it is | `~/.minijev-private/sessions/v6/`, never in git | |
@@ -208,7 +208,7 @@ extract and of every row, and `freeze` refuses to write unless all counts are ze
 that the scrub ran: it tests the scrub's own patterns. For literals it shows that no known private string passed. It
 cannot find a private string that nobody listed.
 
-**The review that wrote `private-strings.txt`.** A Claude Sonnet 5 agent read all 505 turns and searched the call
+**The review that wrote `private-strings.txt`.** A Claude Sonnet 5 agent read all 504 turns and searched the call
 summaries. It proposed 44 strings in 6 classes: people's names, Wi-Fi names, router and keychain details, LAN IPs in
 router context, account and budget IDs, and fragments of the user's own name. We checked that each matches the data as
 a whole word, and we added 1 street address that a travel guide is anchored on.
@@ -269,34 +269,40 @@ precision 6/35 (Measured); it misses the guide edits of threat T14. This is the 
 
 ## 7.2 Where the tokens go
 
-`minijev sessions tokens` (`sessions/tokens.py`) sums the usage that every assistant message records, per kind of
-work (`sessions/patterns.py`) and per chain pattern. A message's tokens are split evenly over its calls; a message
-without calls counts as "answer". A **chain pattern** is the sequence of the kinds of work of a turn's calls, with
-repeats merged. Measured on all 232 sessions, 498 turns and 4232 assistant messages:
+**Interactive and SDK sessions.** The log records each session's entry point. 34 sessions come from the interactive
+entry points (`cli`, `claude-desktop`): a person typed the turns. 198 sessions come from SDK entry points (`sdk-py` 126,
+`sdk-cli` 72): the travel-planner app ran Claude Code as a program, with generated prompts (Measured). The SDK
+sessions hold 247 of the 504 turns but only 486 of the 4156 calls and 2% of the cache reads. `extract` counts sessions
+per entry point, and `--interactive-only` (on `freeze`, `stats` and `tokens`) leaves the SDK sessions out. Questions
+about how the user works (area, preferences) use interactive sessions only.
+
+`minijev sessions tokens --interactive-only` (`sessions/tokens.py`) sums the usage that every assistant message
+records, per kind of work (`sessions/patterns.py`) and per chain pattern. A message's tokens are split evenly over its
+calls; a message without calls counts as "answer". A **chain pattern** is the sequence of the kinds of work of a
+turn's calls, with repeats merged. Measured on the 34 interactive sessions (257 turns, 3764 assistant messages):
 
 | Kind of work | Calls | Cache read | Cache write | Output |
 |---|---|---|---|---|
-| inspect | 1856 | 371.9 M | 8.66 M | 1.06 M |
-| run | 1085 | 292.6 M | 3.16 M | 1.11 M |
-| answer (no call) | – | 89.3 M | 4.23 M | 0.53 M |
-| change | 592 | 81.9 M | 0.93 M | 0.61 M |
+| inspect | 1723 | 368.4 M | 8.23 M | 1.03 M |
+| run | 1081 | 292.4 M | 3.12 M | 1.11 M |
+| answer (no call) | – | 84.9 M | 0.69 M | 0.23 M |
+| change | 316 | 71.3 M | 0.79 M | 0.44 M |
 | browse | 193 | 41.2 M | 0.32 M | 0.05 M |
 | remote | 139 | 27.5 M | 0.18 M | 0.06 M |
-| orchestrate | 165 | 20.7 M | 1.23 M | 0.10 M |
-| research | 64 | 7.8 M | 0.30 M | 0.05 M |
+| orchestrate | 103 | 18.8 M | 0.19 M | 0.06 M |
+| research | 53 | 7.7 M | 0.07 M | 0.03 M |
 | publish | 30 | 6.4 M | 0.15 M | 0.01 M |
 | ask | 32 | 5.9 M | 0.05 M | 0.04 M |
-| **Total** | 4156 | **945.2 M** | **19.2 M** | **3.65 M** |
+| **Total** | 3670 | **924.4 M** | **13.8 M** | **3.08 M** |
 
-Fresh (uncached) input is 9.4 thousand tokens in total.
+Fresh (uncached) input is 7.8 thousand tokens in total.
 
 - **Round trips drive the volume.** Every assistant message reads the whole context again from the cache: the median
-  message reads 175 thousand cached tokens. A turn has a median of 2 messages, but the longest 10% of turns have 24 or
-  more (maximum 193). The tokens of a turn therefore grow with its number of messages more than with its answer
-  length.
-- **Inspection is the largest share:** 39% of cache reads and 45% of cache writes. 1601 of the 1856 inspect calls
-  use Bash (`cat`, `grep`, `sed` and so on) rather than Read, Grep or Glob.
-- **Calls are rarely batched:** 248 of the 3627 messages with calls make 2 or more calls. The most expensive turns
+  message reads 196 thousand cached tokens. A turn has a median of 6 messages, and the longest 10% of turns have 38 or
+  more (maximum 193). The tokens of a turn grow with its number of messages more than with its answer length.
+- **Inspection is the largest share:** 40% of cache reads and 60% of cache writes. 1587 of the 1723 inspect calls use
+  Bash (`cat`, `grep`, `sed` and so on) rather than Read, Grep or Glob.
+- **Calls are rarely batched:** 186 of the 3373 messages with calls make 2 or more calls. The most expensive turns
   are long loops of inspect and run, one call per message.
 
 Inferred: the decisions worth handing to minijev are the ones that cut messages: batching independent inspect calls

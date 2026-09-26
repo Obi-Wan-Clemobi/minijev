@@ -23,3 +23,13 @@ it.
 #### Scenario: State without project
 - **WHEN** a version is frozen for decision patterns
 - **THEN** no state contains a `Project:` line
+
+### Requirement: Sessions are marked interactive or SDK
+
+Extraction SHALL record each session's entry point and mark the session interactive when a person typed its turns
+(entry points `cli` and `claude-desktop`). `freeze`, `stats` and `tokens` SHALL take an option that leaves out
+non-interactive (SDK) sessions, and the manifest SHALL record it.
+
+#### Scenario: An app runs Claude Code
+- **WHEN** a session's entry point is `sdk-py`
+- **THEN** the session is not interactive, and `freeze --interactive-only` leaves out all its rows

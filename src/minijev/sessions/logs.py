@@ -22,6 +22,7 @@ SKIP_PREFIXES = ("<command-", "<local-command", "<system-reminder", "Caveat:", "
                  "[Request interrupted", "<bash-", "<user-prompt-submit-hook")
 REJECTED = "The user doesn't want to proceed with this tool use"
 CALL_CHARS = 200
+INTERACTIVE = {"cli", "claude-desktop"}   # a person types the turns; "sdk-py", "sdk-cli", … are programs
 TOKEN_FIELDS = ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens", "output_tokens")
 
 TOOL_GROUPS = {"Bash": "bash", "Edit": "edit", "Write": "edit", "MultiEdit": "edit", "NotebookEdit": "edit",
@@ -131,6 +132,8 @@ def parse(path: Path, diag: Diagnostics | None = None) -> dict:
                     s = json.dumps(b.get("content"), ensure_ascii=False)
                     results[b.get("tool_use_id")] = "rejected" if REJECTED in s else "error" if b.get("is_error") else "ok"
     cwd = next((e["cwd"] for e in entries if e.get("cwd")), "")
+    entrypoint = next((e["entrypoint"] for e in entries if e.get("entrypoint")), "unknown")
+    diag[f"sessions from entrypoint {entrypoint}"] += 1
     calls, turns, turn, seen = [], [], None, set()
     messages: dict[str, dict] = {}   # assistant message id -> {turn, calls, tokens}; streamed entries repeat an id
     for e in entries:
@@ -165,6 +168,7 @@ def parse(path: Path, diag: Diagnostics | None = None) -> dict:
     if not turns:
         diag["sessions without turns"] += 1
     return {"session": path.stem, "project": project_name(cwd), "start": turns[0]["ts"] if turns else "", "cwd": cwd,
+            "entrypoint": entrypoint, "interactive": entrypoint in INTERACTIVE,
             "turns": turns, "calls": calls, "messages": list(messages.values())}
 
 

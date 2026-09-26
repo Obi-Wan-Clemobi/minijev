@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 from collections import Counter, defaultdict
 
-from .dataset import Paths, sessions
+from .dataset import Paths, select, sessions
 from .logs import TOKEN_FIELDS
 from .patterns import work_kind
 
@@ -54,8 +54,8 @@ def breakdown(all_sessions: list[dict], top: int = 15) -> dict:
             "by_chain": {k: dict(v) for k, v in chains[:top]}, "chains_total": len(by_chain), "turns": len(by_turn)}
 
 
-def report(paths: Paths) -> dict:
-    out = breakdown(sessions(paths))
+def report(paths: Paths, interactive_only: bool = False) -> dict:
+    out = breakdown(select(sessions(paths), interactive_only)) | {"interactive_only": interactive_only}
     folder = paths.out / "results"
     folder.mkdir(exist_ok=True)
     (folder / "tokens.json").write_text(json.dumps(out, indent=1))

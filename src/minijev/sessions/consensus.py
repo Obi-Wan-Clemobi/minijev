@@ -127,19 +127,19 @@ def decide(folder: Path, sample_of: dict[str, str], texts: dict[str, str] | None
     changed = sum(final[i]["y"] != majority(r1[i]) for i in final)
     counts = {"items": len(ids), "agreed_round1": len(ok), "disputed_round1": len(disputed), "audit": len(audit),
               "audit_overturned": len(overturned), "second_round": second_round,
-              "final": dict(Counter(f["status"] for f in final.values())), "final_positive": sum(f["y"] for f in final.values()), "by_fact": len(by_fact),
+              "final": dict(Counter(f["status"] for f in final.values())), "final_labels": dict(sorted(Counter(f["y"] for f in final.values() if f["status"] != "contested").items())), "by_fact": len(by_fact),
               "changed_from_round1_majority": changed, "need_review": len(need_review), "need_adjudication": len(need_adj)}
     return {"final": final, "queues": {"review": need_review, "adjudicate": need_adj}, "counts": counts}
 
 
 def pairwise_kappa(folder: Path) -> dict:
-    """Cohen's kappa between the labeller files of round 1, on the items both labelled, per pair of labeller names
-    (the part of the file name before its last character: A0..A3 -> A)."""
+    """Cohen's kappa between the labeller sets of round 1, on the items both labelled. A set is the leading letters of
+    a file name: A0..A3 and A are set A."""
     r1 = read(folder / "round1")
     by_set = defaultdict(dict)
     for i, ops in r1.items():
         for o in ops:
-            by_set[o["file"][:-1]][i] = o["y"]
+            by_set[re.match(r"[A-Za-z]*", o["file"]).group(0) or o["file"]][i] = o["y"]
     names, out = sorted(by_set), {}
     for a_i, a in enumerate(names):
         for b in names[a_i + 1:]:
@@ -149,8 +149,8 @@ def pairwise_kappa(folder: Path) -> dict:
             if not n:
                 continue
             po = sum(x == y for x, y in pairs) / n
-            pa, pb = sum(x for x, _ in pairs) / n, sum(y for _, y in pairs) / n
-            pe = pa * pb + (1 - pa) * (1 - pb)
+            ca, cb = Counter(x for x, _ in pairs), Counter(y for _, y in pairs)
+            pe = sum(ca[k] * cb[k] for k in ca) / n ** 2   # chance agreement, for any number of classes
             out[f"{a}-{b}"] = {"n": n, "agreement": po, "kappa": (po - pe) / (1 - pe) if pe < 1 else None}
     return out
 

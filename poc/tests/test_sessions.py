@@ -59,6 +59,8 @@ def test_state_holds_no_own_call(tmp_path):
     s = logs.parse(_write(tmp_path / "s.jsonl", _entries()))
     for q in questions.QUESTIONS.values():
         for rid, text, _ in q.rows(s):
+            if rid.split(":")[1].startswith("t"):
+                continue   # a per-turn question (area): its state has no calls
             k = int(rid.split(":")[1])
             listed = [l for l in text.split("\nNext call:")[0].split("\n") if l.startswith("- [")]
             assert len(listed) == sum(c["turn"] == s["calls"][k]["turn"] for c in s["calls"][:k])
@@ -116,11 +118,15 @@ def test_extract_check_freeze(tmp_path):
     assert sum(stats(paths)["next_tool"]["train"].values()) == 9
     freeze(paths, "v1")
     assert len(load_split("will_fail", "train", "v1", paths)) == 6
+    import shutil
+    shutil.rmtree(paths.out / "v1")
+    assert dataset.next_version(paths) == "v2"   # a deleted version's name is never reused
+    freeze(paths)
     with pytest.raises(SystemExit):
-        freeze(paths, "v1")
-    (paths.out / "v1" / "will_fail.jsonl").write_text("{}")
+        freeze(paths, "v2")
+    (paths.out / "v2" / "will_fail.jsonl").write_text("{}")
     with pytest.raises(ValueError):
-        load_split("will_fail", "train", "v1", paths)
+        load_split("will_fail", "train", "v2", paths)
 
 
 def test_external_labels_join(tmp_path):
@@ -179,7 +185,7 @@ def test_consensus_rules(tmp_path):
     r = consensus.decide(tmp_path, {})
     assert r["final"]["s:1"]["status"] == "contested" and not any(r["queues"].values())
     assert r["final"]["s:1"]["y"] == 0   # opinions on s:1: 0, 0 (round 1), 0, 1 (review), 1, 0 (adjudication)
-    assert r["counts"]["final_positive"] == 1 and r["counts"]["changed_from_round1_majority"] == 1   # s:0 was a tie
+    assert r["counts"]["final_labels"] == {0: 18, 1: 1} and r["counts"]["changed_from_round1_majority"] == 1   # s:0 was a tie
 
 
 def test_consensus_fact_rule(tmp_path):
@@ -234,7 +240,8 @@ def test_lopo_freeze_and_load(tmp_path, monkeypatch):
     paths = _lopo_root(tmp_path, monkeypatch)
     freeze(paths, "v1", strategy="leave-one-project-out", show_project=False)
     m = dataset.manifest("v1", paths)
-    assert m["split"] == {"strategy": "leave-one-project-out", "folds": ["app", "tool"], "show_project": False}
+    assert m["split"] == {"strategy": "leave-one-project-out", "folds": ["app", "tool"], "show_project": False,
+                          "interactive_only": False}
     test = load_split("next_tool", "test", "v1", paths, fold="tool")
     assert {r["project"] for r in test} == {"tool"} and all("Project:" not in r["text"] for r in test)
     assert "tool" not in {r["project"] for r in load_split("next_tool", "train", "v1", paths, fold="tool")}
@@ -294,3 +301,48 @@ def test_token_breakdown(tmp_path):
     assert out["by_kind"]["inspect"]["cache_read"] == 100 and out["by_kind"]["run"]["cache_read"] == 300
     assert out["total"]["output"] == 20 and list(out["by_chain"]) == ["inspect > run"]
     assert chain(["inspect", "inspect", "run", "inspect"]) == "inspect > run > inspect"
+
+
+def test_risk_coverage():
+    from minijev.sessions.evaluate import choose_threshold, confidence, risk_coverage
+    assert confidence([0.5, 0.5]) == 0 and confidence([1.0, 0.0]) == 1
+    probs = [[0.9, 0.1], [0.9, 0.1], [0.6, 0.4], [0.55, 0.45]]
+    curve = risk_coverage(probs, [0, 0, 1, 0], steps=10)
+    assert curve[0] == {"threshold": 0.0, "kept": 4, "coverage": 1.0, "accuracy": 0.75}
+    chosen = choose_threshold(curve, 0.9, min_kept=2)
+    assert chosen["coverage"] == 0.5 and chosen["accuracy"] == 1.0   # keep the two confident ones, hand off the rest
+    assert choose_threshold(curve, 0.9, min_kept=3) is None          # 2 kept rows are too few to trust
+
+
+def test_sdk_sessions_are_marked_and_can_be_left_out(tmp_path):
+    entries = _entries()
+    entries[1]["entrypoint"] = "sdk-py"
+    s = logs.parse(_write(tmp_path / "s.jsonl", entries))
+    assert s["entrypoint"] == "sdk-py" and not s["interactive"]
+    assert dataset.select([s], interactive_only=True) == [] and dataset.select([s], False) == [s]
+
+
+def test_kappa_multiclass(tmp_path):
+    from minijev.sessions import consensus
+    (tmp_path / "round1").mkdir()
+    a = [0, 1, 2, 2, 1, 0]; b = [0, 1, 2, 1, 1, 0]
+    for name, ys in (("A", a), ("B", b)):
+        (tmp_path / "round1" / f"{name}.jsonl").write_text("".join(json.dumps({"id": f"s:{i}", "y": y}) + "\n"
+                                                                   for i, y in enumerate(ys)))
+    k = consensus.pairwise_kappa(tmp_path)["A-B"]
+    pe = (2 * 2 + 2 * 3 + 2 * 1) / 36   # class rates: A 2,2,2; B 2,3,1
+    assert abs(k["kappa"] - (5 / 6 - pe) / (1 - pe)) < 1e-9
+
+
+def test_area_rows_interactive_only_with_context(tmp_path):
+    from minijev.sessions import QUESTIONS
+    entries = _entries() + [{"type": "user", "timestamp": "2026-01-01T00:01:00Z", "message": {"content": "go"}}]
+    entries[1]["entrypoint"] = "cli"
+    s = logs.parse(_write(tmp_path / "s.jsonl", entries))
+    rows = list(QUESTIONS["area"].rows(s))
+    assert [r[0] for r in rows] == ["s:t0", "s:t1"]
+    assert rows[0][1] == "User request:\nfix the test"
+    assert rows[1][1] == "Previous request:\nfix the test\nUser request:\ngo"   # a short reply keeps its context
+    assert all("Project:" not in r[1] and "[Bash]" not in r[1] for r in rows)
+    entries[1]["entrypoint"] = "sdk-py"
+    assert list(QUESTIONS["area"].rows(logs.parse(_write(tmp_path / "t.jsonl", entries)))) == []

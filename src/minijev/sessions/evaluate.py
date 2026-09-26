@@ -22,6 +22,8 @@ from .dataset import ACCESS, Paths, load_split, manifest
 from .questions import QUESTIONS, Question
 
 FIT_ROWS, SEED = 600, 2026
+MIN_TRAIN_ROWS, TARGET_ACCURACY = 20, 0.9   # a class with fewer train rows is "unsupported"; hand-off target on val
+MIN_KEPT = 30   # a hand-off threshold must keep at least this many val rows, or its accuracy is too noisy to use
 
 
 def counted(q: Question, train: list[dict]) -> tuple[list[float], dict]:
@@ -63,31 +65,65 @@ def report(probs: list[list[float]], labels: list[int]) -> dict:
             "accuracy_ci95": bootstrap_ci(pairs, lambda v: multiclass_metrics(*zip(*v))["accuracy"])}
 
 
+def confidence(p: list[float]) -> float:
+    """The confidence of a decision: (p_max - 1/k) / (1 - 1/k), 0 for a uniform guess, 1 for certainty (as in flows)."""
+    k = len(p)
+    return (max(p) - 1 / k) / (1 - 1 / k)
+
+
+def risk_coverage(probs: list[list[float]], labels: list[int], steps: int = 20) -> list[dict]:
+    """For thresholds 0, 1/steps, …, 1: the share of decisions kept (confidence >= threshold), and the accuracy on
+    them. A decision below the threshold is handed off to the large model."""
+    rows = [(confidence(p), max(range(len(p)), key=p.__getitem__) == y) for p, y in zip(probs, labels)]
+    out = []
+    for i in range(steps + 1):
+        t = i / steps
+        kept = [ok for c, ok in rows if c >= t]
+        out.append({"threshold": t, "kept": len(kept), "coverage": len(kept) / len(rows),
+                    "accuracy": sum(kept) / len(kept) if kept else None})
+    return out
+
+
+def choose_threshold(curve: list[dict], target: float = TARGET_ACCURACY, min_kept: int = MIN_KEPT) -> dict | None:
+    """The lowest threshold whose accuracy on kept decisions reaches target (so the most decisions are kept), among the
+    thresholds that keep at least min_kept rows."""
+    return next((c for c in curve if c["kept"] >= min_kept and c["accuracy"] >= target), None)
+
+
+def load_engine(model: str | None = None):
+    from ..engine import Engine
+    return Engine(model) if model else Engine()
+
+
 def baselines(version: str, names: list[str], model: str | None = None, paths: Paths | None = None,
-              readouts: bool = True) -> dict:
+              readouts: bool = True, fold: str | None = None, engine=None) -> dict:
+    """The baselines on val of one version (and one fold, for a leave-one-project-out version). Train and val only."""
     paths = paths or Paths()
     frozen = manifest(version, paths)["questions"]
-    out = {"version": version, "split": "val", "fit_rows": FIT_ROWS, "questions": {}}
-    engine = None
-    if readouts:
-        from ..engine import Engine
-        engine = Engine(model) if model else Engine()
+    out = {"version": version, "fold": fold, "split": "val", "fit_rows": FIT_ROWS, "questions": {}}
+    engine = (engine or load_engine(model)) if readouts else None
+    if engine is not None:
         out["model"] = engine.name
     for name in names:
         if name not in frozen:
             print(f"{name}: not in {version}, skipped")
             continue
         q = QUESTIONS[name]
-        train, val = load_split(name, "train", version, paths), load_split(name, "val", version, paths)
+        train, val = load_split(name, "train", version, paths, fold), load_split(name, "val", version, paths, fold)
         if not train or not val:
             print(f"{name}: no train or val rows, skipped")
             continue
         labels = [r["y"] for r in val]
         p_prior, p_by = counted(q, train)
-        res = {"n": len(val), "labels": dict(Counter(q.labels[y] for y in labels)),
+        train_counts = Counter(q.labels[r["y"]] for r in train)
+        res = {"n": len(val), "labels": dict(Counter(q.labels[y] for y in labels)), "train_labels": dict(train_counts),
+               "unsupported": [k for k in q.labels if train_counts[k] < MIN_TRAIN_ROWS],
                "prior": report([p_prior] * len(val), labels)}
         if q.condition:
-            res["previous_call"] = report([p_by.get(q.condition(r["text"]), p_prior) for r in val], labels)
+            probs = [p_by.get(q.condition(r["text"]), p_prior) for r in val]
+            curve = risk_coverage(probs, labels)
+            res["previous_call"] = report(probs, labels) | {"risk_coverage": curve,
+                                                            "hand_off": choose_threshold(curve)}
         if engine is not None:
             t0 = time.time()
             z_val = [readout(engine, q, r["text"]) for r in val]
@@ -95,20 +131,25 @@ def baselines(version: str, names: list[str], model: str | None = None, paths: P
             z_fit = [readout(engine, q, r["text"]) for r in fit]
             temp, bias = fit_bias_temperature(z_fit, [r["y"] for r in fit])
             res["zero_shot"] = report([softmax_list(z) for z in z_val], labels)
-            res["zero_shot_bias_temp"] = {**report([softmax_list([v / temp + b for v, b in zip(z, bias)]) for z in z_val],
-                                                   labels), "temperature": temp, "bias": bias}
+            probs = [softmax_list([v / temp + b for v, b in zip(z, bias)]) for z in z_val]
+            curve = risk_coverage(probs, labels)
+            res["zero_shot_bias_temp"] = {**report(probs, labels), "temperature": temp, "bias": bias,
+                                          "risk_coverage": curve, "hand_off": choose_threshold(curve)}
             res["readout_seconds"] = time.time() - t0
         out["questions"][name] = res
-        print(f"\n{name}  n={len(val)}  {res['labels']}")
+        print(f"\n{name}{' fold ' + fold if fold else ''}  n={len(val)}  {res['labels']}"
+              + (f"  unsupported: {res['unsupported']}" if res["unsupported"] else ""))
         for key in ("prior", "previous_call", "zero_shot", "zero_shot_bias_temp"):
             if key in res:
                 m = res[key]
                 print(f"  {key:20} log loss {m['log_loss']:.3f} [{m['log_loss_ci95'][0]:.3f},{m['log_loss_ci95'][1]:.3f}]"
-                      f"  acc {m['accuracy']:.3f}  ece {m['ece']:.3f}")
+                      f"  acc {m['accuracy']:.3f}  ece {m['ece']:.3f}"
+                      + (f"  hand-off at {m['hand_off']['threshold']:.2f}: keeps {m['hand_off']['coverage']:.0%}"
+                         if m.get("hand_off") else ""))
     out["splits_accessed"] = list(ACCESS)
     folder = paths.out / "results"
     folder.mkdir(exist_ok=True)
-    path = folder / f"baselines-{version}-{out.get('model', 'counts').split('/')[-1]}.json"
+    path = folder / f"baselines-{version}{'-' + fold if fold else ''}-{out.get('model', 'counts').split('/')[-1]}.json"
     path.write_text(json.dumps(out, indent=1))
     print(f"\nwrote {path}")
     return out

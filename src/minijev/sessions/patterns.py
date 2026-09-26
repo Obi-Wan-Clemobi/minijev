@@ -29,7 +29,7 @@ from __future__ import annotations
 import re
 
 from .logs import bash_kind, strip_bash
-from .questions import Question, previous_call, register, state
+from .questions import USER_CHARS, Question, previous_call, register, state
 
 WORK_KINDS = ["inspect", "change", "run", "remote", "research", "browse", "publish", "ask", "orchestrate"]
 READ_VERBS = re.compile(r"(^|_)(get|list|load|lookup|search|read|find|view|query|fetch)(_|$)")
@@ -171,3 +171,34 @@ register(Question(
     "waste", "noul", ["no", "yes"],
     {"instructions": "Will this next call be wasted (rejected, retried after a failure, or a repeated read)?"},
     _waste_rows, condition=lambda text: text.split("\nNext call:\n[")[1].split("]")[0]))
+
+
+AREAS = ["frontend", "backend", "data", "infra", "ml", "docs", "agent-setup", "personal-admin", "other"]
+
+
+def _cut(text: str, n: int) -> str:
+    return text[:n] + (" …" if len(text) > n else "")
+
+
+def _area_rows(s):
+    """One decision point per turn of an interactive session (a program writes the turns of an SDK session). The
+    state is the request, and the previous request of the session for context (a reply such as "go" names no area
+    by itself); no project line and no calls, so a labeller (and a model) judges the area of work, not the domain."""
+    if not s.get("interactive", False):   # unknown counts as not interactive, as in logs.parse
+        return
+    previous = None
+    for t in s["turns"]:
+        context = f"Previous request:\n{_cut(previous, 300)}\n" if previous else ""
+        yield f"{s['session']}:t{t['i']}", context + "User request:\n" + _cut(t["text"], USER_CHARS), None
+        previous = t["text"]
+
+
+register(Question(
+    "area", "choice", AREAS,
+    {"instructions": "Which technical area is this request about?", "criteria": {
+        "frontend": "User interface, pages, styling, mockups", "backend": "Server code, APIs, command-line tools",
+        "data": "Databases, data files, migrations, queries", "infra": "Deploys, cloud, servers, CI, networking",
+        "ml": "Models, training, evaluation, prompts", "docs": "Documents, specs, plans, reports",
+        "agent-setup": "The coding agent's own settings, hooks, skills, memory",
+        "personal-admin": "Email, calendar, files, accounts, home devices", "other": "None of these"}},
+    _area_rows, label_source="external"))

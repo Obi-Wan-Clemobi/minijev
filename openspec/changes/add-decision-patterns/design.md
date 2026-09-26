@@ -4,7 +4,10 @@ A **decision pattern** is a mapping from a request and the work so far to the ne
 projects. The **domain** is what a project is about (board games, travel). A model that learned the domain does not
 transfer to a new project. Background, data and threats: `docs/SESSIONS_METHOD.md`.
 
-Measured on the archive (2026-09-25): every assistant message records its token use (8850 of 8850 entries);
+Measured on the archive (2026-09-26): 198 of 232 sessions come from SDK entry points (the travel-planner app runs
+Claude Code as a program); 34 sessions are interactive and hold 3670 of the 4156 calls. Decision-pattern versions use
+interactive sessions only, because the goal is how the user works. Every assistant message records its token use
+(8850 of 8850 entries);
 27 of 32 `AskUserQuestion` calls have a recorded answer; 248 of 3627 assistant messages hold 2 or more tool calls.
 
 ## Goals / Non-Goals

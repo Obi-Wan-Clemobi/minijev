@@ -181,8 +181,9 @@ def check(paths: Paths, quiet: bool = False) -> bool:
     return not any(counts[n] for n in names)
 
 
-def stats(paths: Paths, strategy: str = "time-per-project", held_out: str | None = None) -> dict:
-    all_sessions = sessions(paths)
+def stats(paths: Paths, strategy: str = "time-per-project", held_out: str | None = None,
+          interactive_only: bool = False) -> dict:
+    all_sessions = select(sessions(paths), interactive_only)
     split = split_of(all_sessions, strategy, held_out)
     out = {}
     for q in QUESTIONS.values():
@@ -194,13 +195,23 @@ def stats(paths: Paths, strategy: str = "time-per-project", held_out: str | None
 
 
 def next_version(paths: Paths) -> str:
-    """One more than the highest existing version, so a deleted version's name is never reused."""
-    numbers = [int(p.name[1:]) for p in paths.out.glob("v*") if p.name[1:].isdigit()]
+    """One more than the highest version that exists or ever existed (the ledger versions.txt), so the name of a
+    deleted version is never reused."""
+    ledger = paths.out / "versions.txt"
+    names = [p.name for p in paths.out.glob("v*")] + (ledger.read_text().split() if ledger.exists() else [])
+    numbers = [int(n[1:]) for n in names if n[1:].isdigit()]
     return f"v{max(numbers, default=0) + 1}"
 
 
+def select(all_sessions: list[dict], interactive_only: bool) -> list[dict]:
+    """With interactive_only, the sessions a person typed (logs.INTERACTIVE entry points); SDK sessions, where a
+    program writes the turns, are left out. A session without the flag (an extract older than the flag) counts as not
+    interactive, as logs.parse counts an unknown entry point."""
+    return [s for s in all_sessions if s.get("interactive", False)] if interactive_only else all_sessions
+
+
 def freeze(paths: Paths, version: str | None = None, diag: dict | None = None,
-           strategy: str = "time-per-project", show_project: bool = True) -> Path:
+           strategy: str = "time-per-project", show_project: bool = True, interactive_only: bool = False) -> Path:
     """Write the rows of every question with their split to ROOT/sessions/<version>/. An existing version is never
     rewritten. The check must pass first. With leave-one-project-out, each row gets "splits": {fold: split} for every
     fold, instead of "split"."""
@@ -210,13 +221,14 @@ def freeze(paths: Paths, version: str | None = None, diag: dict | None = None,
         raise SystemExit(f"{folder} exists. A frozen version is never rewritten; choose a new version.")
     if not check(paths):
         raise SystemExit("check failed: nothing written")
-    all_sessions = sessions(paths)
+    all_sessions = select(sessions(paths), interactive_only)
     lopo = strategy == "leave-one-project-out"
     fold_names = folds(all_sessions) if lopo else [None]
     splits = {f: split_of(all_sessions, strategy, f) for f in fold_names}
     folder.mkdir(parents=True)
     manifest = {"version": version, "provenance": provenance(paths),
-                "split": {"strategy": strategy, "folds": fold_names if lopo else [], "show_project": show_project},
+                "split": {"strategy": strategy, "folds": fold_names if lopo else [], "show_project": show_project,
+                          "interactive_only": interactive_only},
                 "sessions": {str(f): {sp: sorted(s for s, v in splits[f].items() if v == sp) for sp, _ in SPLITS}
                              for f in fold_names} if lopo else
                             {sp: sorted(s for s, v in splits[None].items() if v == sp) for sp, _ in SPLITS},
@@ -230,6 +242,8 @@ def freeze(paths: Paths, version: str | None = None, diag: dict | None = None,
                 f.write(json.dumps({**r, **where}, ensure_ascii=False) + "\n")
         manifest["questions"][q.name] = {**q.spec(), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
     (folder / "manifest.json").write_text(json.dumps(manifest, indent=1))
+    with (paths.out / "versions.txt").open("a") as f:
+        f.write(version + "\n")
     return folder
 
 
