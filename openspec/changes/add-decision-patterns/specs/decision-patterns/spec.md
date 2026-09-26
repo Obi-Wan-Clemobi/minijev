@@ -2,9 +2,10 @@
 
 ### Requirement: Kind of work comes from a fixed table
 
-The `work_kind` question SHALL label each call by a fixed table from the call (tool group, Bash kind, and whether an
-MCP tool reads or writes) to one of: inspect, change, run, research, publish, configure, ask, design. The table SHALL
-be committed before any fold result is computed, and a change to it SHALL give a new version.
+The `work_kind` question SHALL label each call by a fixed table from the call (tool, Bash kind, git subcommand, and
+the verb of an MCP tool name) to one of: inspect, change, run, remote, research, browse, publish, ask, orchestrate.
+The table (`minijev/sessions/patterns.py`) SHALL be committed before any fold result is computed, and a change to it
+SHALL give a new version.
 
 #### Scenario: A Bash test run
 - **WHEN** the next call is a Bash command of kind "run"
@@ -12,12 +13,18 @@ be committed before any fold result is computed, and a change to it SHALL give a
 
 ### Requirement: Tool choice is asked given the kind of work
 
-The `tool_given_kind` question SHALL be a Choice whose options are only the tool groups that the table maps to the
-row's kind of work. Its label SHALL be the tool group of the next call.
+For each kind of work that more than one tool can do, a `tool_<kind>` question SHALL be a Choice whose options are
+the tools that can do that kind (`TOOLS_BY_KIND`). Its rows SHALL be the calls of that kind, and its label SHALL be
+the tool id of the call. A tool id SHALL name every MCP tool "mcp" and every browser tool "browser", so that no label
+names a domain.
 
 #### Scenario: Options follow the kind
-- **WHEN** a row's kind of work is "research"
-- **THEN** the options are only the tool groups that the table maps to "research"
+- **WHEN** a call's kind of work is "research"
+- **THEN** it is a row of `tool_research`, whose options are WebSearch, WebFetch and mcp
+
+#### Scenario: A domain-specific MCP tool
+- **WHEN** the call is `mcp__travel__add_guide_entry`
+- **THEN** its tool id is "mcp"
 
 ### Requirement: Waste is labelled from the log
 

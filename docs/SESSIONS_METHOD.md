@@ -267,6 +267,42 @@ anything. On the random sample (all splits, v6 labels), "yes if the risk regex m
 precision 6/35 (Measured); it misses the guide edits of threat T14. This is the bar for a future model. The regex was written after the first labels
 (threat T6).
 
+## 7.2 Where the tokens go
+
+`minijev sessions tokens` (`sessions/tokens.py`) sums the usage that every assistant message records, per kind of
+work (`sessions/patterns.py`) and per chain pattern. A message's tokens are split evenly over its calls; a message
+without calls counts as "answer". A **chain pattern** is the sequence of the kinds of work of a turn's calls, with
+repeats merged. Measured on all 232 sessions, 498 turns and 4232 assistant messages:
+
+| Kind of work | Calls | Cache read | Cache write | Output |
+|---|---|---|---|---|
+| inspect | 1856 | 371.9 M | 8.66 M | 1.06 M |
+| run | 1085 | 292.6 M | 3.16 M | 1.11 M |
+| answer (no call) | – | 89.3 M | 4.23 M | 0.53 M |
+| change | 592 | 81.9 M | 0.93 M | 0.61 M |
+| browse | 193 | 41.2 M | 0.32 M | 0.05 M |
+| remote | 139 | 27.5 M | 0.18 M | 0.06 M |
+| orchestrate | 165 | 20.7 M | 1.23 M | 0.10 M |
+| research | 64 | 7.8 M | 0.30 M | 0.05 M |
+| publish | 30 | 6.4 M | 0.15 M | 0.01 M |
+| ask | 32 | 5.9 M | 0.05 M | 0.04 M |
+| **Total** | 4156 | **945.2 M** | **19.2 M** | **3.65 M** |
+
+Fresh (uncached) input is 9.4 thousand tokens in total.
+
+- **Round trips drive the volume.** Every assistant message reads the whole context again from the cache: the median
+  message reads 175 thousand cached tokens. A turn has a median of 2 messages, but the longest 10% of turns have 24 or
+  more (maximum 193). The tokens of a turn therefore grow with its number of messages more than with its answer
+  length.
+- **Inspection is the largest share:** 39% of cache reads and 45% of cache writes. 1601 of the 1856 inspect calls
+  use Bash (`cat`, `grep`, `sed` and so on) rather than Read, Grep or Glob.
+- **Calls are rarely batched:** 248 of the 3627 messages with calls make 2 or more calls. The most expensive turns
+  are long loops of inspect and run, one call per message.
+
+Inferred: the decisions worth handing to minijev are the ones that cut messages: batching independent inspect calls
+into one message, and stopping an inspect-run loop early. The price of each token type differs, and this page does not
+convert the counts into cost.
+
 ## 8. How to check the claims on this page
 
 | Claim | Command or file |

@@ -8,9 +8,13 @@
 
 ROOT is ~/.minijev-private, or the MINIJEV_PRIVATE environment variable.
 
-Splits are by session start time inside each project: train until 70% of the project's calls, val until 85%, then test.
-Rows from one session are always in one split. A global time split would put whole projects (and the tools they use)
-in one split. A cut by session count gives tiny val and test splits, because a few long sessions hold most calls.
+Split strategies (rows from one session are always in one split):
+- time-per-project: sessions by start time inside each project; train until 70% of the project's calls, val until
+  85%, then test. A global time split would put whole projects in one split; a cut by session count gives tiny val and
+  test splits, because a few long sessions hold most calls.
+- leave-one-project-out: one fold per project group with at least MIN_FOLD_CALLS calls. In a fold, the held-out group
+  is test; in every other group the sessions that reach into the newest 15% of calls are val (never the group's first
+  session) and the rest is train; groups with fewer calls are always train. A project group is the first part of the project name ("app/web" belongs to "app").
 """
 
 from __future__ import annotations
@@ -28,6 +32,8 @@ from .questions import QUESTIONS, Question
 
 ROOT = Path(os.environ.get("MINIJEV_PRIVATE", Path.home() / ".minijev-private"))
 SPLITS = (("train", 0.70), ("val", 0.85), ("test", 1.0))
+STRATEGIES = ("time-per-project", "leave-one-project-out")
+MIN_FOLD_CALLS, LOPO_VAL = 50, 0.15
 LABEL_FIELDS = ("by", "sample", "unsure", "status")   # external label fields a row keeps. Not "why": it is free text that
                                             # the labeller wrote, and neither the scrub nor check covers it.
 ACCESS: list[dict] = []   # every load_split call: {question, split, version, n}. Results and training logs record it.
@@ -93,12 +99,13 @@ def external_labels(paths: Paths, name: str) -> dict[str, dict]:
     return {r["id"]: r for r in map(json.loads, path.open())} if path.exists() else {}
 
 
-def rows(paths: Paths, q: Question, all_sessions: list[dict] | None = None) -> list[dict]:
-    """The rows of one question: {id, session, project, text, y} (and "by" for external labels)."""
+def rows(paths: Paths, q: Question, all_sessions: list[dict] | None = None, show_project: bool = True) -> list[dict]:
+    """The rows of one question: {id, session, project, text, y} (and "by" for external labels). With show_project
+    false, the states leave out the project line; the row still names its project, for splits and reports."""
     labels = external_labels(paths, q.name) if q.label_source == "external" else {}
     out = []
     for s in all_sessions if all_sessions is not None else sessions(paths):
-        for rid, text, y in q.rows(s):
+        for rid, text, y in q.rows(s if show_project else {**s, "project": None}):
             row = {"id": rid, "session": s["session"], "project": s["project"], "text": text, "y": y}
             if q.label_source == "external":
                 if rid not in labels or labels[rid].get("status") == "contested":
@@ -115,16 +122,41 @@ def points(paths: Paths, q: Question, n: int, seed: int = 0) -> list[dict]:
     return random.Random(seed).sample(todo, min(n, len(todo)))
 
 
-def split_of(all_sessions: list[dict]) -> dict[str, str]:
-    """Session id -> split: see the module docstring."""
-    by_project = defaultdict(list)
+def group_of(project: str) -> str:
+    return project.split("/")[0]
+
+
+def folds(all_sessions: list[dict]) -> list[str]:
+    """The project groups that are a fold of leave-one-project-out: those with at least MIN_FOLD_CALLS calls."""
+    calls = Counter()
     for s in all_sessions:
-        by_project[s["project"]].append(s)
+        calls[group_of(s["project"])] += len(s["calls"])
+    return sorted(g for g, n in calls.items() if n >= MIN_FOLD_CALLS)
+
+
+def split_of(all_sessions: list[dict], strategy: str = "time-per-project", held_out: str | None = None) -> dict[str, str]:
+    """Session id -> split: see the module docstring."""
+    if strategy not in STRATEGIES:
+        raise ValueError(f"unknown split strategy {strategy}")
+    lopo = strategy == "leave-one-project-out"
+    if lopo and held_out not in folds(all_sessions):
+        raise ValueError(f"{held_out} is not a fold; folds: {folds(all_sessions)}")
+    by_group = defaultdict(list)
+    for s in all_sessions:
+        by_group[group_of(s["project"]) if lopo else s["project"]].append(s)
     out = {}
-    for group in by_project.values():
-        total, seen = sum(len(s["calls"]) for s in group), 0
-        for s in sorted(group, key=lambda s: s["start"]):
-            out[s["session"]] = next(name for name, cut in SPLITS if seen < cut * total or cut == 1.0)
+    for group, members in by_group.items():
+        total, seen = sum(len(s["calls"]) for s in members), 0
+        for s in sorted(members, key=lambda s: s["start"]):
+            if not lopo:
+                out[s["session"]] = next(name for name, cut in SPLITS if seen < cut * total or cut == 1.0)
+            elif group == held_out:
+                out[s["session"]] = "test"
+            else:
+                # val: the sessions whose calls reach past the newest LOPO_VAL of the group's calls, never the first
+                # session (a cut by start time leaves val empty when the last session is long)
+                late = seen > 0 and seen + len(s["calls"]) > (1 - LOPO_VAL) * total
+                out[s["session"]] = "val" if late and total >= MIN_FOLD_CALLS else "train"
             seen += len(s["calls"])
     return out
 
@@ -149,9 +181,9 @@ def check(paths: Paths, quiet: bool = False) -> bool:
     return not any(counts[n] for n in names)
 
 
-def stats(paths: Paths) -> dict:
+def stats(paths: Paths, strategy: str = "time-per-project", held_out: str | None = None) -> dict:
     all_sessions = sessions(paths)
-    split = split_of(all_sessions)
+    split = split_of(all_sessions, strategy, held_out)
     out = {}
     for q in QUESTIONS.values():
         per = defaultdict(Counter)
@@ -167,9 +199,11 @@ def next_version(paths: Paths) -> str:
     return f"v{max(numbers, default=0) + 1}"
 
 
-def freeze(paths: Paths, version: str | None = None, diag: dict | None = None) -> Path:
+def freeze(paths: Paths, version: str | None = None, diag: dict | None = None,
+           strategy: str = "time-per-project", show_project: bool = True) -> Path:
     """Write the rows of every question with their split to ROOT/sessions/<version>/. An existing version is never
-    rewritten. The check must pass first."""
+    rewritten. The check must pass first. With leave-one-project-out, each row gets "splits": {fold: split} for every
+    fold, instead of "split"."""
     version = version or next_version(paths)
     folder = paths.out / version
     if folder.exists():
@@ -177,16 +211,23 @@ def freeze(paths: Paths, version: str | None = None, diag: dict | None = None) -
     if not check(paths):
         raise SystemExit("check failed: nothing written")
     all_sessions = sessions(paths)
-    split = split_of(all_sessions)
+    lopo = strategy == "leave-one-project-out"
+    fold_names = folds(all_sessions) if lopo else [None]
+    splits = {f: split_of(all_sessions, strategy, f) for f in fold_names}
     folder.mkdir(parents=True)
     manifest = {"version": version, "provenance": provenance(paths),
-                "sessions": {sp: sorted(s for s, v in split.items() if v == sp) for sp, _ in SPLITS},
+                "split": {"strategy": strategy, "folds": fold_names if lopo else [], "show_project": show_project},
+                "sessions": {str(f): {sp: sorted(s for s, v in splits[f].items() if v == sp) for sp, _ in SPLITS}
+                             for f in fold_names} if lopo else
+                            {sp: sorted(s for s, v in splits[None].items() if v == sp) for sp, _ in SPLITS},
                 "extract": diag or {}, "questions": {}}
     for q in QUESTIONS.values():
         path = folder / f"{q.name}.jsonl"
         with path.open("w") as f:
-            for r in rows(paths, q, all_sessions):
-                f.write(json.dumps({**r, "split": split[r["session"]]}, ensure_ascii=False) + "\n")
+            for r in rows(paths, q, all_sessions, show_project):
+                where = {"splits": {fo: splits[fo][r["session"]] for fo in fold_names}} if lopo else \
+                    {"split": splits[None][r["session"]]}
+                f.write(json.dumps({**r, **where}, ensure_ascii=False) + "\n")
         manifest["questions"][q.name] = {**q.spec(), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
     (folder / "manifest.json").write_text(json.dumps(manifest, indent=1))
     return folder
@@ -218,16 +259,20 @@ def provenance(paths: Paths) -> dict:
                            if paths.labels.exists() else {}}
 
 
-def load_split(question: str, split: str, version: str, paths: Paths | None = None) -> list[dict]:
+def load_split(question: str, split: str, version: str, paths: Paths | None = None, fold: str | None = None) -> list[dict]:
     """The rows of one frozen split, each with "text" and "y". Fails loudly if the file changed after the freeze.
-    Every call is logged in ACCESS, so a result can show which splits it read."""
+    A leave-one-project-out version needs the fold. Every call is logged in ACCESS, so a result can show which splits
+    it read."""
     folder = (paths or Paths()).out / version
     manifest = json.loads((folder / "manifest.json").read_text())
     path = folder / f"{question}.jsonl"
     if hashlib.sha256(path.read_bytes()).hexdigest() != manifest["questions"][question]["sha256"]:
         raise ValueError(f"{path} changed after the freeze")
-    out = [r for r in map(json.loads, path.open()) if r["split"] == split]
-    ACCESS.append({"question": question, "split": split, "version": version, "n": len(out)})
+    lopo = manifest.get("split", {}).get("strategy") == "leave-one-project-out"
+    if lopo and fold not in manifest["split"]["folds"]:
+        raise ValueError(f"{version} is leave-one-project-out: give a fold, one of {manifest['split']['folds']}")
+    out = [r for r in map(json.loads, path.open()) if (r["splits"][fold] if lopo else r["split"]) == split]
+    ACCESS.append({"question": question, "split": split, "version": version, "n": len(out)} | ({"fold": fold} if lopo else {}))
     return out
 
 

@@ -28,14 +28,19 @@ def main(argv: list[str]) -> None:
     s.add_argument("-n", type=int, default=5)
     s.add_argument("--seed", type=int, default=0)
     sub.add_parser("check")
-    sub.add_parser("stats")
+    s = sub.add_parser("stats")
+    s.add_argument("--split", choices=dataset.STRATEGIES, default="time-per-project")
+    s.add_argument("--held-out", help="the held-out fold, for --split leave-one-project-out")
     s = sub.add_parser("freeze")
     s.add_argument("--version", help="default: the next unused vN")
+    s.add_argument("--split", choices=dataset.STRATEGIES, default="time-per-project")
+    s.add_argument("--no-project", action="store_true", help="leave the project line out of every state")
     s = sub.add_parser("points")
     s.add_argument("question")
     s.add_argument("-n", type=int, default=100)
     s = sub.add_parser("consensus", help="combine labellers and reviewers (minijev.sessions.consensus)")
     s.add_argument("question")
+    sub.add_parser("tokens", help="token use per kind of work and per chain pattern (tokens.py)")
     s = sub.add_parser("compare", help="the fixed adapter comparison on test (read once): SESSIONS_METHOD.md §7.1")
     s.add_argument("version")
     s.add_argument("question")
@@ -66,7 +71,7 @@ def main(argv: list[str]) -> None:
     elif args.cmd == "check":
         sys.exit(0 if dataset.check(paths) else 1)
     elif args.cmd == "stats":
-        for name, per in dataset.stats(paths).items():
+        for name, per in dataset.stats(paths, args.split, args.held_out).items():
             print(f"\n{name} ({QUESTIONS[name].type}, labels from {QUESTIONS[name].label_source})")
             for split, counts in per.items():
                 print(f"  {split:5} n={sum(counts.values()):5}  " + "  ".join(f"{k}={counts.get(k, 0)}"
@@ -74,7 +79,7 @@ def main(argv: list[str]) -> None:
     elif args.cmd == "freeze":
         extract = paths.out / "extract.json"
         diag = json.loads(extract.read_text()) if extract.exists() else None
-        print(f"wrote {dataset.freeze(paths, args.version, diag)}")
+        print(f"wrote {dataset.freeze(paths, args.version, diag, args.split, not args.no_project)}")
     elif args.cmd == "points":
         for p in dataset.points(paths, QUESTIONS[args.question], args.n):
             print(json.dumps(p, ensure_ascii=False))
@@ -89,6 +94,9 @@ def main(argv: list[str]) -> None:
         consensus.write(folder, result, texts, paths.labels / f"{q.name}.jsonl" if done else folder / "partial.jsonl")
         print(json.dumps({**result["counts"], "kappa_round1": consensus.pairwise_kappa(folder)}, indent=1))
         print("consensus complete: wrote" if done else "not complete: queues in", folder)
+    elif args.cmd == "tokens":
+        from .tokens import report
+        report(paths)
     elif args.cmd == "compare":
         from .evaluate import compare
         compare(args.version, args.question, str(Path(args.adapter).expanduser()), paths)

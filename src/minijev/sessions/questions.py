@@ -68,9 +68,10 @@ def load(path: str | Path) -> None:
 
 
 def state(s: dict, turn: dict | None, before: list[dict], call: dict | None = None, msg: str | None = None) -> str:
-    """The state text: the user turn, and the last calls of that turn before the decision. A call's status shows only
-    if its result existed at decision time; calls from assistant message msg show "pending"."""
-    lines = [f"Project: {s['project']}", "User request:",
+    """The state text: the project (left out if s["project"] is None), the user turn, and the last calls of that turn
+    before the decision. A call's status shows only if its result existed at decision time; calls from assistant
+    message msg show "pending"."""
+    lines = ([f"Project: {s['project']}"] if s.get("project") is not None else []) + ["User request:",
              (turn["text"][:USER_CHARS] + (" …" if len(turn["text"]) > USER_CHARS else "")) if turn else "(none)"]
     own = [c for c in before if turn is not None and c["turn"] == turn["i"]][-CALLS_KEPT:]
     lines.append("Calls so far in this turn:" if own else "Calls so far in this turn: none")

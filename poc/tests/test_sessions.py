@@ -204,3 +204,93 @@ def test_training_cannot_read_test():
     import train_lora
     with pytest.raises(AssertionError):
         train_lora.sessions_split("sessions-next_tool", "test")
+
+
+def _lopo_root(tmp_path, monkeypatch):
+    """Three project groups: app (4 sessions, with a sub-folder app/web), tool (4 sessions), tiny (1 session)."""
+    monkeypatch.setattr(dataset, "MIN_FOLD_CALLS", 10)
+    paths = Paths(tmp_path / "root")
+    code = Path.home() / "Code"   # project names are relative to the home folder (logs.project_name)
+    for i, (cwd, day) in enumerate([("app", "01"), ("app", "02"), ("app/web", "03"), ("app", "04"), ("tool", "01"),
+                                    ("tool", "02"), ("tool", "03"), ("tool", "04"), ("tiny", "05")]):
+        _write(paths.raw / "p" / f"s{i}.jsonl", _entries(cwd=str(code / cwd), day=day))
+    extract(paths)
+    return paths
+
+
+def test_leave_one_project_out(tmp_path, monkeypatch):
+    paths = _lopo_root(tmp_path, monkeypatch)
+    all_sessions = dataset.sessions(paths)
+    assert dataset.folds(all_sessions) == ["app", "tool"]            # tiny has 3 calls < 10: never a fold
+    split = dataset.split_of(all_sessions, "leave-one-project-out", "app")
+    assert {split[f"s{i}"] for i in range(4)} == {"test"}            # app/web belongs to app
+    assert [split[f"s{i}"] for i in range(4, 8)] == ["train", "train", "train", "val"]   # newest 15% of tool is val
+    assert split["s8"] == "train"                                    # a small project is always train
+    with pytest.raises(ValueError):
+        dataset.split_of(all_sessions, "leave-one-project-out", "tiny")
+
+
+def test_lopo_freeze_and_load(tmp_path, monkeypatch):
+    paths = _lopo_root(tmp_path, monkeypatch)
+    freeze(paths, "v1", strategy="leave-one-project-out", show_project=False)
+    m = dataset.manifest("v1", paths)
+    assert m["split"] == {"strategy": "leave-one-project-out", "folds": ["app", "tool"], "show_project": False}
+    test = load_split("next_tool", "test", "v1", paths, fold="tool")
+    assert {r["project"] for r in test} == {"tool"} and all("Project:" not in r["text"] for r in test)
+    assert "tool" not in {r["project"] for r in load_split("next_tool", "train", "v1", paths, fold="tool")}
+    with pytest.raises(ValueError):
+        load_split("next_tool", "test", "v1", paths)                 # a fold is required
+    assert dataset.ACCESS[-1]["fold"] == "tool"
+
+
+def test_work_kind_table():
+    from minijev.sessions.patterns import tool_id, work_kind
+
+    def call(tool, summary="", kind=None):
+        return {"tool": tool, "summary": summary, "kind": kind}
+    assert work_kind(call("Read", "/x.py")) == "inspect" and work_kind(call("Edit", "/x.py")) == "change"
+    assert work_kind(call("Bash", "git status", "git")) == "inspect"
+    assert work_kind(call("Bash", "git commit -m x", "git")) == "change"
+    assert work_kind(call("Bash", "git push origin main", "git")) == "publish"
+    assert work_kind(call("Bash", "pytest", "run")) == "run" and work_kind(call("Bash", "ssh host ls", "remote")) == "remote"
+    assert work_kind(call("mcp__app__remove_entry")) == "change" and work_kind(call("mcp__app__lookup_place")) == "inspect"
+    assert work_kind(call("mcp__mail__send_message")) == "publish"
+    assert work_kind(call("mcp__claude-in-chrome__computer")) == "browse"
+    assert work_kind(call("mcp__claude-in-chrome__get_page_text")) == "inspect"
+    assert work_kind(call("AskUserQuestion")) == "ask" and work_kind(call("ToolSearch")) == "orchestrate"
+    assert tool_id("mcp__travel__add_entry") == "mcp" and tool_id("NotebookEdit") == "Edit"
+
+
+def test_waste_rules(tmp_path):
+    from minijev.sessions import QUESTIONS
+    use = lambda msg, uid, name, inp: {"type": "assistant", "message": {"id": msg, "content": [
+        {"type": "tool_use", "id": uid, "name": name, "input": inp}]}}
+    entries = [
+        {"type": "user", "cwd": "/w/app", "timestamp": "2026-01-01T00:00:00Z", "message": {"content": "go"}},
+        use("m1", "a", "Bash", {"command": "pytest"}), _result("a", True),       # fails, then Bash again: waste
+        use("m2", "b", "Bash", {"command": "pytest -x"}), _result("b", False),
+        use("m3", "c", "Read", {"file_path": "/f"}), _result("c", False),
+        use("m4", "d", "Read", {"file_path": "/f"}), _result("d", False),       # read again, no edit between: waste
+        use("m5", "e", "Edit", {"file_path": "/f"}), _result("e", False),
+        use("m6", "f", "Read", {"file_path": "/f"}), _result("f", False),       # read after an edit: not waste
+    ]
+    s = logs.parse(_write(tmp_path / "s.jsonl", entries))
+    assert [y for _, _, y in QUESTIONS["waste"].rows(s)] == [1, 0, 0, 1, 0, 0]
+
+
+def test_token_breakdown(tmp_path):
+    from minijev.sessions.tokens import breakdown, chain
+    use = lambda msg, uid, name, inp, cr: {"type": "assistant", "message": {"id": msg, "usage": {
+        "input_tokens": 1, "cache_read_input_tokens": cr, "cache_creation_input_tokens": 0, "output_tokens": 10},
+        "content": [{"type": "tool_use", "id": uid, "name": name, "input": inp}]}}
+    entries = [
+        {"type": "user", "cwd": "/w/app", "timestamp": "2026-01-01T00:00:00Z", "message": {"content": "go"}},
+        use("m1", "a", "Read", {"file_path": "/f"}, 100),
+        use("m1", "b", "Read", {"file_path": "/g"}, 100),    # the same message streamed again: counted once
+        use("m2", "c", "Bash", {"command": "pytest"}, 300),
+    ]
+    s = logs.parse(_write(tmp_path / "s.jsonl", entries))
+    out = breakdown([s])
+    assert out["by_kind"]["inspect"]["cache_read"] == 100 and out["by_kind"]["run"]["cache_read"] == 300
+    assert out["total"]["output"] == 20 and list(out["by_chain"]) == ["inspect > run"]
+    assert chain(["inspect", "inspect", "run", "inspect"]) == "inspect > run > inspect"

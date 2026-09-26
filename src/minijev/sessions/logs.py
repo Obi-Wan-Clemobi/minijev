@@ -22,6 +22,7 @@ SKIP_PREFIXES = ("<command-", "<local-command", "<system-reminder", "Caveat:", "
                  "[Request interrupted", "<bash-", "<user-prompt-submit-hook")
 REJECTED = "The user doesn't want to proceed with this tool use"
 CALL_CHARS = 200
+TOKEN_FIELDS = ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens", "output_tokens")
 
 TOOL_GROUPS = {"Bash": "bash", "Edit": "edit", "Write": "edit", "MultiEdit": "edit", "NotebookEdit": "edit",
                "Read": "read", "Grep": "read", "Glob": "read", "WebSearch": "web", "WebFetch": "web",
@@ -131,6 +132,7 @@ def parse(path: Path, diag: Diagnostics | None = None) -> dict:
                     results[b.get("tool_use_id")] = "rejected" if REJECTED in s else "error" if b.get("is_error") else "ok"
     cwd = next((e["cwd"] for e in entries if e.get("cwd")), "")
     calls, turns, turn, seen = [], [], None, set()
+    messages: dict[str, dict] = {}   # assistant message id -> {turn, calls, tokens}; streamed entries repeat an id
     for e in entries:
         if e.get("isSidechain"):
             diag["sidechain entries"] += 1
@@ -142,6 +144,11 @@ def parse(path: Path, diag: Diagnostics | None = None) -> dict:
             continue
         if e.get("type") != "assistant":
             continue
+        mid = (e.get("message") or {}).get("id") or e.get("uuid")
+        m = messages.setdefault(mid, {"turn": turn["i"] if turn else None, "calls": [], "tokens": {}})
+        usage = (e.get("message") or {}).get("usage") or {}
+        for k in TOKEN_FIELDS:   # a repeated entry carries the same or a later count: keep the largest
+            m["tokens"][k] = max(m["tokens"].get(k, 0), usage.get(k) or 0)
         for b in (e.get("message") or {}).get("content") or []:
             if not (isinstance(b, dict) and b.get("type") == "tool_use") or b.get("id") in seen:
                 continue
@@ -153,11 +160,12 @@ def parse(path: Path, diag: Diagnostics | None = None) -> dict:
                     "status": results.get(b.get("id"), "unknown"), "turn": turn["i"] if turn else None,
                     "ts": e.get("timestamp", "")}
             diag[f"calls with status {call['status']}"] += 1
+            m["calls"].append(len(calls))
             calls.append(call)
     if not turns:
         diag["sessions without turns"] += 1
     return {"session": path.stem, "project": project_name(cwd), "start": turns[0]["ts"] if turns else "", "cwd": cwd,
-            "turns": turns, "calls": calls}
+            "turns": turns, "calls": calls, "messages": list(messages.values())}
 
 
 def project_name(cwd: str) -> str:

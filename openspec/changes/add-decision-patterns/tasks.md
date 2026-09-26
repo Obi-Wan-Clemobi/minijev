@@ -1,18 +1,18 @@
 ## 1. Split and state
 
-- [ ] 1.1 Add the split strategy parameter to `split_of`, with `leave-one-project-out`; record it in the manifest
-- [ ] 1.2 Add the option to leave out the `Project:` line; tests for both
-- [ ] 1.3 Freeze v7 (one folder per fold, or one manifest with fold ids); list train label counts per fold
+- [x] 1.1 Add the split strategy parameter to `split_of`, with `leave-one-project-out`; record it in the manifest
+- [x] 1.2 Add the option to leave out the `Project:` line; tests for both
+- [ ] 1.3 Freeze v8 (one manifest with fold ids, after the questions of 3.1 and 3.2 exist); list train label counts per fold
 
 ## 2. Token breakdown
 
-- [ ] 2.1 `tokens.py` and `minijev sessions tokens`: the four token counts per kind of work and per chain pattern
-- [ ] 2.2 Write the Measured breakdown into `docs/SESSIONS_METHOD.md`
+- [x] 2.1 `tokens.py` and `minijev sessions tokens`: the four token counts per kind of work and per chain pattern
+- [x] 2.2 Write the Measured breakdown into `docs/SESSIONS_METHOD.md`
 
 ## 3. Questions
 
-- [ ] 3.1 Write and commit the `work_kind` table (before any fold result)
-- [ ] 3.2 `work_kind`, `tool_given_kind` and `waste` questions, with tests
+- [x] 3.1 Write and commit the `work_kind` table (before any fold result)
+- [x] 3.2 `work_kind`, `tool_<kind>` and `waste` questions, with tests
 - [ ] 3.3 `area` question (external); label it with the consensus pipeline, request only
 
 ## 4. Evaluation

@@ -39,14 +39,19 @@ Measured on the archive (2026-09-25): every assistant message records its token 
 
 ### Labels
 
-- **`work_kind` from a fixed table, not from labellers.** The table maps the next call (tool group, Bash kind, MCP
-  read or write) to inspect, change, run, research, publish, configure, ask or design. It is written and committed
-  before any fold result. Alternative: labellers who see the next call. Rejected: their label would be a noisy copy of
+- **`work_kind` from a fixed table, not from labellers.** The table maps the next call (tool, Bash kind, git
+  subcommand, MCP verb) to inspect, change, run, remote, research, browse, publish, ask or orchestrate. The kinds come
+  from the inventory of tool names in our logs; each kind matches at least 30 calls (Measured). It is committed before
+  any fold result. Alternative: labellers who see the next call. Rejected: their label would be a noisy copy of
   the same table.
 - **`area` from labellers, from the request only.** It is the one label the logs cannot give. The consensus pipeline
   of `session-data` applies.
 - **`waste` from the logs.** A failed call followed by a call of the same tool in the same turn; a Read of a file
   already read in the turn with no edit between; a rejected call.
+
+- **One tool question per kind.** `tool_inspect`, `tool_change`, `tool_research`, `tool_publish`,
+  `tool_orchestrate`, each a Choice with fixed options. The flow engine's `options_from` (enhance-flow-engine) chains
+  them after `work_kind`.
 
 ### Token breakdown
 
@@ -60,4 +65,4 @@ much less.
 - [`home` mixes several kinds of work] → it is still a fold, and its report says so.
 - [The kind-of-work table is a coarse version of the tool] → the flat question and the previous-call baseline control
   for a ladder score that comes only from the table.
-- [Removing the project line changes every state] → v7 is a new version; v6 results are not compared with v7 results.
+- [Removing the project line changes every state] → v8 is a new version; v6 results are not compared with v8 results.
