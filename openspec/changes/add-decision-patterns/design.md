@@ -40,6 +40,31 @@ interactive sessions only, because the goal is how the user works. Every assista
 6. **Tokens saved** always states its counterfactual (what the large model would no longer do). Without one, it is an
    upper bound (Inferred).
 
+### Amendments from the val results (2026-09-26, before any test result)
+
+The count baselines on val of v9 (interactive sessions, leave one project out) narrow what this change claims:
+
+- **One final report per fold reads test.** In this split the held-out project is test, so every per-project number
+  reads test. `minijev sessions compare --fold` computes all fixed methods in one pass (prior, previous call, base
+  and adapter each with a val-fitted bias and temperature, the val-chosen hand-off threshold applied to test, and the
+  ladder against the flat question), and refuses to run twice for a version, fold and adapter.
+- **Ladder against flat, on one label space.** The ladder's probability of a tool group is the sum over kinds of
+  P(kind) × P(tool | kind), over the tools of that group; a kind with one tool gives it probability 1. P(tool | kind)
+  is the previous-call count model of `tool_<kind>`. The groups are those of `next_tool`, and the rows are the same
+  calls. The ladder is scored with P(kind) from the previous-call model and from the adapter.
+- **`work_kind` is the target.** It is the one question with a signal across projects: the previous call beats the
+  prior by 10 to 17 accuracy points in 3 of 4 folds (Measured, val).
+- **`area` does not transfer.** The prior scores 0% to 5% on the val of each fold, and most areas have fewer than 20
+  train rows (Measured). Nothing uses it as a feature. This also shows that the folds separate domains.
+- **`waste`** has 7 to 12 val positives per fold: counts only, no claim. **`tool_inspect`** is Bash in 90% to 98% of
+  rows: reported as trivial.
+- **Pilot fold rule:** among folds with at least 500 test rows, the fold with the fewest `work_kind` classes under 20
+  train rows. Result: board-game-event-planner (989 test rows; only "publish" is unsupported). Only row counts of
+  the test split were read to apply the rule, not its labels.
+- **Zero-shot readouts on the pilot fold only.** The base model had no usable signal on these questions before
+  training (v4: zero-shot below the prior on every question, Measured), so readouts on all four folds (about 5 hours
+  of CPU) would not change a decision. The pilot's final report includes the base model, calibrated on val.
+
 ### Labels
 
 - **`work_kind` from a fixed table, not from labellers.** The table maps the next call (tool, Bash kind, git

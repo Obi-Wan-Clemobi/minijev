@@ -42,7 +42,8 @@ GIT_READS = {"status", "diff", "log", "show", "fetch", "blame", "--no-pager", "l
 GIT_PUBLISH = re.compile(r"^(git\s+push|gh\s+(pr|api|repo|release|issue))\b")
 PUBLISH_TOOLS = {"Artifact", "SendUserFile", "PushNotification"}
 
-# The tools that can do each kind of work. A kind with one tool has no tool question.
+# The tools that can do each kind of work. A kind with one tool has no tool question: SINGLE_TOOL names its tool.
+SINGLE_TOOL = {"run": "Bash", "remote": "Bash", "browse": "browser", "ask": "AskUserQuestion"}
 TOOLS_BY_KIND = {
     "inspect": ["Read", "Grep", "Glob", "Bash", "mcp", "browser"],
     "change": ["Edit", "Write", "Bash", "mcp"],

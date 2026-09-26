@@ -140,13 +140,13 @@ def val_nll(engine: Engine, task: str = "mixed") -> dict:
     return out
 
 
-SESSIONS_VERSION = ["v1"]   # set by --version
+SESSIONS_VERSION, SESSIONS_FOLD = ["v1"], [None]   # set by --version and --fold
 
 
 def sessions_split(task: str, split: str) -> list[dict]:
     from minijev.sessions import load_split
     assert split != "test", "the test split is for reporting only"
-    return load_split(task.removeprefix("sessions-"), split, SESSIONS_VERSION[0])
+    return load_split(task.removeprefix("sessions-"), split, SESSIONS_VERSION[0], fold=SESSIONS_FOLD[0])
 
 
 def lora_engine(model: str, attn: str, threads: int) -> Engine:
@@ -183,7 +183,8 @@ def run(args, max_steps: int | None = None) -> None:
     out = ADAPTERS / (args.model.split("/")[-1] + ("" if args.task == "mixed" else f"-{args.task}"))
     if args.task.startswith("sessions-"):
         from minijev.sessions import Paths
-        out = Paths().root / "adapters" / f"{args.model.split('/')[-1]}-{args.task}-{args.version}"
+        out = Paths().root / "adapters" / (f"{args.model.split('/')[-1]}-{args.task}-{args.version}"
+                                           + (f"-{args.fold}" if args.fold else ""))
     streams = [train_stream(engine, e, HYPER["orders_per_epoch"], args.task) for e in range(HYPER["epochs"])]
     if args.task.startswith("sessions-"):  # the labels keep their natural balance (docs/SESSIONS.md)
         k = len(streams[0][0]["classes"])
@@ -202,7 +203,8 @@ def run(args, max_steps: int | None = None) -> None:
     warm = max(1, int(HYPER["warmup_fraction"] * total))
     sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: min((s + 1) / warm, max(0.0, (total - s) / (total - warm))))
 
-    log = {"hyper": HYPER, "task": args.task, "sessions_version": args.version, "model": args.model, "attn": args.attn, "target_balance_epoch0": balance,
+    log = {"hyper": HYPER, "task": args.task, "sessions_version": args.version, "sessions_fold": args.fold,
+           "model": args.model, "attn": args.attn, "target_balance_epoch0": balance,
            "examples_per_epoch": len(streams[0]), "optimizer_steps": total, "epochs": []}
     start_epoch = 0
     state = out / "state.pt"
@@ -273,10 +275,11 @@ def main() -> None:
                     help="mixed: BoolQ + AG News (E20). sst5: a per-task adapter for SST-5 Scores (E22). "
                          "sessions-<question>: a Claude Code session question (docs/SESSIONS.md)")
     ap.add_argument("--version", default="v1", help="the frozen sessions version, for --task sessions-<question>")
+    ap.add_argument("--fold", help="the held-out fold, for a leave-one-project-out sessions version")
     args = ap.parse_args()
     if args.task not in ("mixed", "sst5") and not args.task.startswith("sessions-"):
         ap.error(f"unknown task {args.task}")
-    SESSIONS_VERSION[0] = args.version
+    SESSIONS_VERSION[0], SESSIONS_FOLD[0] = args.version, args.fold
     if args.command == "parity":
         parity(args)
     else:

@@ -48,6 +48,7 @@ def main(argv: list[str]) -> None:
     s.add_argument("version")
     s.add_argument("question")
     s.add_argument("adapter", help="an adapter folder, for example ~/.minijev-private/adapters/<run>/epoch-1")
+    s.add_argument("--fold", help="the held-out fold, for a leave-one-project-out version")
     s = sub.add_parser("baselines")
     s.add_argument("version")
     s.add_argument("questions_to_run", nargs="*", metavar="question", help="default: every question in the version")
@@ -103,7 +104,7 @@ def main(argv: list[str]) -> None:
         report(paths, args.interactive_only)
     elif args.cmd == "compare":
         from .evaluate import compare
-        compare(args.version, args.question, str(Path(args.adapter).expanduser()), paths)
+        compare(args.version, args.question, str(Path(args.adapter).expanduser()), paths, fold=args.fold)
     elif args.cmd == "baselines":
         from .evaluate import baselines
         m = dataset.manifest(args.version, paths)

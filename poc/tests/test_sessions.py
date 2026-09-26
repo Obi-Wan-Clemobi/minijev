@@ -346,3 +346,34 @@ def test_area_rows_interactive_only_with_context(tmp_path):
     assert all("Project:" not in r[1] and "[Bash]" not in r[1] for r in rows)
     entries[1]["entrypoint"] = "sdk-py"
     assert list(QUESTIONS["area"].rows(logs.parse(_write(tmp_path / "t.jsonl", entries)))) == []
+
+
+def test_ladder_groups_sum_over_kinds():
+    from minijev.sessions import QUESTIONS
+    from minijev.sessions.evaluate import ladder_groups
+    from minijev.sessions.patterns import TOOLS_BY_KIND, WORK_KINDS
+    from minijev.sessions.questions import NEXT_TOOL
+    uniform = {k: (QUESTIONS[f"tool_{k}"], ([1 / len(t)] * len(t), {})) for k, t in TOOLS_BY_KIND.items()}
+    pk = [0.0] * len(WORK_KINDS)
+    pk[WORK_KINDS.index("run")], pk[WORK_KINDS.index("inspect")] = 0.5, 0.5
+    [g] = ladder_groups([pk], ["User request:\nx\nCalls so far in this turn: none"], uniform)
+    assert abs(sum(g) - 1) < 1e-9
+    # run -> Bash (0.5); inspect -> uniform over Read, Grep, Glob, Bash, mcp, browser (0.5 / 6 each)
+    assert abs(g[NEXT_TOOL.index("bash")] - (0.5 + 0.5 / 6)) < 1e-9 and abs(g[NEXT_TOOL.index("read")] - 0.25) < 1e-9
+
+
+def test_compare_checks_adapter_and_ledger(tmp_path):
+    from minijev.sessions import evaluate
+    ad = tmp_path / "run" / "epoch-0"
+    ad.mkdir(parents=True)
+    (ad.parent / "train_log.json").write_text(json.dumps(
+        {"sessions_version": "v9", "sessions_fold": "app", "task": "sessions-work_kind"}))
+    evaluate.check_adapter(str(ad), "v9", "app", "work_kind")
+    for args in (("v8", "app", "work_kind"), ("v9", "tool", "work_kind"), ("v9", "app", "next_tool")):
+        with pytest.raises(SystemExit):
+            evaluate.check_adapter(str(ad), *args)
+    paths = Paths(tmp_path / "root")
+    (paths.out / "results").mkdir(parents=True)
+    evaluate.test_reads(paths).write_text(json.dumps({"version": "v9", "fold": "app", "question": "next_tool"}) + "\n")
+    with pytest.raises(SystemExit, match="already read"):     # the ladder already read next_tool's test in this fold
+        evaluate.compare("v9", "work_kind", str(ad), paths, fold="app")

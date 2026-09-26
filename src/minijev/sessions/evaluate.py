@@ -161,28 +161,90 @@ def paired_delta(a: list[float], b: list[float]) -> dict:
     return {"mean": sum(d) / len(d), "ci95": bootstrap_ci(d, lambda v: sum(v) / len(v))}
 
 
-def compare(version: str, name: str, adapter: str, paths: Paths | None = None, attn: str = "eager") -> dict:
-    """The fixed comparison for an adapter (docs/SESSIONS_METHOD.md §7.1), written before the first result:
+def ladder_groups(kind_probs: list[list[float]], texts: list[str], tool_models: dict) -> list[list[float]]:
+    """Tool-group probabilities from the ladder: P(group) = sum over kinds of P(kind) * P(tool | kind), over the tools
+    of that group. P(tool | kind) is the previous-call count model of tool_<kind>; a kind with one tool gives that
+    tool probability 1. The groups are those of next_tool, so the ladder and the flat question share one label space."""
+    from .logs import tool_group
+    from .patterns import SINGLE_TOOL, TOOLS_BY_KIND, WORK_KINDS
+    from .questions import NEXT_TOOL
+    group_of = lambda t: tool_group({"browser": "mcp__claude-in-chrome__x", "mcp": "mcp__x__y"}.get(t, t))
+    out = []
+    for pk, text in zip(kind_probs, texts):
+        g = [0.0] * len(NEXT_TOOL)
+        for k, p in zip(WORK_KINDS, pk):
+            if k in SINGLE_TOOL:
+                g[NEXT_TOOL.index(group_of(SINGLE_TOOL[k]))] += p
+                continue
+            q, (p_prior, p_by) = tool_models[k]
+            for t, pt in zip(TOOLS_BY_KIND[k], p_by.get(q.condition(text), p_prior)):
+                g[NEXT_TOOL.index(group_of(t))] += p * pt
+        out.append(g)
+    return out
+
+
+def check_adapter(adapter: str, version: str, fold: str | None, name: str) -> None:
+    """Stop unless the adapter's train_log.json says it was trained on this version, fold and question."""
+    log_path = Path(adapter).parent / "train_log.json"
+    if not log_path.exists():
+        raise SystemExit(f"{log_path} is missing: cannot confirm what {adapter} was trained on")
+    log = json.loads(log_path.read_text())
+    want = {"sessions_version": version, "sessions_fold": fold, "task": f"sessions-{name}"}
+    got = {k: log.get(k) for k in want}
+    if got != want:
+        raise SystemExit(f"{adapter} was trained on {got}, not {want}")
+
+
+def test_reads(paths: Paths) -> Path:
+    """The ledger of every (version, fold, question) whose test split a final report has read."""
+    return paths.out / "results" / "test-reads.jsonl"
+
+
+def compare(version: str, name: str, adapter: str, paths: Paths | None = None, attn: str = "eager",
+            fold: str | None = None, require_trained_on: bool = True) -> dict:
+    """The one final report of a (version, fold, question): it alone reads test, once. It stops before any read if
+    the adapter was not trained on this version, fold and question, or if the test split of any question it reads is
+    in the test-read ledger. Rules fixed
+    before the first result (docs/SESSIONS_METHOD.md §7.1; openspec/changes/add-decision-patterns/design.md):
     - base model and adapter use the same attention implementation as the baselines (eager);
-    - each model gets its own bias and temperature, fitted on val (E22), and test is read once, here;
+    - each model gets its own bias and temperature, fitted on val (E22);
     - the adapter must beat the previous-call baseline and the calibrated base model on test log loss: paired
       bootstrap deltas over the same rows; a gain counts only if the 95% interval of the delta is below zero;
-    - results per project, because two projects hold most rows (threat T4)."""
+    - the hand-off threshold is chosen on val and applied to test;
+    - for work_kind, the ladder (kind, then tool) is compared with flat next_tool on tool groups;
+    - results per project (threat T4)."""
     from ..engine import Engine
     paths = paths or Paths()
+    folder = paths.out / "results"
+    folder.mkdir(exist_ok=True)
+    path = folder / f"compare-{version}{'-' + fold if fold else ''}-{name}-{Path(adapter).parent.name}-{Path(adapter).name}.json"
+    if require_trained_on:
+        check_adapter(adapter, version, fold, name)
+    reads = [{"version": version, "fold": fold, "question": q} for q in [name] + (["next_tool"] if name == "work_kind" else [])]
+    ledger = test_reads(paths)
+    done = [json.loads(l) for l in ledger.open()] if ledger.exists() else []
+    seen = [r for r in reads if any({k: d.get(k) for k in r} == r for d in done)]
+    if path.exists() or seen:
+        raise SystemExit(f"test was already read for {seen or path}: a final report reads test once")
+    with ledger.open("a") as f:   # written before test is read, so a run that crashes still counts as the one read
+        for r in reads:
+            f.write(json.dumps(r | {"report": path.name}) + "\n")
     q = QUESTIONS[name]
-    train, val, test = (load_split(name, s, version, paths) for s in ("train", "val", "test"))
+    train, val, test = (load_split(name, s, version, paths, fold) for s in ("train", "val", "test"))
     y_val, y_test = [r["y"] for r in val], [r["y"] for r in test]
     p_prior, p_by = counted(q, train)
-    probs = {"previous_call": [p_by.get(q.condition(r["text"]), p_prior) for r in test] if q.condition else
-             [p_prior] * len(test)}
-    out = {"version": version, "question": name, "attn": attn, "n_test": len(test), "models": {}}
+    cond = lambda r: p_by.get(q.condition(r["text"]), p_prior) if q.condition else p_prior
+    probs = {"prior": [p_prior] * len(test), "previous_call": [cond(r) for r in test]}
+    val_probs = {"previous_call": [cond(r) for r in val]}
+    out = {"version": version, "fold": fold, "question": name, "attn": attn, "n_test": len(test), "models": {}}
     for label, engine in (("base", Engine(attn=attn)), ("adapter", Engine(adapter=adapter, attn=attn))):
         z_val = [readout(engine, q, r["text"]) for r in val]
         z_test = [readout(engine, q, r["text"]) for r in test]
         temp, bias = fit_bias_temperature(z_val, y_val)
-        probs[f"{label}_bias_temp"] = [softmax_list([v / temp + b for v, b in zip(z, bias)]) for z in z_test]
+        cal = lambda z: softmax_list([v / temp + b for v, b in zip(z, bias)])
+        probs[f"{label}_bias_temp"] = [cal(z) for z in z_test]
         probs[f"{label}_raw"] = [softmax_list(z) for z in z_test]
+        val_probs[f"{label}_bias_temp"] = [cal(z) for z in z_val]
         out["models"][label] = {"name": engine.name, "adapter": engine.adapter, "adapter_sha256": engine.adapter_sha256,
                                 "temperature": temp, "bias": bias}
     nll = {k: [-math.log(max(p[y], 1e-12)) for p, y in zip(v, y_test)] for k, v in probs.items()}
@@ -191,18 +253,50 @@ def compare(version: str, name: str, adapter: str, paths: Paths | None = None, a
     out["deltas"] = {f"adapter_bias_temp_minus_{ref}": {"log_loss": paired_delta(nll[ref], nll["adapter_bias_temp"]),
                                                         "accuracy": paired_delta(hit[ref], hit["adapter_bias_temp"])}
                      for ref in ("previous_call", "base_bias_temp")}
+    out["hand_off"] = {}
+    for k, vp in val_probs.items():
+        chosen = choose_threshold(risk_coverage(vp, y_val))
+        if chosen is None:
+            out["hand_off"][k] = None
+            continue
+        kept = [h for p, h in zip(probs[k], hit[k]) if confidence(p) >= chosen["threshold"]]
+        out["hand_off"][k] = {"threshold": chosen["threshold"], "val": chosen,
+                              "test": {"coverage": len(kept) / len(test), "accuracy": sum(kept) / len(kept) if kept else None}}
+    if name == "work_kind":
+        out["ladder"] = ladder_section(version, fold, paths, test, probs)
     by_project = defaultdict(list)
     for k, r in enumerate(test):
         by_project[r["project"]].append(k)
     out["per_project"] = {proj: {"n": len(ks), **{m: sum(nll[m][k] for k in ks) / len(ks) for m in nll}}
                           for proj, ks in sorted(by_project.items())}
     out["splits_accessed"] = list(ACCESS)
-    folder = paths.out / "results"
-    folder.mkdir(exist_ok=True)
-    path = folder / f"compare-{version}-{name}-{Path(adapter).parent.name}-{Path(adapter).name}.json"
     path.write_text(json.dumps(out, indent=1))
     for ref, d in out["deltas"].items():
         ll = d["log_loss"]
         print(f"{ref}: log loss {ll['mean']:+.3f} [{ll['ci95'][0]:+.3f}, {ll['ci95'][1]:+.3f}]")
     print(f"wrote {path}")
     return out
+
+
+def ladder_section(version: str, fold: str | None, paths: Paths, test: list[dict], kind_probs: dict) -> dict:
+    """Ladder against flat next_tool, on the tool groups of next_tool, over the same test rows (the row ids of
+    work_kind and next_tool are the same calls). Every tool_<kind> model is the previous-call count model on train."""
+    from .patterns import TOOLS_BY_KIND
+    flat_q = QUESTIONS["next_tool"]
+    flat_train = load_split("next_tool", "train", version, paths, fold)
+    flat_test = {r["id"]: r for r in load_split("next_tool", "test", version, paths, fold)}
+    rows = [r for r in test if r["id"] in flat_test]
+    y = [flat_test[r["id"]]["y"] for r in rows]
+    fp, fb = counted(flat_q, flat_train)
+    tool_models = {k: (QUESTIONS[f"tool_{k}"], counted(QUESTIONS[f"tool_{k}"],
+                                                        load_split(f"tool_{k}", "train", version, paths, fold)))
+                   for k in TOOLS_BY_KIND}
+    index = {r["id"]: i for i, r in enumerate(test)}
+    methods = {"flat_prior": [fp] * len(rows), "flat_previous_call": [fb.get(flat_q.condition(r["text"]), fp) for r in rows]}
+    for source in ("previous_call", "adapter_bias_temp"):
+        methods[f"ladder_{source}"] = ladder_groups([kind_probs[source][index[r["id"]]] for r in rows],
+                                                    [r["text"] for r in rows], tool_models)
+    nll = {k: [-math.log(max(p[t], 1e-12)) for p, t in zip(v, y)] for k, v in methods.items()}
+    return {"n": len(rows), "test": {k: report(v, y) for k, v in methods.items()},
+            "deltas": {f"{m}_minus_flat_previous_call": paired_delta(nll["flat_previous_call"], nll[m])
+                       for m in ("ladder_previous_call", "ladder_adapter_bias_temp")}}
