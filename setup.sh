@@ -2,8 +2,8 @@
 # Install everything the minijev POC and web playground need. Safe to run again.
 #
 #   ./setup.sh              Python deps (poc/) and web deps (web/)
-#   ./setup.sh --model      also download Qwen2.5-0.5B-Instruct (~1 GB) so the first run starts fast
-#   ./setup.sh --model-1.5b also download Qwen2.5-1.5B-Instruct (~3 GB)
+#   ./setup.sh --model      also download Qwen2.5-1.5B-Instruct (~3 GB), the app's model, so the first run starts fast
+#   ./setup.sh --model-0.5b also download Qwen2.5-0.5B-Instruct (~1 GB), the fast model of the tests
 #
 # It never installs system tools by itself. If one is missing, it says what to install and stops.
 set -euo pipefail
@@ -16,8 +16,9 @@ fail() { printf '  \033[31m✗\033[0m %s\n' "$*"; exit 1; }
 MODELS=()
 for arg in "$@"; do
   case "$arg" in
-    --model) MODELS+=("Qwen/Qwen2.5-0.5B-Instruct") ;;
-    --model-1.5b) MODELS+=("Qwen/Qwen2.5-1.5B-Instruct") ;;
+    --model) MODELS+=("Qwen/Qwen2.5-1.5B-Instruct") ;;
+    --model-0.5b) MODELS+=("Qwen/Qwen2.5-0.5B-Instruct") ;;
+    --model-1.5b) MODELS+=("Qwen/Qwen2.5-1.5B-Instruct") ;;   # the old name of --model
     -h|--help) sed -n '2,8p' "$0"; exit 0 ;;
     *) fail "unknown option: $arg (try --help)" ;;
   esac

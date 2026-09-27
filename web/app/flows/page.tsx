@@ -219,6 +219,16 @@ function Builder() {
               disabled={!!running || !query.trim() || !nSteps || problems.errors.length > 0}>{running ? "Running…" : "Run"}</button>
             <Tip k="smRun" />
           </div>
+          {!!flow.examples?.length && (
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="text-muted">Try:</span>
+              {flow.examples.map((ex) => (
+                <button key={ex.query} className="px-2 py-0.5 rounded-full border border-line hover:border-accent text-left"
+                  title={`Expected: ${Object.entries(ex.expect).map(([s, a]) => `${s} = ${String(a)}`).join(", ")}`}
+                  onClick={() => setQuery(ex.query)}>{ex.query}</button>
+              ))}
+            </div>
+          )}
           <div className="h-[620px] rounded-xl border border-line bg-surface overflow-hidden"
             onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
             onDrop={(e) => {

@@ -33,8 +33,9 @@ defined in the glossary in [CLAUDE.md](CLAUDE.md).
 
 You need [uv](https://docs.astral.sh/uv/) and Node.js 20 or newer. The model runs on the CPU; no GPU is necessary.
 
-1. Run `./setup.sh --model`. It installs the Python and web dependencies and downloads Qwen2.5-0.5B-Instruct
-   (about 1 GB).
+1. Run `./setup.sh --model`. It installs the Python and web dependencies and downloads Qwen2.5-1.5B-Instruct
+   (about 3 GB), the app's model (`MINIJEV_MODEL` in `poc/minijev.env`). `--model-0.5b` adds the faster 0.5B model,
+   which the tests use.
 2. Run `tilt up`. It starts the API on port 8000 and the web app on port 3000. Install Tilt with
    `brew install tilt-dev/tap/tilt` if you do not have it.
 3. Open http://localhost:3000.

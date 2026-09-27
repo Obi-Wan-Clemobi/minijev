@@ -138,5 +138,44 @@
     }
    ]
   }
- }
+ },
+ "examples": [
+  {
+   "query": "read the config file and tell me the port",
+   "expect": {
+    "kind": "inspect"
+   }
+  },
+  {
+   "query": "fix the typo in README.md",
+   "expect": {
+    "kind": "change"
+   }
+  },
+  {
+   "query": "run the test suite",
+   "expect": {
+    "kind": "run"
+   }
+  },
+  {
+   "query": "search the web for the latest Next.js release notes",
+   "expect": {
+    "kind": "research",
+    "tool": "WebSearch"
+   }
+  },
+  {
+   "query": "open the dashboard in the browser and take a screenshot",
+   "expect": {
+    "kind": "browse"
+   }
+  },
+  {
+   "query": "ask me whether I want an ascii or an html mockup",
+   "expect": {
+    "kind": "ask"
+   }
+  }
+ ]
 }

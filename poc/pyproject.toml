@@ -27,7 +27,7 @@ train = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-markers = ["model: loads Qwen2.5-0.5B-Instruct (downloads ~1 GB on first run)"]
+markers = ["model: loads a Qwen model: most tests use 0.5B (~1 GB), the template tests use the app's model from minijev.env (1.5B, ~3 GB)"]
 
 # In Docker (Linux), use the CPU-only torch build: the default Linux wheel pulls ~2 GB of CUDA libraries.
 [[tool.uv.index]]

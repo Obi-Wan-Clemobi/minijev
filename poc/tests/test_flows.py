@@ -313,3 +313,41 @@ def test_options_from_a_yes_no_step_uses_json_keys():
     ask, seen = multi({"gate": {"type": "noul", "noul": 0.2}, "tool": choice("Agent", ["Agent", "Skill"], 0.9)})
     list(run(flow, "x", ask))
     assert seen[1]["questions"]["tool"]["criteria"] == {"Agent": None, "Skill": None}
+
+
+def test_examples_are_checked_against_the_steps():
+    f = load("customer-triage")
+    assert check(f)["errors"] == [] and len(f.examples) == 5
+    f.examples[0].expect["team"] = "legal"
+    f.examples[1].expect["nowhere"] = True
+    msgs = [e["message"] for e in check(f)["errors"]]
+    assert any("'legal'" in m for m in msgs) and any("'nowhere'" in m for m in msgs)
+    ladder = load("work-ladder")
+    ladder.examples[3].expect["tool"] = "Teleport"               # a step whose options come from an earlier answer
+    assert any("'Teleport'" in e["message"] for e in check(ladder)["errors"])
+
+
+def test_try_examples_counts_hits_and_distinct_answers():
+    from minijev.flows import try_examples
+    ask, _ = fake({"tool_type": choice("search", ["search", "file", "network"], 0.9),
+                   "search_tool": choice("grep", ["grep", "ripgrep"], 0.9)})
+    r = try_examples(load("tool-selection"), ask)
+    assert r["distinct"] == {"tool_type": 1, "search_tool": 1}   # the same answer for every request
+    assert r["checked"] == 5 and r["hits"] == 1                  # tool_type 5 times; file_tool is never reached
+
+
+@pytest.mark.model
+@pytest.mark.parametrize("name", ["tool-selection", "customer-triage", "work-ladder"])
+def test_templates_answer_their_examples(name):
+    """With the app's model (minijev.env), each template gets most expected answers right, and its first step does not
+    give every request the same answer."""
+    from minijev.engine import Engine
+    from minijev.flows import try_examples
+    from minijev.judge import ask
+    from minijev.settings import Settings
+    s = Settings.load()
+    engine = Engine(s.model, attn="eager", threads=6)
+    f = load(name)
+    r = try_examples(f, lambda req: ask(engine, req, settings=s))
+    assert r["distinct"][f.start] > 1, r
+    assert r["hits"] / r["checked"] >= 0.6, r

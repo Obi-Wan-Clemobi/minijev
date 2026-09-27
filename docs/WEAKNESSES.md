@@ -17,11 +17,11 @@ average gap between stated confidence and accuracy.
 | W1 | The option order changes listwise answers | Method | High | Partly: order-robust default (E14); shuffle training, flips 22% → 9% (E20) |
 | W2 | Raw probabilities are overconfident | Calibration | High | Partly: fitted for Noul and Choice on train (E14); Score open |
 | W3 | Calibration does not transfer beyond its data, and Score has none | Calibration | High | Open |
-| W4 | The 0.5B model is at chance on BoolQ | Model | High | Partly: LoRA lifts 0.5B to 0.770, as base 1.5B (E20) |
+| W4 | The 0.5B model is at chance on BoolQ | Model | High | Partly: LoRA lifts 0.5B to 0.770, as base 1.5B (E20); the app uses 1.5B |
 | W5 | Pointwise items on small models say "yes" to the plausible item | Method | Medium | Open; contrastive levels tried and rejected (E16) |
 | W6 | Opposite questions are not consistent | Method | Medium | Measured (E17); opt-in pair step |
 | W7 | Answers depend on the prompt wording | Method | Medium | Measured (E15); template frozen |
-| W8 | Literal reading of vague questions | Model | Medium | Partly: Noul `criteria` and a library; mixed (E18) |
+| W8 | Literal reading of vague questions | Model | Medium | Partly: Noul `criteria` and a library; mixed (E18); concrete template questions |
 | W9 | Contextual calibration over-corrects | Calibration | Low | Avoided (opt-in) |
 | W10 | More than 25 options is not supported | Method | Low | Open |
 | W11 | Long states lose details | Model | Medium | Measured to 8k (E19) |
@@ -158,6 +158,12 @@ average gap between stated confidence and accuracy.
   accuracy (E21, RESEARCH.md §7.3 R17, R18).
 - **Per-task fine-tune (Measured, E22, SST-5 test, n = 300):** an SST-5-only adapter raises listwise accuracy from
   0.340 to 0.443. One bias per level and a temperature, fitted on val with no training, reach 0.440 (R19).
+- **Flows (Measured, exploratory: the 16 examples of the 3 flow templates, CPU, 2026-09-27):** on 0.5B, the
+  templates gave nearly the same answers to every request. The triage question `urgent` gave one answer to all 5 samples, and
+  11 of 21 expected answers were right. On 1.5B, 21 of 23 were right, and `kind` of the work ladder gave 5 different
+  answers. A step takes a median of 2.4 s on 1.5B against 0.7 s on 0.5B. The triage wording was chosen on the same
+  messages (W8), so these counts are optimistic. The app now uses 1.5B (`MINIJEV_MODEL` in `poc/minijev.env`). The
+  tests keep 0.5B for speed.
 - **Candidate fix:** use 1.5B or a larger model; fit a bias and a temperature on labelled examples of the target
   task, and fine-tune only if a gain remains; train on many tasks and test on held-out tasks; distillation with soft
   labels (RESEARCH.md §3.9).
@@ -173,6 +179,11 @@ average gap between stated confidence and accuracy.
     most other answers toward "no", so the mean gap to Jev grows (0.24 → 0.31).
   - 1.5B: the gap shrinks (0.26 → 0.22), but the Python case stays literal (0.90 → 0.89).
   - So criteria help or hurt depending on the model and the case. Test them on labelled data before relying on them.
+- **Concrete questions (Measured, exploratory: 6 support messages, chosen on the same messages):** "Does this message
+  need an answer today?" got 3 of 6 right on both sizes. "Does the customer report a problem that is happening now?"
+  got 6 of 6 on 1.5B and 5 of 6 on 0.5B. The triage template now asks the concrete question. Each flow template has
+  sample requests with expected answers (`examples`); a model test fails if a template's first step gives every
+  sample the same answer, or gets fewer than 60% right.
 - **What Jev may do:** it lists literal reading as a known weakness (Stated, row 25).
 
 ### W11. Long states lose details

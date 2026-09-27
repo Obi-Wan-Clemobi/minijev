@@ -1,14 +1,14 @@
 {
   "id": "customer-triage",
   "name": "Customer support triage",
-  "description": "A support message comes in. Is it urgent? Which team gets it? How upset is the customer? Upset customers are offered a human.",
+  "description": "A support message comes in. Does it report a problem now? Which team gets it? How upset is the customer? For an upset customer: is the customer angry, or unable to work?",
   "version": "1.0",
   "start": "urgent",
   "steps": {
     "urgent": {
       "id": "urgent", "type": "noul",
-      "instructions": "Does this message need an answer today?",
-      "criteria": {"true": "Money, access or a live system is affected now", "false": "A question or request that can wait"},
+      "instructions": "Does the customer report a problem that is happening now?",
+      "criteria": {"true": "Something is broken, blocked or charged wrongly right now", "false": "A question, a request or a thank-you"},
       "position": {"x": 0, "y": 160},
       "transitions": [{"target": "team"}]
     },
@@ -33,9 +33,16 @@
     },
     "human": {
       "id": "human", "type": "noul",
-      "instructions": "Would the customer accept a call from a person instead of an email?",
+      "instructions": "Is the customer angry, or unable to work?",
       "position": {"x": 1020, "y": 280},
       "transitions": [{"target": "DONE"}]
     }
-  }
+  },
+  "examples": [
+    {"query": "I was charged twice this month, please refund me now!!!", "expect": {"urgent": true, "team": "billing"}},
+    {"query": "How do I reset my password?", "expect": {"urgent": false, "team": "technical"}},
+    {"query": "The app crashes every time I open it. This is the third time I write. Unacceptable.", "expect": {"urgent": true, "team": "technical"}},
+    {"query": "Can I get a quote for 50 seats?", "expect": {"urgent": false, "team": "sales"}},
+    {"query": "Your API returns 500 errors, our production is down", "expect": {"urgent": true, "team": "technical"}}
+  ]
 }

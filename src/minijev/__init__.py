@@ -1,7 +1,7 @@
 """minijev: typed, calibrated decisions read out of one forward pass of a small open model.
 
     from minijev import Engine, Settings, ask
-    engine = Engine()                       # the model in minijev.env (default Qwen2.5-0.5B-Instruct)
+    engine = Engine()                       # the model in minijev.env (Qwen2.5-1.5B-Instruct)
     ask(engine, {"state": "…", "questions": {"q": {"type": "noul", "instructions": "…?"}}})
 """
 

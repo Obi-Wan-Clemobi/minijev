@@ -25,6 +25,7 @@ transition tests the step's own question, or with from_question one of its fan-o
 from __future__ import annotations
 
 import math
+from collections import defaultdict
 import time
 from typing import Callable, Iterator, Literal
 
@@ -78,6 +79,13 @@ class Step(BaseModel):
     transitions: list[Transition] = Field(default_factory=list)
 
 
+class Example(BaseModel):
+    """A sample request, and the answer that a step should give to it. A step that the run does not reach is not
+    checked. Examples show on the page and let a test catch a flow that gives every request the same answers."""
+    query: str
+    expect: dict[str, str | bool | int] = Field(default_factory=dict)
+
+
 class Flow(BaseModel):
     id: str
     name: str
@@ -85,6 +93,7 @@ class Flow(BaseModel):
     version: str = "1.0"
     start: str
     steps: dict[str, Step]
+    examples: list[Example] = Field(default_factory=list)
 
 
 def decided_so_far(decisions: list[dict]) -> str:
@@ -240,7 +249,30 @@ def check(flow: Flow) -> dict:
         todo += [t.target for t in flow.steps[sid].transitions if t.target in flow.steps]
     for sid in flow.steps.keys() - seen:
         warnings.append({"step": sid, "message": "no path from the start reaches this step"})
+    for i, ex in enumerate(flow.examples):
+        for sid, want in ex.expect.items():
+            if sid not in flow.steps:
+                errors.append({"step": None, "message": f"example {i + 1} expects an answer from unknown step {sid!r}"})
+            elif answer_key(want) not in map(answer_key, answers_of(flow.steps[sid])):
+                errors.append({"step": sid, "message": f"example {i + 1} expects {want!r}, which is not an answer of {sid!r}"})
     return {"errors": errors, "warnings": warnings}
+
+
+def try_examples(flow: Flow, ask: Callable[[dict], dict]) -> dict:
+    """Run the flow on each example. Count the expected answers that the run reached (checked) and matched (hits). Also
+    count the distinct answers of each step over all examples. A step with one distinct answer does not depend on the
+    request."""
+    out, answers = [], defaultdict(set)
+    for ex in flow.examples:
+        got = {e["step"]: e["answer"] for e in run(flow, ex.query, ask)
+               if e["event"] == "decision" and e.get("question_id") in (None, e["step"])}
+        for sid, a in got.items():
+            answers[sid].add(answer_key(a))
+        checked = [s for s in ex.expect if s in got]
+        out.append({"query": ex.query, "got": got, "checked": len(checked),
+                    "hits": sum(answer_key(got[s]) == answer_key(ex.expect[s]) for s in checked)})
+    return {"examples": out, "checked": sum(e["checked"] for e in out), "hits": sum(e["hits"] for e in out),
+            "distinct": {s: len(v) for s, v in answers.items()}}
 
 
 def run(flow: Flow, query: str, ask: Callable[[dict], dict]) -> Iterator[dict]:

@@ -41,5 +41,12 @@
       "position": {"x": 720, "y": 300},
       "transitions": [{"target": "DONE"}]
     }
-  }
+  },
+  "examples": [
+    {"query": "find all TODO comments in Python files", "expect": {"tool_type": "search"}},
+    {"query": "download the latest release tarball from GitHub", "expect": {"tool_type": "network"}},
+    {"query": "rename config.yaml to settings.yaml", "expect": {"tool_type": "file", "file_tool": "mv"}},
+    {"query": "show me what is in README.md", "expect": {"tool_type": "file", "file_tool": "cat"}},
+    {"query": "call the weather API for Toronto", "expect": {"tool_type": "network"}}
+  ]
 }

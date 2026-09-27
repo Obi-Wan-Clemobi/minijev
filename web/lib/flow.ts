@@ -17,7 +17,9 @@ export type Step = {
   criteria?: Criteria; options_from?: OptionsFrom | null; fanout?: SubQuestion[];
   position: { x: number; y: number }; transitions: Transition[];
 };
-export type Flow = { id: string; name: string; description: string; version: string; start: string; steps: Record<string, Step> };
+// A sample request, and the answer each listed step should give (a step the run does not reach is not checked).
+export type Example = { query: string; expect: Record<string, Answer> };
+export type Flow = { id: string; name: string; description: string; version: string; start: string; steps: Record<string, Step>; examples?: Example[] };
 
 // One answered question. question_id is the step id for the step's own question, or a fan-out question id; only
 // the own question's decision has transition and next. state is the request (the same for every step of a run).
