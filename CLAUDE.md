@@ -54,6 +54,7 @@ Add a term here when a document defines it. Use the term exactly as written. The
 | decision pattern | A mapping from a request and the work so far to the next kind of step, that holds across projects. | habit, heuristic |
 | domain | What a project is about (board games, travel). | topic, subject |
 | fold | One leave-one-project-out split: one held-out project is test, and the other projects give train and val. | |
+| CV group | One of 5 groups of whole sessions for cross-validation. It holds out sessions, not a project. | fold (for a CV group) |
 | fan-out step | A flow step that asks several independent questions, answered in one forward pass. | parallel step, branch step |
 | hand-off | Ending a flow at `ESCALATE`, so that the large model makes the decision. | fallback, delegation |
 
