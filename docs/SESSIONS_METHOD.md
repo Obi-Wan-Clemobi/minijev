@@ -183,7 +183,7 @@ write that log into their results.
 | v3 | Deleted | The privacy audit found router details in 2 of 200 rows (section 6) |
 | v4, v5, v6, v8 | Deleted | Scrub order bug: email addresses kept their domain after `<private>` (section 6). v4 held the rubric v1 labels, v5 the consensus before the v2.1 sweep, v6 the final labels, v8 the decision patterns before `--interactive-only` |
 | v7 | Deleted | Frozen before the decision-pattern questions existed |
-| v9 | Kept until the pilot report | Decision patterns (leave one project out, interactive only). It has the scrub order bug; the pilot adapter was trained on it, so its one final report must read it. Deleted after that report |
+| v9 | Deleted | Decision patterns (leave one project out, interactive only), with the scrub order bug. The pilot adapter was trained on it, and its one final report read it (section 7.1) |
 | v10, v11 | Deleted | Frozen with an intermediate scrub (patterns, then literals); v12 and v13 run the literals before and after the patterns |
 | v12 | Current | The settings of v6 with the current scrub. For the four questions of v6 (`next_tool`, `bash_kind`, `will_fail`, `needs_approval`), the same row ids and labels; it adds the later questions |
 | v13 | Current | The settings of v9 with the current scrub: the same row ids, labels and splits for the 12 questions of v9, except one `area` row that labelled a compact summary (Measured); it adds `turn_cost` |
@@ -195,7 +195,8 @@ privacy audit (`labels/privacy-audit-result.jsonl` and `-summary.json`); the rub
 (in their results files). The training times (12 s per example on v1 with eager attention, 6.7 s on v2 with sdpa)
 come from short timing runs whose output was not kept: Measured, but not reproducible from a file.
 
-**Test is untouched.** No baseline and no training run has read a test split of any version. For v4 runs, the
+**Test was read once.** Only the pilot's final report (section 7.1) read a test split: the board-game-event-planner
+fold of v9 (Measured, `splits_accessed` in its result and the test-read ledger). No baseline and no training run has read a test split. For v4 runs, the
 `splits_accessed` log in each result shows it (Measured). The v1 baseline runs came before that log; their code read
 only train and val (Observed, in the code). `train_lora.py` asserts it for session tasks.
 
@@ -282,6 +283,28 @@ before any adapter result existed:
    baseline and with the calibrated base model by a paired bootstrap over the same test rows. A gain counts only if
    the 95% interval of the delta is below zero.
 5. Results are also given per project (threat T4) and are labelled "predicts Claude" (threat T1).
+
+**The pilot result** (`work_kind`, v9, fold board-game-event-planner, 989 test calls, epoch 1 chosen on val; Measured,
+predicts Claude). The results file is `results/compare-v9-board-game-event-planner-work_kind-*-epoch-1.json`.
+
+| Model on test | Log loss | Accuracy |
+|---|---|---|
+| Prior | 1.503 | 0.539 |
+| Previous call | 1.243 | 0.564 |
+| Base model, bias and temperature | 1.407 | 0.538 |
+| Adapter, bias and temperature | 1.240 | 0.583 |
+
+- The adapter beats the calibrated base model: log loss −0.168 [−0.203, −0.132]. So the fine-tune learned something
+  that a bias and temperature do not give.
+- The adapter does not beat the previous-call baseline: log loss −0.004 [−0.043, +0.035], accuracy +0.019
+  [−0.009, +0.047]. By rule 4, this is no gain.
+- No model reaches 90% accuracy on 30 or more kept val rows, so no hand-off threshold exists.
+- The ladder (`work_kind`, then the tool within the kind) predicts the tool group worse than the flat previous-call
+  baseline: log loss +0.022 [+0.009, +0.033] with the previous call in both steps, and +0.035 [+0.010, +0.059] with
+  the adapter.
+
+Inferred: on this fold, the next kind of step depends mostly on the previous call, and one fold with 2 epochs does not
+show a decision pattern beyond that. Further fold work uses v13.
 
 **`needs_approval` has no val baseline.** Its v12 val split has 1 positive in 57 rows, so no metric on it means
 anything. On the random sample (all splits, v12 labels), "yes if the risk regex matches" finds 6 of 21 positives with

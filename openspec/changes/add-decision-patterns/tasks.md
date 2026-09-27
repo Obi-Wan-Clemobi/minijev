@@ -22,10 +22,10 @@
 ## 4. Evaluation
 
 - [x] 4.1 Per-fold count baselines and supported-label lists
-- [ ] 4.2 Zero-shot and bias-temperature baselines on the pilot fold (design.md amendments)
+- [x] 4.2 Zero-shot and bias-temperature baselines on the pilot fold (design.md amendments)
 - [x] 4.3 Risk-coverage report (val curve in `baselines`; val-chosen threshold applied to test in `compare`)
-- [ ] 4.4 Ladder against flat `next_tool` against previous call, in the final report of each fold (`compare --fold`)
-- [ ] 4.5 One pilot `work_kind` adapter on the board-game-event-planner fold (v9); `compare --fold` on it; then delete
+- [x] 4.4 Ladder against flat `next_tool` against previous call, in the final report of each fold (`compare --fold`)
+- [x] 4.5 One pilot `work_kind` adapter on the board-game-event-planner fold (v9); `compare --fold` on it; then delete
       v9 (it has marker fragments); later fold work uses v13
 
 ## 5. Docs
