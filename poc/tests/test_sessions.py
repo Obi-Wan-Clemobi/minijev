@@ -591,3 +591,60 @@ def test_a_start_without_a_zone_is_sealed():
 def test_tail_marks_a_cut_text():
     assert logs.tail("short", 10) == "short"
     assert logs.tail("alpha beta gamma", 9) == "… gamma"                    # "ta" of "beta" is dropped
+
+
+def test_plan_eval_parts_baselines_and_groups():
+    from minijev.sessions import plan_eval as pe
+    state = "End of the previous answer:\nPlan:\n1. split\n2. test\n- push?\nUser message:\ngo\nPrevious turn: 3-8 assistant messages"
+    assert pe.parts(state) == ("Plan:\n1. split\n2. test\n- push?", "go")
+    start = "No previous answer (the session starts here)\nUser message:\nhi there\nPrevious turn: none"
+    assert pe.parts(start) == (None, "hi there") and pe.plan_steps("1. a\n2. b\n- c\nnot 3.x") == 3
+    assert pe.is_keyword_reply(state) and not pe.is_keyword_reply(start)
+    rows = [{"id": f"s{k}:t0", "session": f"s{k}", "text": state if k % 3 == 0 else start, "y": int(k % 3 == 0)}
+            for k in range(30)]
+    g = pe.groups(rows)
+    assert sorted(set(g.values())) == [0, 1, 2, 3, 4] and pe.groups(rows) == g            # fixed by the seed
+    cats = pe.categorizers(rows)
+    assert cats["plan_steps"][0](start) == "none" and cats["plan_question"][0](state) == "asks"
+    predict, table = pe.fit(cats["keywords"][0], rows)
+    assert predict({"text": state}) == (10 + 1) / (10 + 2) and table["prior"] == (10 + 1) / (30 + 2)
+    out = pe.held_out(rows, g, lambda train: pe.fit(pe.categorizers(train)["keywords"][0], train)[0])
+    assert len(out["scored"]) == 30 and all(abs(r - 1 / 3) < 0.15 for r in out["train_flag_rates"])
+    assert pe.precision(out["scored"]) == 1.0                                             # keyword replies are the long ones
+
+
+def _plan_version(tmp_path, rows):
+    import hashlib
+    paths = Paths(tmp_path / "root")
+    folder = paths.out / "v1"
+    folder.mkdir(parents=True)
+    path = folder / "plan_cost.jsonl"
+    path.write_text("".join(json.dumps(r | {"split": "dev"}) + "\n" for r in rows))
+    (folder / "manifest.json").write_text(json.dumps({
+        "split": {"strategy": "before-cutoff"}, "sessions": {"dev": sorted({r["session"] for r in rows})},
+        "questions": {"plan_cost": {"sha256": hashlib.sha256(path.read_bytes()).hexdigest()}}}))
+    return paths
+
+
+def test_plan_choose_tie_guard_screen_and_storage(tmp_path):
+    import hashlib
+    from minijev.sessions import plan_eval as pe
+    long_plan = "End of the previous answer:\n" + "\n".join(f"{k}. step" for k in range(1, 9))
+    short_plan = "End of the previous answer:\nDone."
+    rows = []
+    for k in range(60):                     # a long plan then "go" (25% of turns) is long; the rest is short
+        s = f"s{k:02d}"
+        plan, msg = (long_plan, "go") if k % 4 == 0 else (short_plan, "thanks, now the docs please")
+        rows.append({"id": f"{s}:t1", "session": s, "y": int(k % 4 == 0),
+                     "text": f"{plan}\nUser message:\n{msg}\nPrevious turn: 0-2 assistant messages"})
+    res = pe.choose("v1", _plan_version(tmp_path, rows), readouts=False)
+    p = res["predictors"]
+    assert not p["prior"]["tie_guard_ok"] and p["prior"]["refit_flag_rate"] == 1.0   # one score: flags every turn
+    assert res["chosen"] in {"keywords", "plan_steps", "plan_length", "keywords_steps"} and p[res["chosen"]]["tie_guard_ok"]
+    assert res["screen"]["passed"] and res["screen"]["precision"] == 1.0
+    stored = {k: v for k, v in res["deployed"].items() if k != "sha256"}
+    assert res["deployed"]["sha256"] == hashlib.sha256(json.dumps(stored, sort_keys=True).encode()).hexdigest()
+    # no signal: every baseline breaks the tie guard or fails the screen, and nothing is stored
+    flat = [r | {"y": int(r["id"] in ("s01:t1", "s02:t1"))} for r in rows]
+    res = pe.choose("v1", _plan_version(tmp_path / "flat", flat), readouts=False)
+    assert "deployed" not in res and not res["screen"]["passed"]

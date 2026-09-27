@@ -77,7 +77,9 @@ The model is the zero-shot Noul readout of the base model, with a bias and tempe
    percentile of the training scores (nearest rank; ties flagged together). This is the go rule of
    add-turn-cost-routing, so the two results stay comparable.
 5. **The tie guard:** a predictor whose threshold flags more than 30% of its own training turns cannot rank turns
-   (the failure of the keyword baseline in §7.3). The choice skips it and takes the next best by rule 3.
+   (the failure of the keyword baseline in §7.3). The choice skips it and takes the next best by rule 3. The guard
+   applies to each of the 5 CV group fits and to the refit on all development turns: one breach skips the predictor.
+   If no baseline passes, the result is a no go.
 6. **The screen:** the pooled held-out precision at the threshold must exceed the development base rate by a
    one-sided 95% session-bootstrap bound. If it does not, the change ends with a no go now, and no prospective test
    is collected.

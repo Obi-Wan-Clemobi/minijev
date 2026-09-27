@@ -396,6 +396,42 @@ Many long turns (14 of 33, Measured on all turns) start with a user message of 2
 "go". Inferred: for these turns, the plan in the previous answer holds the signal, not the user message. A later question can try that, with new rules
 fixed before any result.
 
+## 7.4 Plan cost: the choice on development data (exploratory)
+
+`plan_cost` is a Noul: will this turn take 31 or more assistant messages? Its state starts with the end of the
+previous answer (the **plan text**), then the user message. The rules are in `openspec/changes/add-plan-cost/design.md`,
+fixed before any result. Development data is v14: the 34 interactive sessions that start before the cutoff
+(2026-09-27 00:00 Toronto time). It holds 287 turns and 40 long turns; the base rate is 0.139 (Measured).
+
+**These results are exploratory.** Development data holds the test turns of v12 and v13, whose labels we read
+(section 7.3). Only the prospective test decides: the interactive sessions from the cutoff to 2026-11-22. Until
+that freeze, every command skips those sessions (`dataset.SEALED`).
+
+Held-out results over 5 CV groups (a **CV group** is one of 5 groups of whole sessions; Measured,
+`results/plan-choice-v14.json`):
+
+| Predictor | Held-out log loss | Flags | Precision | Tie guard |
+|---|---|---|---|---|
+| keywords | 0.399 | 287 | 0.139 | fails |
+| zero-shot model, bias and temperature | 0.405 | 61 | 0.180 | passes |
+| keywords × plan steps | 0.409 | 75 | 0.240 | passes |
+| prior | 0.410 | 287 | 0.139 | fails |
+| plan steps | 0.413 | 55 | 0.145 | fails |
+| plan length | 0.417 | 95 | 0.179 | fails |
+| plan question | 0.422 | 128 | 0.094 | fails |
+
+- The **tie guard** skips a predictor whose threshold flags more than 30% of its training turns. With the
+  nearest-rank threshold at the top 20%, a feature passes only if its top category holds 20% to 30% of turns
+  (Inferred from the rule).
+- The **deployed predictor** is `keywords × plan steps`: a short reply with a keyword, crossed with the number of list
+  steps in the plan text. It has the lowest held-out log loss among the baselines that pass the tie guard.
+- The zero-shot model does not replace it: log loss −0.0045 [−0.039, +0.033]. The interval includes zero.
+- **The screen passes:** 18 of 75 flagged turns are long. The precision is 0.240, with a one-sided 5% bound of 0.156
+  above the base rate of 0.139. So the change goes on to the prospective test.
+- The deployed predictor and its threshold are stored with a sha256 in the results file, before any read of the test.
+- The development data mixes two models: `claude-opus-5` wrote 2,502 assistant messages, and `claude-opus-5-5` 1,856
+  (Measured). A change of model can change the plan style (threat).
+
 ## 8. How to check the claims on this page
 
 | Claim | Command or file |

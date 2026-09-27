@@ -4,13 +4,13 @@
 - [x] 1.2 Record the model of each assistant message in `logs.parse` and the extract; tests
 - [x] 1.3 Freeze by session start time: `--split before-cutoff` or `after-cutoff`, with `--cutoff` and `--until`; a
       version with one split (`dev` or `test`); every other reader skips the sealed sessions; tests
-- [ ] 1.4 Sync, then freeze development data (sessions before the cutoff)
+- [x] 1.4 Sync, then freeze development data (sessions before the cutoff)
 
 ## 2. Choice on development data
 
-- [ ] 2.1 The CV groups (design.md), the six baselines and the zero-shot readout; held-out log loss; tests
-- [ ] 2.2 The choice rule, the tie guard and the screen; store the refitted predictor and threshold with a sha256
-- [ ] 2.3 Results into docs/SESSIONS_METHOD.md, labelled exploratory; if the screen fails, the change ends here
+- [x] 2.1 The CV groups (design.md), the six baselines and the zero-shot readout; held-out log loss; tests
+- [x] 2.2 The choice rule, the tie guard and the screen; store the refitted predictor and threshold with a sha256
+- [x] 2.3 Results into docs/SESSIONS_METHOD.md, labelled exploratory; if the screen fails, the change ends here
 
 ## 3. Prospective test
 

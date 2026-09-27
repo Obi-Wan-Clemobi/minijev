@@ -61,6 +61,9 @@ def main(argv: list[str]) -> None:
     s = sub.add_parser("turn-baselines", help="the turn_cost baselines on val (turn_eval.py)")
     s.add_argument("version")
     s.add_argument("--fold", help="one fold of a leave-one-project-out version (default: every fold)")
+    s = sub.add_parser("plan-choose", help="choose the plan_cost predictor on development data (plan_eval.py)")
+    s.add_argument("version")
+    s.add_argument("--no-readout", action="store_true", help="baselines only; do not load a model")
     sub.add_parser("turn-final", help="the one final turn_cost report: reads test once (turn_eval.py)")
     s = sub.add_parser("turn-zero-shot", help="the turn_cost zero-shot readout and the deployed predictor (turn_eval.py)")
     s.add_argument("version")
@@ -134,6 +137,9 @@ def main(argv: list[str]) -> None:
     elif args.cmd == "turn-zero-shot":
         from . import turn_eval
         turn_eval.zero_shot(args.version, args.fold, paths)
+    elif args.cmd == "plan-choose":
+        from . import plan_eval
+        plan_eval.choose(args.version, paths, readouts=not args.no_readout)
     elif args.cmd == "turn-final":
         from . import turn_eval
         turn_eval.final_report(paths)
