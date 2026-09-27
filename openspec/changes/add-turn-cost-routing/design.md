@@ -84,7 +84,8 @@ project-out folds (v13) hold 3 to 7 long turns in val and 1 to 13 in test (Measu
    keywords (a user message of 20 characters or fewer that holds one of a fixed list as a whole word or phrase: go, yes,
    ok, continue, sure, do it, implement, apply, fix all, push, deploy); previous turn
    (level given the previous level); context size (level per context-size tercile). Plus the zero-shot readout with a
-   val-fitted bias and temperature.
+   bias and temperature fitted on train. The baselines are also counted on train,
+   so val compares them fairly: a fit on val would score the model on its own fit data.
 3. **Measures:** log loss; ordinal accuracy (the share of rows whose predicted level is within one level of the true
    level); and for the routing decision "31 or more", recall and precision.
 4. **Small splits:** routing measures (recall, precision, flag rate) of a split with fewer than 10 long turns are

@@ -164,3 +164,59 @@ def baselines(version: str, fold: str | None = None, paths: Paths | None = None)
     path.write_text(json.dumps(res, indent=1))
     print(f"wrote {path}")
     return res
+
+
+def paired_session_delta(a: list[dict], b: list[dict]) -> dict:
+    """Mean log loss of b minus a on the same rows, with a two-sided 95% interval from the session bootstrap."""
+    rows = [{"session": x["session"], "d": -math.log(max(y["p"][y["y"]], 1e-12)) + math.log(max(x["p"][x["y"]], 1e-12))}
+            for x, y in zip(a, b)]
+    mean = lambda v: sum(r["d"] for r in v) / len(v)
+    lo, _, hi = session_bootstrap(rows, mean)
+    return {"mean": mean(rows), "ci95": [lo, hi]}
+
+
+def zero_shot(version: str, fold: str | None = None, paths: Paths | None = None, engine=None) -> dict:
+    """Task 2.2 and 2.3: the zero-shot readout, with a bias and temperature fitted on train (as the baselines are
+    counted on train, so that val compares them fairly), and the choice of the deployed predictor by the fixed rule."""
+    from ..calibrate import fit_bias_temperature, softmax_list
+    from .evaluate import load_engine, readout
+    from .questions import QUESTIONS
+    paths, q = paths or Paths(), QUESTIONS["turn_cost"]
+    train, val = load_split("turn_cost", "train", version, paths, fold), load_split("turn_cost", "val", version, paths, fold)
+    engine = engine or load_engine()
+    z_train, z_val = [readout(engine, q, r["text"]) for r in train], [readout(engine, q, r["text"]) for r in val]
+    temp, bias = fit_bias_temperature(z_train, [r["y"] for r in train])
+    score = lambda probs: [{"session": session_of(r), "p": p, "y": r["y"]} for r, p in zip(val, probs)]
+    models = {"zero_shot": (score([softmax_list(z) for z in z_val]), [softmax_list(z)[LONG] for z in z_train]),
+              "zero_shot_bias_temp": (score([softmax_list([v / temp + b for v, b in zip(z, bias)]) for z in z_val]),
+                                      [softmax_list([v / temp + b for v, b in zip(z, bias)])[LONG] for z in z_train])}
+    base = {}
+    for name, cat in categorizers(train).items():
+        predict = fit(cat, train)
+        base[name] = (score([predict(r["text"]) for r in val]), [predict(r["text"])[LONG] for r in train])
+    best = min(base, key=lambda n: log_loss(base[n][0]))
+    res = {"version": version, "fold": fold, "split": "val", "model": engine.name, "temperature": temp, "bias": bias,
+           "best_baseline": best, "best_baseline_log_loss": log_loss(base[best][0]), "models": {}}
+    for name, (scored, train_scores) in models.items():
+        res["models"][name] = {"log_loss": log_loss(scored), "log_loss_ci": session_bootstrap(scored, log_loss),
+                               "ordinal_accuracy": ordinal_accuracy(scored),
+                               "ordinal_accuracy_ci": session_bootstrap(scored, ordinal_accuracy),
+                               "routing": routing(scored, train_scores),
+                               "minus_best_baseline": paired_session_delta(base[best][0], scored)}
+    beats = [n for n, m in res["models"].items() if m["minus_best_baseline"]["ci95"][1] < 0]
+    chosen = min(beats, key=lambda n: res["models"][n]["log_loss"]) if beats else best
+    spread = (res["models"][chosen]["routing"] if beats else routing(*base[best]))["spread"]
+    res["deployed"] = {"predictor": chosen, "model_beats_baseline": bool(beats), "spread": spread}
+    res["splits_accessed"] = list(ACCESS)
+    print(f"turn_cost {version}{' fold ' + fold if fold else ''}  best baseline {best} {res['best_baseline_log_loss']:.3f}")
+    for name, m in res["models"].items():
+        d = m["minus_best_baseline"]
+        print(f"  {name:20} log loss {m['log_loss']:.3f}  ordinal acc {m['ordinal_accuracy']:.3f}"
+              f"  minus {best}: {d['mean']:+.3f} [{d['ci95'][0]:+.3f},{d['ci95'][1]:+.3f}]")
+    print(f"  deployed predictor: {chosen}{'' if spread else ' (no spread: no go)'}")
+    folder = paths.out / "results"
+    folder.mkdir(exist_ok=True)
+    path = folder / f"turn-zero-shot-{version}{'-' + fold if fold else ''}.json"
+    path.write_text(json.dumps(res, indent=1))
+    print(f"wrote {path}")
+    return res

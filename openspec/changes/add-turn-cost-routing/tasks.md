@@ -15,7 +15,7 @@
 - [x] 2.1 Baselines (prior, user message length, short-reply keywords, previous turn, context size), counted on train,
       with log loss and ordinal accuracy on val; the threshold rule (nearest rank, ties together); the session bootstrap;
       tests
-- [ ] 2.2 Zero-shot readout with a val-fitted bias and temperature, on the primary split; per fold as well if it can
+- [ ] 2.2 Zero-shot readout with a bias and temperature fitted on train, on the primary split; per fold as well if it can
       replace the baseline (it then needs pooled out-of-fold predictions; they are stored, not scored, until 2.4)
 - [ ] 2.3 Choose the deployed predictor by the fixed rule, on val only
 - [ ] 2.4 The final report (reads test once): per split and fold log loss and ordinal accuracy; pooled out-of-fold

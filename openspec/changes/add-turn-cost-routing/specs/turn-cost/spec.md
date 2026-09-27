@@ -42,7 +42,7 @@ turn itself, or the project name.
 
 The evaluation SHALL use the time-per-project split as primary and leave one project out as secondary. It SHALL report
 the class prior, user-message-length, short-reply keyword, previous-turn and context-size baselines, counted on train,
-and the zero-shot readout with a val-fitted bias and temperature. It SHALL give log loss and ordinal accuracy for every
+and the zero-shot readout with a bias and temperature fitted on train. It SHALL give log loss and ordinal accuracy for every
 split. Recall, precision and flag rate of "31 or more" SHALL come from pooled out-of-fold predictions over the
 leave-one-project-out folds, labelled pooled; for a single split with fewer than 10 long turns they SHALL be counts
 only. Every interval SHALL come from a bootstrap over sessions.

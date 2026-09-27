@@ -58,6 +58,9 @@ def main(argv: list[str]) -> None:
     s = sub.add_parser("turn-baselines", help="the turn_cost baselines on val (turn_eval.py)")
     s.add_argument("version")
     s.add_argument("--fold", help="one fold of a leave-one-project-out version (default: every fold)")
+    s = sub.add_parser("turn-zero-shot", help="the turn_cost zero-shot readout and the deployed predictor (turn_eval.py)")
+    s.add_argument("version")
+    s.add_argument("--fold", help="one fold of a leave-one-project-out version")
     args = ap.parse_args(argv)
 
     for path in args.questions:
@@ -122,3 +125,6 @@ def main(argv: list[str]) -> None:
         m = dataset.manifest(args.version, paths)
         for fold in [args.fold] if args.fold else (m.get("split", {}).get("folds") or [None]):
             turn_eval.baselines(args.version, fold, paths)
+    elif args.cmd == "turn-zero-shot":
+        from . import turn_eval
+        turn_eval.zero_shot(args.version, args.fold, paths)

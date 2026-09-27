@@ -475,3 +475,12 @@ def test_turn_baselines_features_threshold_and_bootstrap(tmp_path):
     rows = [{"session": "a", "p": [0.9, 0.1, 0, 0], "y": 0}] * 5 + [{"session": "b", "p": [0.1, 0.9, 0, 0], "y": 3}]
     lo, _, hi = te.session_bootstrap(rows, te.ordinal_accuracy, n_boot=200)
     assert lo < hi and te.ordinal_accuracy(rows) == 5 / 6
+
+
+def test_paired_session_delta():
+    from minijev.sessions import turn_eval as te
+    base = [{"session": s, "p": [0.25] * 4, "y": 0} for s in "abcdef"]
+    better = [{"session": s, "p": [0.7, 0.1, 0.1, 0.1], "y": 0} for s in "abcdef"]
+    d = te.paired_session_delta(base, better)
+    assert d["mean"] < 0 and d["ci95"][1] < 0                  # b beats a on every session
+    assert te.paired_session_delta(base, base)["ci95"] == [0.0, 0.0]
