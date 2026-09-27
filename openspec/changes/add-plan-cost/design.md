@@ -29,7 +29,8 @@ development result is exploratory, and only the prospective test decides.
 ### Data
 
 - **The cutoff** is 2026-09-27 00:00 America/Toronto (2026-09-27T04:00:00Z). A session belongs to the side of the
-  cutoff where its first entry falls. A session never has turns on both sides.
+  cutoff where its first user turn falls. A session never has turns on both sides. Until the test freeze, every
+  reader but the privacy check skips the sessions from the cutoff on (`dataset.SEALED`).
 - **Development data:** every interactive turn of every session that starts before the cutoff. It is frozen once, after
   a sync, as a new version with one split, `dev`.
 - **The prospective test:** every interactive turn of every session that starts at or after the cutoff. It is frozen

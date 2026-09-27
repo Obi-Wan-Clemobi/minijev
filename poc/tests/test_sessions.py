@@ -241,7 +241,7 @@ def test_lopo_freeze_and_load(tmp_path, monkeypatch):
     freeze(paths, "v1", strategy="leave-one-project-out", show_project=False)
     m = dataset.manifest("v1", paths)
     assert m["split"] == {"strategy": "leave-one-project-out", "folds": ["app", "tool"], "show_project": False,
-                          "interactive_only": False}
+                          "interactive_only": False, "cutoff": None, "until": None}
     test = load_split("next_tool", "test", "v1", paths, fold="tool")
     assert {r["project"] for r in test} == {"tool"} and all("Project:" not in r["text"] for r in test)
     assert "tool" not in {r["project"] for r in load_split("next_tool", "train", "v1", paths, fold="tool")}
@@ -501,3 +501,93 @@ def test_pooled_routing_nothing_flagged_and_no_long_turns():
     p = te.pooled_routing(rows, lambda r: r["y"] == 3)
     assert p["flag_20"]["precision"] is None and p["flag_20"]["recall"] is None and not p["flag_20"]["above_base_rate"]
     assert te._fmt(None) == "n/a" and te._fmt(0.25) == "0.250"
+
+
+def test_plan_cost_state_and_label(tmp_path):
+    from minijev.sessions import QUESTIONS
+    say = lambda msg, text: {"type": "assistant", "message": {"id": msg, "usage": {"cache_read_input_tokens": 0},
+                                                             "content": [{"type": "text", "text": text}]}}
+    entries = [{"type": "user", "cwd": "/w/app", "entrypoint": "cli", "timestamp": "2026-01-01T00:00:00Z",
+                "message": {"content": "plan the refactor"}}, say("m1", "Plan:\n1. split\n2. test")]
+    entries += [{"type": "user", "timestamp": "2026-01-01T00:05:00Z", "message": {"content": "go"}}]
+    entries += [say(f"n{k}", f"step {k}") for k in range(31)]                   # 31 messages: a long turn
+    entries[1]["message"]["model"] = "claude-test-1"
+    rows = list(QUESTIONS["plan_cost"].rows(logs.parse(_write(tmp_path / "s.jsonl", entries))))
+    assert [(r[0], r[2]) for r in rows] == [("s:t0", 0), ("s:t1", 1)]
+    s = logs.parse(tmp_path / "s.jsonl")
+    assert s["messages"][0]["model"] == "claude-test-1" and s["messages"][1]["model"] is None
+    first, second = rows[0][1], rows[1][1]
+    assert first.startswith("No previous answer (the session starts here)") and first.endswith("Previous turn: none")
+    assert second.startswith("End of the previous answer:\nPlan:\n1. split\n2. test\nUser message:\ngo")
+    assert second.endswith("Previous turn: 0-2 assistant messages") and "step" not in second   # nothing of the turn
+    entries[0]["entrypoint"] = "sdk-py"
+    assert list(QUESTIONS["plan_cost"].rows(logs.parse(_write(tmp_path / "t.jsonl", entries)))) == []
+
+
+def test_cutoff_freeze_dev_and_test(tmp_path, monkeypatch):
+    from datetime import datetime, timezone
+    paths = _lopo_root(tmp_path, monkeypatch)
+    all_sessions = dataset.sessions(paths)
+    cut, end = "2026-01-03T00:00:00Z", "2026-01-05T00:00:00Z"
+    dev = dataset.split_of(all_sessions, "before-cutoff", cutoff=cut)
+    test = dataset.split_of(all_sessions, "after-cutoff", cutoff=cut, until=end)
+    assert set(dev.values()) == {"dev"} and set(test.values()) == {"test"} and not set(dev) & set(test)
+    starts = {s["session"]: dataset.when(s["start"]) for s in all_sessions}
+    assert all(starts[s] < dataset.when(cut) for s in dev) and all(dataset.when(cut) <= starts[s] < dataset.when(end) for s in test)
+    assert len(dev) + len(test) == 8                                 # tiny starts on day 05: after the end, in neither
+    with pytest.raises(SystemExit):
+        dataset.stats(paths, "after-cutoff")                         # nothing counts the test labels early
+    with pytest.raises(SystemExit):
+        freeze(paths, "v1", strategy="after-cutoff", cutoff=cut, until=end, now=datetime(2026, 1, 4, tzinfo=timezone.utc))
+    freeze(paths, "v1", strategy="before-cutoff", cutoff=cut)
+    rows_dev = load_split("next_tool", "dev", "v1", paths)
+    assert {r["session"] for r in rows_dev} == set(dev) and dataset.manifest("v1", paths)["sessions"] == {"dev": sorted(dev)}
+    freeze(paths, "v2", strategy="after-cutoff", cutoff=cut, until=end, now=datetime(2026, 2, 1, tzinfo=timezone.utc))
+    assert {r["session"] for r in load_split("next_tool", "test", "v2", paths)} == set(test)
+
+
+def test_sealed_sessions_are_hidden_until_the_test_freeze(tmp_path, monkeypatch):
+    from datetime import datetime, timezone
+    paths = _lopo_root(tmp_path, monkeypatch)
+    monkeypatch.setattr(dataset, "SEALED", "2026-01-03T00:00:00Z")          # day 03 onward is the sealed test window
+    monkeypatch.setattr(dataset, "SEALED_UNTIL", "2026-01-05T00:00:00Z")
+    seen = {s["session"] for s in dataset.sessions(paths)}
+    everything = {s["session"] for s in dataset.sessions(paths, include_sealed=True)}
+    assert len(seen) == 4 and len(everything) == 9                          # days 01 and 02 only
+    from minijev.sessions import QUESTIONS
+    assert {r["session"] for r in dataset.rows(paths, QUESTIONS["next_tool"])} == seen    # sample and consensus use rows
+    counted = sum(sum(c.values()) for c in dataset.stats(paths)["next_tool"].values())
+    assert counted == len(dataset.rows(paths, QUESTIONS["next_tool"]))                  # counts only unsealed rows
+    cut, end = "2026-01-03T00:00:00Z", "2026-01-05T00:00:00Z"
+    with pytest.raises(SystemExit, match="--until"):
+        freeze(paths, "v1", strategy="after-cutoff", cutoff=cut)              # a clear error, before any work
+    assert not (paths.out / "v1").exists()
+    with pytest.raises(SystemExit, match="no readable session"):             # an early --until does not open the seal
+        freeze(paths, "v1", strategy="after-cutoff", cutoff=cut, until="2026-01-04T00:00:00Z",
+               now=datetime(2026, 1, 4, 12, tzinfo=timezone.utc))
+    assert not (paths.out / "v1").exists()
+    freeze(paths, "v1", strategy="after-cutoff", cutoff=cut, until=end, now=datetime(2026, 2, 1, tzinfo=timezone.utc))
+    test = {r["session"] for r in load_split("next_tool", "test", "v1", paths)}
+    assert test and test <= everything - seen                                # the test freeze reads the sealed sessions
+    with pytest.raises(ValueError):
+        load_split("next_tool", "train", "v1", paths)                       # a version without that split
+
+
+def test_cutoff_instant_and_a_session_that_spans_it(tmp_path):
+    s = logs.parse(_write(tmp_path / "s.jsonl", [
+        {"type": "user", "cwd": "/w/app", "entrypoint": "cli", "timestamp": "2026-01-02T23:59:00Z",
+         "message": {"content": "plan"}},
+        {"type": "user", "timestamp": "2026-01-03T00:05:00Z", "message": {"content": "go"}}]))
+    at = {**s, "session": "at", "start": "2026-01-03T00:00:00Z"}
+    split = lambda strategy: dataset.split_of([s, at], strategy, cutoff="2026-01-03T00:00:00Z", until="2026-01-04T00:00:00Z")
+    assert split("before-cutoff") == {"s": "dev"} and split("after-cutoff") == {"at": "test"}   # a start at the cutoff is test
+    assert s["start"] == "2026-01-02T23:59:00Z"                             # both turns of s are development data
+
+
+def test_a_start_without_a_zone_is_sealed():
+    assert dataset.sealed({"start": "2026-01-01T00:00:00"}) and dataset.sealed({"start": ""})
+
+
+def test_tail_marks_a_cut_text():
+    assert logs.tail("short", 10) == "short"
+    assert logs.tail("alpha beta gamma", 9) == "… gamma"                    # "ta" of "beta" is dropped

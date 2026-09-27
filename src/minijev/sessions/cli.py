@@ -32,11 +32,14 @@ def main(argv: list[str]) -> None:
     s.add_argument("--split", choices=dataset.STRATEGIES, default="time-per-project")
     s.add_argument("--held-out", help="the held-out fold, for --split leave-one-project-out")
     s.add_argument("--interactive-only", action="store_true", help="leave out SDK sessions (a program wrote the turns)")
+    s.add_argument("--cutoff", help="an ISO time with a zone, for --split before-cutoff")
     s = sub.add_parser("freeze")
     s.add_argument("--version", help="default: the next unused vN")
     s.add_argument("--split", choices=dataset.STRATEGIES, default="time-per-project")
     s.add_argument("--no-project", action="store_true", help="leave the project line out of every state")
     s.add_argument("--interactive-only", action="store_true", help="leave out SDK sessions (a program wrote the turns)")
+    s.add_argument("--cutoff", help="an ISO time with a zone, for --split before-cutoff or after-cutoff")
+    s.add_argument("--until", help="an ISO time with a zone: the end of --split after-cutoff")
     s = sub.add_parser("points")
     s.add_argument("question")
     s.add_argument("-n", type=int, default=100)
@@ -83,7 +86,7 @@ def main(argv: list[str]) -> None:
     elif args.cmd == "check":
         sys.exit(0 if dataset.check(paths) else 1)
     elif args.cmd == "stats":
-        for name, per in dataset.stats(paths, args.split, args.held_out, args.interactive_only).items():
+        for name, per in dataset.stats(paths, args.split, args.held_out, args.interactive_only, args.cutoff).items():
             print(f"\n{name} ({QUESTIONS[name].type}, labels from {QUESTIONS[name].label_source})")
             for split, counts in per.items():
                 print(f"  {split:5} n={sum(counts.values()):5}  " + "  ".join(f"{k}={counts.get(k, 0)}"
@@ -91,7 +94,9 @@ def main(argv: list[str]) -> None:
     elif args.cmd == "freeze":
         extract = paths.out / "extract.json"
         diag = json.loads(extract.read_text()) if extract.exists() else None
-        print(f"wrote {dataset.freeze(paths, args.version, diag, args.split, not args.no_project, args.interactive_only)}")
+        folder = dataset.freeze(paths, args.version, diag, args.split, not args.no_project, args.interactive_only,
+                                args.cutoff, args.until)
+        print(f"wrote {folder}")
     elif args.cmd == "points":
         for p in dataset.points(paths, QUESTIONS[args.question], args.n):
             print(json.dumps(p, ensure_ascii=False))

@@ -42,6 +42,14 @@ BASH_KINDS = {
 }
 
 
+def tail(text: str, n: int) -> str:
+    """The last n characters. A cut text starts with "… " and drops its first word. That word can be the end of a
+    longer word, such as a private string that the scrub then cannot match."""
+    if len(text) <= n:
+        return text
+    return "… " + text[-n:].split(None, 1)[-1]
+
+
 def tool_group(name: str) -> str:
     if name in TOOL_GROUPS:
         return TOOL_GROUPS[name]
@@ -146,7 +154,7 @@ def parse(path: Path, diag: Diagnostics | None = None) -> dict:
     entrypoint = next((e["entrypoint"] for e in entries if e.get("entrypoint")), "unknown")
     diag[f"sessions from entrypoint {entrypoint}"] += 1
     calls, turns, turn, seen = [], [], None, set()
-    messages: dict[str, dict] = {}   # assistant message id -> {turn, calls, tokens}; streamed entries repeat an id
+    messages: dict[str, dict] = {}   # assistant message id -> {turn, calls, tokens, model}; streamed entries repeat an id
     for e in entries:
         if e.get("isSidechain"):
             diag["sidechain entries"] += 1
@@ -162,13 +170,14 @@ def parse(path: Path, diag: Diagnostics | None = None) -> dict:
         if e.get("type") != "assistant":
             continue
         mid = (e.get("message") or {}).get("id") or e.get("uuid")
-        m = messages.setdefault(mid, {"turn": turn["i"] if turn else None, "calls": [], "tokens": {}})
+        m = messages.setdefault(mid, {"turn": turn["i"] if turn else None, "calls": [], "tokens": {}, "model": None})
+        m["model"] = (e.get("message") or {}).get("model") or m["model"]   # the Claude model that wrote the message
         usage = (e.get("message") or {}).get("usage") or {}
         for k in TOKEN_FIELDS:   # a repeated entry carries the same or a later count: keep the largest
             m["tokens"][k] = max(m["tokens"].get(k, 0), usage.get(k) or 0)
         for b in (e.get("message") or {}).get("content") or []:
             if turn is not None and isinstance(b, dict) and b.get("type") == "text" and b.get("text", "").strip():
-                turn["last_text"] = b["text"].strip()[-LAST_TEXT_CHARS:]   # the end of the turn's last answer
+                turn["last_text"] = tail(b["text"].strip(), LAST_TEXT_CHARS)   # the end of the turn's last answer
             if not (isinstance(b, dict) and b.get("type") == "tool_use") or b.get("id") in seen:
                 continue
             seen.add(b.get("id"))   # a streamed assistant message can repeat in several entries

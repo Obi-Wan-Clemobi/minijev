@@ -86,3 +86,34 @@ register(Question(
     {"instructions": "How many assistant messages will the coding agent need for this user message?",
      "criteria": ["0 to 2", "3 to 8", "9 to 30", "31 or more"]},
     _rows, condition=previous_level))
+
+
+# plan_cost (openspec/changes/add-plan-cost): the same turns, a Noul "long or not", and a state that leads with the
+# plan text. The plan text is the end of the previous turn's last assistant text: the extract keeps its last
+# LAST_TEXT_CHARS (1000) characters, scrubbed.
+LONG_MESSAGES = CUTS[-1] + 1       # 31: a long turn
+
+
+def plan_state(s: dict, i: int, counts: Counter) -> str:
+    t, prev = s["turns"][i], s["turns"][i - 1] if i > 0 else None
+    if prev is None or not prev.get("last_text"):
+        lines = ["No previous answer (the session starts here)" if prev is None else "No previous answer text"]
+    else:
+        lines = ["End of the previous answer:", prev["last_text"]]
+    lines += ["User message:", _cut(t["text"], USER_CHARS)]
+    lines.append(f"Previous turn: {LEVELS[level_of(counts[prev['i']])]} assistant messages" if prev else "Previous turn: none")
+    return "\n".join(lines)
+
+
+def _plan_rows(s):
+    if not s.get("interactive", False):
+        return
+    counts = messages_per_turn(s)
+    for t in s["turns"]:
+        yield f"{s['session']}:t{t['i']}", plan_state(s, t["i"], counts), int(counts[t["i"]] >= LONG_MESSAGES)
+
+
+register(Question(
+    "plan_cost", "noul", ["no", "yes"],
+    {"instructions": "Will the coding agent need 31 or more assistant messages for this user message?"},
+    _plan_rows))

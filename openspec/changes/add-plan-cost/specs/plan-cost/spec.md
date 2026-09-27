@@ -21,9 +21,14 @@ The state SHALL NOT hold anything of the turn itself or the project name.
 
 ### Requirement: The cutoff separates development data and the prospective test
 
-A session SHALL belong to development data if its first entry is before 2026-09-27T04:00:00Z. Otherwise it SHALL
+A session SHALL belong to development data if its first user turn is before 2026-09-27T04:00:00Z. Otherwise it SHALL
 belong to the prospective test. No session SHALL have turns in both. Nothing SHALL read the prospective test before
-its freeze.
+its freeze: every reader but the privacy check and the test freeze SHALL skip the sessions that start from the
+cutoff on.
+
+#### Scenario: A reader before the freeze
+- **WHEN** a command lists, samples or counts rows before the test freeze
+- **THEN** it skips every session that starts from the cutoff on
 
 #### Scenario: A session that spans the cutoff
 - **WHEN** a session starts before the cutoff and continues after it

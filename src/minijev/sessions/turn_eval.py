@@ -229,7 +229,8 @@ def turn_facts(paths: Paths) -> dict[str, dict]:
     """Per turn id: the message count, the cache reads of the turn, and the interrupted mark, from the extract."""
     from .turns import messages_per_turn
     out = {}
-    for s in map(json.loads, (paths.out / "events.jsonl").open()):
+    from .dataset import sessions
+    for s in sessions(paths):
         counts, reads = messages_per_turn(s), Counter()
         for m in s.get("messages", []):
             if m["turn"] is not None:
