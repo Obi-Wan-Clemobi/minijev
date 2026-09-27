@@ -1,0 +1,3 @@
+# Python writes these when it compiles code; a change here must not restart the API.
+**/__pycache__
+**/*.pyc
