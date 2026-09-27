@@ -484,3 +484,20 @@ def test_paired_session_delta():
     d = te.paired_session_delta(base, better)
     assert d["mean"] < 0 and d["ci95"][1] < 0                  # b beats a on every session
     assert te.paired_session_delta(base, base)["ci95"] == [0.0, 0.0]
+
+
+def test_pooled_routing_flag_all_is_no_go():
+    from minijev.sessions import turn_eval as te
+    rows = [{"session": f"s{k}", "y": 3 if k % 5 == 0 else 0, "flag_20": True, "flag_10": k % 5 == 0} for k in range(40)]
+    p = te.pooled_routing(rows, lambda r: r["y"] == 3)
+    assert p["base_rate"] == 0.2 and p["flag_20"]["precision"] == 0.2 and p["flag_20"]["recall"] == 1.0
+    assert not p["flag_20"]["above_base_rate"]                   # flagging every turn cannot beat the base rate
+    assert p["flag_10"]["precision"] == 1.0 and p["flag_10"]["flag_rate"] == 0.2
+
+
+def test_pooled_routing_nothing_flagged_and_no_long_turns():
+    from minijev.sessions import turn_eval as te
+    rows = [{"session": f"s{k}", "y": 0, "flag_20": False, "flag_10": False} for k in range(10)]
+    p = te.pooled_routing(rows, lambda r: r["y"] == 3)
+    assert p["flag_20"]["precision"] is None and p["flag_20"]["recall"] is None and not p["flag_20"]["above_base_rate"]
+    assert te._fmt(None) == "n/a" and te._fmt(0.25) == "0.250"

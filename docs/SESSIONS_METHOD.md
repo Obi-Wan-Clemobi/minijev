@@ -353,6 +353,49 @@ Inferred: the decisions worth handing to minijev are the ones that cut messages:
 into one message, and stopping an inspect-run loop early. The price of each token type differs, and this page does not
 convert the counts into cost.
 
+## 7.3 Turn cost: the final report (no go)
+
+`turn_cost` predicts, when a user message arrives, how many assistant messages its turn will take: 0–2, 3–8, 9–30,
+or 31 or more (a **long turn**). The rules are in `openspec/changes/add-turn-cost-routing/design.md`, fixed before
+any result. `minijev sessions turn-final` read test once (Measured, `results/turn-final-v12-v13.json`, predicts
+Claude).
+
+**The deployed predictor is the keyword baseline.** It predicts the level from one fact. The fact is whether the user
+message is a short reply (20 characters or fewer) with a word such as "go", "ok" or "push". It had the lowest val log loss on v12. The
+zero-shot model did not beat it on val: +0.074 [−0.010, +0.243] with a bias and temperature.
+
+Test log loss per split (lower is better):
+
+| Split | Turns (long) | Prior | Length | Keywords | Previous turn | Context size |
+|---|---|---|---|---|---|---|
+| v12, time per project | 56 (3) | 1.316 | 1.307 | 1.324 | 1.320 | 1.387 |
+| v13, board-game-event-planner | 89 (7) | 1.345 | 1.362 | 1.367 | 1.369 | 1.390 |
+| v13, home | 34 (1) | 1.302 | 1.298 | 1.293 | 1.384 | 1.330 |
+| v13, minijev | 48 (12) | 1.442 | 1.493 | 1.454 | 1.449 | 1.514 |
+| v13, travel-planner | 80 (13) | 1.371 | 1.360 | 1.348 | 1.383 | 1.348 |
+
+No baseline is better than the prior by more than 0.03 in any split.
+
+**Routing, pooled over the 4 folds** (251 turns in 31 sessions, 33 long, base rate 0.131):
+
+| Flag rule | Flagged | Long among flagged | Precision | Recall |
+|---|---|---|---|---|
+| Top 20% of train scores (the go rule) | 251 (100%) | 33 | 0.131 | 1.00 |
+| Top 10% of train scores | 36 (14%) | 11 | 0.306 | 0.33 |
+
+- **No go.** Short replies are fewer than 20% of train turns. So the top-20% threshold falls on the score of all other
+  turns, and the rule flags every turn. Its precision equals the base rate, and the one-sided 5% bound (0.089) is below
+  it. The rule was fixed before the result, so the pilot does not run.
+- Without the 2 interrupted turns, and with 21 or more messages as the long cutoff, the decision is the same.
+- The top 10% flags only short replies such as "go". Among them, 11 of 36 turns were long: 2.3 times the base rate.
+  This is a description, not a claim: the go rule uses the top 20%, and we did not test the top 10%.
+- The loose upper bound on what routing could change is 570 million of 924 million cache reads (61.7%). The top-20%
+  rule flags every long turn, so this is all long turns. It is not a saving.
+
+Many long turns (14 of 33, Measured on all turns) start with a user message of 20 characters or fewer, such as
+"go". Inferred: for these turns, the plan in the previous answer holds the signal, not the user message. A later question can try that, with new rules
+fixed before any result.
+
 ## 8. How to check the claims on this page
 
 | Claim | Command or file |

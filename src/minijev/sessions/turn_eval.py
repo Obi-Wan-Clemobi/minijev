@@ -176,8 +176,8 @@ def paired_session_delta(a: list[dict], b: list[dict]) -> dict:
 
 
 def zero_shot(version: str, fold: str | None = None, paths: Paths | None = None, engine=None) -> dict:
-    """Task 2.2 and 2.3: the zero-shot readout, with a bias and temperature fitted on train (as the baselines are
-    counted on train, so that val compares them fairly), and the choice of the deployed predictor by the fixed rule."""
+    """Task 2.2 and 2.3: the zero-shot readout, with a bias and temperature fitted on train. The baselines are also
+    counted on train, so val compares them fairly. Then the choice of the deployed predictor by the fixed rule."""
     from ..calibrate import fit_bias_temperature, softmax_list
     from .evaluate import load_engine, readout
     from .questions import QUESTIONS
@@ -219,4 +219,118 @@ def zero_shot(version: str, fold: str | None = None, paths: Paths | None = None,
     path = folder / f"turn-zero-shot-{version}{'-' + fold if fold else ''}.json"
     path.write_text(json.dumps(res, indent=1))
     print(f"wrote {path}")
+    return res
+
+
+SENSITIVITY = 21                   # the second cutoff of the sensitivity row: 21 or more assistant messages
+
+
+def turn_facts(paths: Paths) -> dict[str, dict]:
+    """Per turn id: the message count, the cache reads of the turn, and the interrupted mark, from the extract."""
+    from .turns import messages_per_turn
+    out = {}
+    for s in map(json.loads, (paths.out / "events.jsonl").open()):
+        counts, reads = messages_per_turn(s), Counter()
+        for m in s.get("messages", []):
+            if m["turn"] is not None:
+                reads[m["turn"]] += m["tokens"].get("cache_read_input_tokens", 0)
+        for t in s["turns"]:
+            out[f"{s['session']}:t{t['i']}"] = {"messages": counts[t["i"]], "cache_reads": reads[t["i"]],
+                                                "interrupted": bool(t.get("interrupted"))}
+    return out
+
+
+def _fmt(v: float | None) -> str:
+    return "n/a" if v is None else f"{v:.3f}"
+
+
+def pooled_routing(pooled: list[dict], is_long: Callable[[dict], bool]) -> dict:
+    """Recall, precision and the real flag rate over pooled out-of-fold rows, with a one-sided session bootstrap bound
+    on precision at the top 20%. Rows carry "flag_20", "flag_10" and "session". Recall is None when no turn is long.
+    Precision is None when no turn is flagged."""
+    long_n = sum(map(is_long, pooled))
+    base = long_n / len(pooled) if pooled else 0.0
+    out = {"rows": len(pooled), "sessions": len({r["session"] for r in pooled}), "long": long_n, "base_rate": base}
+    for key in ("flag_20", "flag_10"):
+        flagged = [r for r in pooled if r[key]]
+        hits = sum(map(is_long, flagged))
+        out[key] = {"flagged": len(flagged), "flag_rate": len(flagged) / len(pooled), "long_flagged": hits,
+                    "recall": hits / long_n if long_n else None, "precision": hits / len(flagged) if flagged else None}
+
+    def precision(rows):
+        flagged = [r for r in rows if r["flag_20"]]
+        return sum(map(is_long, flagged)) / len(flagged) if flagged else 0.0
+    lo = session_bootstrap(pooled, precision)[1]
+    out["flag_20"]["precision_lower_5pct"] = lo
+    out["flag_20"]["above_base_rate"] = lo > base
+    return out
+
+
+def final_report(paths: Paths | None = None, primary: str = "v12", secondary: str = "v13") -> dict:
+    """Task 2.4: the one final report of turn_cost. It alone reads test, once per split and fold. It stops before any
+    read if a test split is in the test-read ledger. Rules: openspec/changes/add-turn-cost-routing/design.md."""
+    from .evaluate import test_reads
+    paths = paths or Paths()
+    folder = paths.out / "results"
+    chosen = json.loads((folder / f"turn-zero-shot-{primary}.json").read_text())["deployed"]["predictor"]
+    if chosen not in ("prior", "length", "keywords", "previous_turn", "context"):
+        raise SystemExit(f"the deployed predictor {chosen} is a model: its per-fold predictions are not built yet")
+    folds = manifest(secondary, paths)["split"]["folds"]
+    splits = [(primary, None)] + [(secondary, f) for f in folds]
+    reads = [{"version": v, "fold": f, "question": "turn_cost"} for v, f in splits]
+    path = folder / f"turn-final-{primary}-{secondary}.json"
+    ledger = test_reads(paths)
+    done = [json.loads(l) for l in ledger.open()] if ledger.exists() else []
+    seen = [r for r in reads if any({k: d.get(k) for k in r} == r for d in done)]
+    if path.exists() or seen:
+        raise SystemExit(f"test was already read for {seen or path}: a final report reads test once")
+    with ledger.open("a") as f:   # written before test is read, so a run that crashes still counts as the one read
+        for r in reads:
+            f.write(json.dumps(r | {"report": path.name}) + "\n")
+    facts = turn_facts(paths)
+    res = {"deployed": chosen, "splits": {}, "pooled_version": secondary}
+    pooled = []
+    for v, fold in splits:
+        train, test = load_split("turn_cost", "train", v, paths, fold), load_split("turn_cost", "test", v, paths, fold)
+        split = {}
+        for name, cat in categorizers(train).items():
+            predict = fit(cat, train)
+            scored = [{"session": session_of(r), "p": predict(r["text"]), "y": r["y"]} for r in test]
+            split[name] = {"log_loss": log_loss(scored), "log_loss_ci": session_bootstrap(scored, log_loss),
+                           "ordinal_accuracy": ordinal_accuracy(scored),
+                           "ordinal_accuracy_ci": session_bootstrap(scored, ordinal_accuracy)}
+            if name == chosen:
+                train_scores = [predict(r["text"])[LONG] for r in train]
+                split[name]["routing"] = routing(scored, train_scores)
+                if fold is not None:
+                    cut20, cut10 = nearest_rank(train_scores, 0.8), nearest_rank(train_scores, 0.9)
+                    for r, s in zip(test, scored):
+                        pooled.append({"id": r["id"], "session": s["session"], "y": r["y"], **facts[r["id"]],
+                                       "flag_20": s["p"][LONG] >= cut20, "flag_10": s["p"][LONG] >= cut10})
+        res["splits"][f"{v}{'/' + fold if fold else ''}"] = {"n": len(test), "long": sum(r["y"] == LONG for r in test),
+                                                            "baselines": split}
+    long_ = lambda r: r["y"] == LONG
+    res["pooled"] = pooled_routing(pooled, long_)
+    res["pooled_without_interrupted"] = pooled_routing([r for r in pooled if not r["interrupted"]], long_)
+    res["sensitivity_21"] = pooled_routing(pooled, lambda r: r["messages"] >= SENSITIVITY)
+    total = sum(r["cache_reads"] for r in pooled)
+    bound = sum(r["cache_reads"] for r in pooled if r["flag_20"] and long_(r))
+    res["upper_bound"] = {"cache_reads_flagged_long": bound, "cache_reads_all": total, "share": bound / total if total else None,
+                          "note": "loose upper bound on what routing could change, in cache reads; not savings"}
+    spread = res["splits"][f"{primary}"]["baselines"][chosen]["routing"]["spread"]
+    res["go"] = bool(spread and res["pooled"]["flag_20"]["above_base_rate"])
+    res["splits_accessed"] = list(ACCESS)
+    path.write_text(json.dumps(res, indent=1))
+    for key, s in res["splits"].items():
+        m = s["baselines"][chosen]
+        print(f"{key:36} n={s['n']:3} long={s['long']:2}  {chosen} log loss {m['log_loss']:.3f}"
+              f"  ordinal acc {m['ordinal_accuracy']:.3f}  prior {s['baselines']['prior']['log_loss']:.3f}")
+    for key in ("pooled", "pooled_without_interrupted", "sensitivity_21"):
+        p, f20, f10 = res[key], res[key]["flag_20"], res[key]["flag_10"]
+        print(f"{key:27} base rate {_fmt(p['base_rate'])}  top 20%: flagged {f20['flagged']}/{p['rows']}"
+              f" precision {_fmt(f20['precision'])} (5% bound {_fmt(f20['precision_lower_5pct'])})"
+              f" recall {_fmt(f20['recall'])}  top 10%: flagged {f10['flagged']} precision {_fmt(f10['precision'])}"
+              f" recall {_fmt(f10['recall'])}")
+    print(f"upper bound: {bound:,} of {total:,} cache reads ({_fmt(res['upper_bound']['share'])}), loose")
+    print(f"go: {res['go']}\nwrote {path}")
     return res

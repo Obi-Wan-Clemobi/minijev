@@ -15,23 +15,23 @@
 - [x] 2.1 Baselines (prior, user message length, short-reply keywords, previous turn, context size), counted on train,
       with log loss and ordinal accuracy on val; the threshold rule (nearest rank, ties together); the session bootstrap;
       tests
-- [ ] 2.2 Zero-shot readout with a bias and temperature fitted on train, on the primary split; per fold as well if it can
+- [x] 2.2 Zero-shot readout with a bias and temperature fitted on train, on the primary split; per fold as well if it can
       replace the baseline (it then needs pooled out-of-fold predictions; they are stored, not scored, until 2.4)
-- [ ] 2.3 Choose the deployed predictor by the fixed rule, on val only
-- [ ] 2.4 The final report (reads test once): per split and fold log loss and ordinal accuracy; pooled out-of-fold
+- [x] 2.3 Choose the deployed predictor by the fixed rule, on val only
+- [x] 2.4 The final report (reads test once): per split and fold log loss and ordinal accuracy; pooled out-of-fold
       recall, precision and real flag rate at the top 20% and 10%; the sensitivity row at 21 or more; the loose upper
       bound in cache reads; the go or no-go decision; results into docs/SESSIONS_METHOD.md
 
 ## 3. Feasibility pilot
 
-- [ ] 3.1 A flow template "turn cost" (Score step, hand-off at the threshold rule) served by the API
-- [ ] 3.2 The `UserPromptSubmit` hook: interactive sessions only (check the first message of a session: no entry point
+- [ ] ~~3.1~~ (not run: the final report gave no go) A flow template "turn cost" (Score step, hand-off at the threshold rule) served by the API
+- [ ] ~~3.2~~ (not run: the final report gave no go) The `UserPromptSubmit` hook: interactive sessions only (check the first message of a session: no entry point
       yet means add nothing); state from `transcript_path`; seeded draw among flagged
       turns, with episode tracking (a flagged turn inside an open episode joins its draw); exit code 0 on every path; 1 s timeout logged "not assigned"; private log of ids only; tests with a fake
       API, a forced exception, and hook–offline state parity
-- [ ] 3.3 Install instructions in docs/SESSIONS.md (the user installs the hook); mark pilot-period turns in later
+- [ ] ~~3.3~~ (not run: the final report gave no go) Install instructions in docs/SESSIONS.md (the user installs the hook); mark pilot-period turns in later
       versions
-- [ ] 3.4 The pilot report at 30 flagged turns or 8 weeks: latency, timeout rate, flag rate, false-flag share, hint
+- [ ] ~~3.4~~ (not run: the final report gave no go) The pilot report at 30 flagged turns or 8 weeks: latency, timeout rate, flag rate, false-flag share, hint
       tokens
 
 ## 4. Decision for the user
