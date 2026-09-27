@@ -63,3 +63,16 @@ Add a term here when a document defines it. Use the term exactly as written. The
 Planned work is written as OpenSpec changes in `openspec/changes/` (proposal, design, delta specs, tasks) before it is
 built. `openspec/specs/` holds the current requirements. Commands: `/opsx:propose`, `/opsx:apply`, `/opsx:archive`,
 and `openspec validate <change> --strict`.
+
+## Keep the app pages current
+
+The app's Data, Findings and Weaknesses pages show the project state. Update them in the same commit as the work that
+changes them:
+- **Data** (`/data`) shows `docs/DATA.md`. Update it when a dataset, split, version or data rule changes.
+- **Weaknesses** (`/weaknesses`) shows `docs/WEAKNESSES.md`. Add, change or close an entry when a result finds, fixes
+  or measures a weakness. Keep its summary table in step with the entries.
+- **Findings** (`/findings`) shows the committed results in `poc/results/` through `/v1/results`. When a new
+  experiment result is committed there, add it to the page (`web/app/findings/page.tsx`). Results under
+  `~/.minijev-private` are private: summarize them in `docs/SESSIONS_METHOD.md` and in the Weaknesses register instead.
+
+Before a commit that adds a result, check the three pages on http://localhost:3000.

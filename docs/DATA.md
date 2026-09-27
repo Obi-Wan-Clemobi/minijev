@@ -152,14 +152,18 @@ Always answering "yes" gives 0.620 on BoolQ test; chance on AG News is 0.25.
 - **Prompt.** The question template was chosen during E1–E13, while earlier samples were visible. It was not tuned on
   these splits; any future template change must be chosen on val only.
 
-## 9. Future training data (not built yet)
+## 9. Agent-routing data: Claude Code sessions
 
-The use case in view is agent routing: does a request need a heavy or a cheap model, and does a tool call need a
-human. Rules for that data, so that it can be defended in the same way:
-1. **Real before synthetic.** Logs of real sessions are the best source. They contain code and possibly secrets, so
-   decide first what may be stored, and redact before anything is saved.
-2. **Hold out first.** Freeze train, val and test before any model or prompt sees the data; test is never read to
-   choose anything.
-3. **Blind generation.** Synthetic items come from a strong model that has not seen the test set; label a sample by
-   hand to measure its error rate.
-4. **Record everything.** Source, date, licence, labeller and checksum per item, as in this card.
+The use case in view is agent routing. Does a request need a heavy model or a cheap one? Does a tool call need a
+human? This data now exists: `minijev sessions` builds it from the user's own Claude Code sessions. Its data card,
+method and results are in docs/SESSIONS_METHOD.md; the steps are in docs/SESSIONS.md. It follows four rules:
+1. **Real data only.** The rows come from real session logs. Two scrub layers (patterns, then the user's private
+   strings) run before anything is saved, and `check` must find zero hits before a freeze. Privacy audits of samples
+   come before each new kind of text.
+2. **Hold out first.** Every version is frozen before any model sees it. A final report reads test once and writes a
+   ledger entry before the read. The `plan_cost` test is prospective: it holds only sessions after a cutoff.
+3. **Labels from the log or from consensus.** Most labels come from the log (the next tool, a failed call, the number
+   of assistant messages). Two labels (`needs_approval`, `area`) come from blind labeller agents and reviewer agents,
+   with fixed consensus rules; contested items are left out.
+4. **Record everything.** Each version stores the git commit, a hash of the code and the SHA-256 of every file. It
+   also stores the hashes of every labelling file. A ledger keeps every version name. The data stays outside git.

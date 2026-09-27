@@ -33,6 +33,7 @@ average gap between stated confidence and accuracy.
 | W17 | Datasets are not pinned | Reproducibility | Low | Fixed: frozen splits with per-row SHA-256, checked on every load |
 | W18 | No cloud-model baseline | Measurement | Medium | Open (needs an API key) |
 | W19 | The app is a POC: no packaging, no persistence, Docker untested | Engineering | Low | Partly: package, CLI and API exist (src/minijev); Docker build untested |
+| W20 | Agent-routing questions do not beat simple baselines | Model | Medium | Measured on 2 questions; `plan_cost` test due 2026-11-22 |
 
 ---
 
@@ -186,6 +187,19 @@ average gap between stated confidence and accuracy.
     The model still finds the topic, but it loses the details.
   - A request takes 3.6–4.6 s at 1k and 33 s at 8k (CPU, one request).
 - **Still open:** lengths above 8k (the dense packed mask does not fit; kv mode does); 1.5B; more facts per cell.
+
+### W20. Agent-routing questions do not beat simple baselines
+- **What:** on the user's Claude Code sessions, no minijev question has yet predicted an agent decision better than a
+  simple count rule (docs/SESSIONS_METHOD.md). A **count rule** predicts the label frequency of a category on train.
+- **Evidence (Measured, test read once):**
+  - `work_kind` (the next kind of step), one held-out project, 989 calls: a LoRA adapter beats the calibrated base
+    model (log loss −0.168), but not "predict from the previous call" (−0.004 [−0.043, +0.035]). §7.1.
+  - `turn_cost` (will a turn be long?), 251 turns: no baseline beats the prior by more than 0.03 in log loss. The
+    fixed go rule flags every turn, so the result is no go. §7.3.
+- **Candidate fix, under test:** `plan_cost` asks the same question from the end of the previous answer (the plan).
+  On development data, a count rule on the plan passes the screen: precision 0.240 against a base rate of 0.139
+  (exploratory, §7.4). A prospective test of the sessions up to 2026-11-22 decides.
+- **Still open:** one fold for `work_kind`; one user's sessions only, so no result says anything about other users.
 
 ## Speed and serving
 
